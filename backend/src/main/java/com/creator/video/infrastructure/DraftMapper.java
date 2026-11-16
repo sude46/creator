@@ -7,7 +7,7 @@ import org.apache.ibatis.annotations.*;
 @Mapper
 public interface DraftMapper {
     String DRAFT_CONDITION = "processing_status = 'PENDING' AND review_status = 'NOT_SUBMITTED'"
-            + " AND publication_status = 'UNPUBLISHED' AND moderation_blocked = FALSE AND deleted_at IS NULL";
+            + " AND publication_status = 'UNPUBLISHED' AND moderation_blocked = FALSE AND deleted_at IS NULL AND source_asset_id IS NULL";
     String COLUMNS = "id, owner_id, category_id, title, description, creation_fingerprint, version, ("
             + DRAFT_CONDITION + ") AS accessible";
 

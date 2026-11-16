@@ -7,6 +7,9 @@ spring:
     password: ${DB_PASSWORD}
   flyway:
     enabled: true
+  servlet:
+    multipart:
+      enabled: false
   jackson:
     deserialization:
       fail-on-unknown-properties: true
@@ -28,6 +31,23 @@ mybatis-plus:
   global-config:
     banner: false
 creator:
+  upload:
+    enabled: ${UPLOAD_ENABLED:false}
+    max-concurrent: ${UPLOAD_MAX_CONCURRENT:2}
+    max-bytes: ${UPLOAD_MAX_BYTES:209715200}
+    temp-directory: ${UPLOAD_TEMP_DIRECTORY:../.local/upload-temp}
+    min-free-bytes: ${UPLOAD_MIN_FREE_BYTES:1073741824}
+    receive-seconds: ${UPLOAD_RECEIVE_SECONDS:120}
+    user-quota-bytes: ${UPLOAD_USER_QUOTA_BYTES:1073741824}
+    max-pending: ${UPLOAD_MAX_PENDING:5}
+    attempt-seconds: ${UPLOAD_ATTEMPT_SECONDS:900}
+  storage:
+    provider: minio
+    endpoint: ${STORAGE_ENDPOINT:}
+    access-key: ${STORAGE_ACCESS_KEY:}
+    secret-key: ${STORAGE_SECRET_KEY:}
+    bucket: ${STORAGE_BUCKET:creator-private}
+    operation-seconds: ${STORAGE_OPERATION_SECONDS:60}
   security:
     auth-work:
       max-concurrent: ${AUTH_WORK_MAX_CONCURRENT:2}

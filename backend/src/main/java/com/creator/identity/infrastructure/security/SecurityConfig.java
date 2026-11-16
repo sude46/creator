@@ -2,6 +2,8 @@ package com.creator.identity.infrastructure.security;
 
 import com.creator.identity.application.AccountQueryService;
 import com.creator.identity.application.AuthenticationWorkBudget;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.security.config.Customizer;
 import java.time.Clock;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -15,7 +17,7 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.access.intercept.AuthorizationFilter;
+import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
@@ -57,7 +59,8 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http, SecurityHandlers handlers,
             AccountQueryService accounts, SecurityResponseWriter writer, AuthRateLimiter limiter,
-            AuthRateLimitProperties properties, AuthenticationManager authenticationManager) throws Exception {
+            AuthRateLimitProperties properties, AuthenticationManager authenticationManager,
+            ObjectProvider<Customizer<HttpSecurity>> securityCustomizers) throws Exception {
         http.authenticationManager(authenticationManager);
         http.authorizeHttpRequests(authorize -> authorize
                 .requestMatchers(HttpMethod.GET, "/api/auth/csrf").permitAll()
@@ -71,7 +74,8 @@ public class SecurityConfig {
         http.logout(logout -> logout.logoutUrl("/api/auth/logout")
                 .invalidateHttpSession(true).clearAuthentication(true).deleteCookies("JSESSIONID")
                 .logoutSuccessHandler((request, response, authentication) -> response.setStatus(204)));
-        http.addFilterBefore(new ActiveAccountFilter(accounts, writer), AuthorizationFilter.class);
+        http.addFilterBefore(new ActiveAccountFilter(accounts, writer), CsrfFilter.class);
+        securityCustomizers.orderedStream().forEach(customizer -> customizer.customize(http));
         http.addFilterBefore(new AuthRateLimitFilter(limiter, writer, properties), UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
