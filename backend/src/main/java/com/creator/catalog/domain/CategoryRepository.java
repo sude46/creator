@@ -7,6 +7,8 @@ import java.util.Optional;
 public interface CategoryRepository {
     Optional<Category> findById(long id);
 
+    Optional<Category> findByIdForUpdate(long id);
+
     List<Category> findPage(boolean enabledOnly, PageRequest page);
 
     long count(boolean enabledOnly);

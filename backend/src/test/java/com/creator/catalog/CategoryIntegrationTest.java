@@ -49,6 +49,7 @@ class CategoryIntegrationTest {
     @BeforeEach
     void reset() {
         database.update("DELETE FROM operation_log");
+        database.update("DELETE FROM video");
         database.update("DELETE FROM video_category");
         database.update("DELETE FROM user_account");
         bootstrapAdmin.execute("catalog_admin", "SafePassword123");

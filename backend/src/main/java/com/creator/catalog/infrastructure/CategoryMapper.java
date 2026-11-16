@@ -10,6 +10,9 @@ import org.apache.ibatis.annotations.Update;
 
 @Mapper
 public interface CategoryMapper extends BaseMapper<CategoryRow> {
+    @Select("SELECT id, name, sort_order, enabled, version FROM video_category WHERE id = #{id} FOR UPDATE")
+    CategoryRow findByIdForUpdate(long id);
+
     @Select("""
             SELECT id, name, sort_order, enabled, version FROM video_category
             WHERE (#{enabledOnly} = FALSE OR enabled = TRUE)

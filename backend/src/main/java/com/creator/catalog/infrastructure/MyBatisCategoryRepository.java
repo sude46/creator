@@ -27,6 +27,11 @@ public class MyBatisCategoryRepository implements CategoryRepository {
     }
 
     @Override
+    public Optional<Category> findByIdForUpdate(long id) {
+        return Optional.ofNullable(mapper.findByIdForUpdate(id)).map(this::toCategory);
+    }
+
+    @Override
     public List<Category> findPage(boolean enabledOnly, PageRequest page) {
         return mapper.findPage(enabledOnly, page.size(), page.offset()).stream().map(this::toCategory).toList();
     }
