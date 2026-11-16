@@ -1,0 +1,13 @@
+CREATE TABLE user_account (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    username VARCHAR(32) NOT NULL,
+    password_hash VARCHAR(100) NOT NULL,
+    role VARCHAR(16) NOT NULL DEFAULT 'USER',
+    status VARCHAR(16) NOT NULL DEFAULT 'ACTIVE',
+    created_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    PRIMARY KEY (id),
+    CONSTRAINT uk_user_username UNIQUE (username),
+    CONSTRAINT ck_user_role CHECK (role IN ('USER', 'ADMIN')),
+    CONSTRAINT ck_user_status CHECK (status IN ('ACTIVE', 'DISABLED', 'DELETED'))
+);
