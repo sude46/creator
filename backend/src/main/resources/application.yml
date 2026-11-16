@@ -28,6 +28,11 @@ mybatis-plus:
   global-config:
     banner: false
 creator:
+  security:
+    auth-rate-limit:
+      window-seconds: ${AUTH_RATE_WINDOW_SECONDS:60}
+      max-attempts: ${AUTH_RATE_MAX_ATTEMPTS:20}
+      max-entries: ${AUTH_RATE_MAX_ENTRIES:10000}
   bootstrap:
     admin-username: ${ADMIN_USERNAME:}
     admin-password: ${ADMIN_PASSWORD:}

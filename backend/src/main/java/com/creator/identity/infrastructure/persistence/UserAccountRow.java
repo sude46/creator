@@ -1,11 +1,11 @@
-package com.creator.identity;
+package com.creator.identity.infrastructure.persistence;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 
 @TableName("user_account")
-public class UserAccount {
+public class UserAccountRow {
     @TableId(type = IdType.AUTO)
     private Long id;
     private String username;

@@ -1,22 +1,14 @@
 package com.creator.common;
 
-import org.springframework.http.HttpStatus;
-
 public class BusinessException extends RuntimeException {
-    private final HttpStatus status;
-    private final String code;
+    private final ErrorCode code;
 
-    public BusinessException(HttpStatus status, String code, String message) {
-        super(message);
-        this.status = status;
+    public BusinessException(ErrorCode code) {
+        super(code.getMessage());
         this.code = code;
     }
 
-    public HttpStatus getStatus() {
-        return status;
-    }
-
-    public String getCode() {
+    public ErrorCode getCode() {
         return code;
     }
 }

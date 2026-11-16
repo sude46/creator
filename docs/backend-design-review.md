@@ -23,6 +23,20 @@
 
 以上是代码已读到的具体问题及计划，本次设计提交不宣称已经修复。先完成账号模块重构与回归，再开始上传模块；不要在旧边界上不断叠加功能。
 
+### 1.1 账号模块重构进度
+
+2026-11-16 的后续实现已落地以下整改，原表保留作为基线审查记录：
+
+- 账号代码分为 web、application、domain、infrastructure；Controller 不再读取 Mapper，持久化对象不再作为应用层和响应类型。
+- RegisterUser 和 BootstrapAdmin 分离，移除接受角色字符串的 IdentityService.create。UsernamePolicy 与 PasswordPolicy 同时约束 HTTP、内部用例和初始化。
+- AccountRepository 区分凭据查询与不含哈希的账号摘要查询；过滤器生成当前请求 Actor，当前用户接口复用它，不再重复读取完整账号。
+- SecurityConfig 只装配过滤链和配置；SecurityHandlers、SecurityResponseWriter 负责协议响应，状态规则由应用/领域处理。
+- BusinessException 使用纯错误码，HTTP 状态映射集中在 web 适配层；框架 404/405/415 不再被兜底转换成 500，数据库故障返回 503。
+- 登录限流参数配置化并启动校验，窗口容量有界，过期按创建顺序清理，Clock 可注入；真实过滤链测试覆盖注册与登录共享配额和伪造转发 IP 无法绕过。
+- 账号禁用和角色变化使旧会话失效；数据库暂时不可用时拒绝当前请求但不误报账号失效。
+
+管理员概览仍是实际前端使用的阶段性权限探针，待管理业务接入时整体替换；本次不把它计为真实管理功能。真实 MySQL、JDK 21 运行和完整浏览器联调仍待验证，H2 测试不能替代这些验证。
+
 ## 2 模块与依赖规则
 
 ### 2.1 模块归属

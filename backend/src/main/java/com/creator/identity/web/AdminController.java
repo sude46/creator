@@ -1,4 +1,4 @@
-package com.creator.identity;
+package com.creator.identity.web;
 
 import java.util.Map;
 import org.springframework.web.bind.annotation.GetMapping;
