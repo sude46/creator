@@ -53,6 +53,7 @@ class IdentityIntegrationTest {
 
     @BeforeEach
     void reset() {
+        database.update("DELETE FROM operation_log");
         database.update("DELETE FROM user_account");
     }
 
