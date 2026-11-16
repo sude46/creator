@@ -94,17 +94,18 @@ npm.cmd run build
 
 2026-11-16 验证记录：Spring Boot 3.5.16 下 8 项测试通过，前端类型检查与生产构建通过，npm 安装审计报告为 0 个已知漏洞，Compose 配置校验通过。此次使用本机 JDK 23 编译到 Java 21 目标；JDK 21 实际运行、真实 MySQL 和浏览器端完整联调仍待验证，Docker 服务尚未启动。
 
-## Git 与双仓库
+## 后端设计审核
 
-每完成一个模块，先验证再独立提交，并分别推送 Gitee 和 GitHub。当前设计文档 `docs/视频创作者平台需求分析与架构设计.md` 按要求不提交，其他必要工程文档正常管理。`.env`、密钥、视频、构建产物与本地依赖缓存均忽略。
+后端分层、模块归属、现有问题、设计模式、15 条业务链路及审核清单见 [后端详细设计](docs/backend-design-review.md)。其中未来模块为设计契约，不能当作已实现能力。先重构账号边界，再逐模块实现视频流程。
 
-仓库地址确认后添加两个远程，不把密码或 token 写进地址：
+## Git 提交与同步
+
+每完成一个模块，先验证再独立提交并推送 GitHub。Gitee 按最新要求暂缓。原需求设计文档 `docs/视频创作者平台需求分析与架构设计.md` 按要求不提交，其他必要工程文档正常管理。`.env`、密钥、视频、构建产物与本地依赖缓存均忽略。
+
+当前 GitHub 远程为 `https://github.com/sude46/creator.git`。克隆时远程可能叫 origin，先用 `git remote -v` 确认；本地工程使用 github 名称：
 
 ```powershell
-git remote add gitee <你的Gitee仓库地址>
-git remote add github <你的GitHub仓库地址>
-git push -u gitee main
-git push -u github main
+git push github main
 ```
 
-后续每个模块分别执行两次 push；两端可能单独失败，应分别核对结果后重试，不用强制推送掩盖差异。推荐远程仓库初始为空；若已有 README 或历史，先获取并检查，不直接覆盖。
+推送失败应保留本地提交并核对错误后重试，不用强制推送掩盖差异。以后恢复 Gitee 时再配置已确认的远程，不把密码或 token 写进仓库地址。
