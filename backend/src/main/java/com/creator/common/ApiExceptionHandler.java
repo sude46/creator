@@ -23,7 +23,11 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
     ResponseEntity<ApiError> business(BusinessException exception) {
-        return ResponseEntity.status(ErrorHttpMapping.status(exception.getCode()))
+        var response = ResponseEntity.status(ErrorHttpMapping.status(exception.getCode()));
+        if (exception.getCode() == ErrorCode.AUTH_BUSY) {
+            response.header("Retry-After", "1");
+        }
+        return response
                 .body(new ApiError(exception.getCode().name(), exception.getMessage()));
     }
 

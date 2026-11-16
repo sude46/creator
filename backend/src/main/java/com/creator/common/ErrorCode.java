@@ -11,6 +11,7 @@ public enum ErrorCode {
     CSRF_INVALID("安全令牌已失效，请刷新后重试"),
     LOGIN_FAILED("用户名或密码错误，或账号不可用"),
     AUTH_RATE_LIMITED("请求过于频繁，请稍后再试"),
+    AUTH_BUSY("认证服务繁忙，请稍后重试"),
     INVALID_REQUEST("请求格式错误或包含不支持的字段"),
     VALIDATION_FAILED("请检查输入内容"),
     NOT_FOUND("请求的资源不存在"),

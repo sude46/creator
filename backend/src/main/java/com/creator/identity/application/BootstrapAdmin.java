@@ -10,19 +10,19 @@ import com.creator.identity.domain.Role;
 import com.creator.identity.domain.UsernamePolicy;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class BootstrapAdmin {
     private final AccountRepository accounts;
     private final PasswordEncoder encoder;
+    private final AuthenticationWorkBudget budget;
 
-    public BootstrapAdmin(AccountRepository accounts, PasswordEncoder encoder) {
+    public BootstrapAdmin(AccountRepository accounts, PasswordEncoder encoder, AuthenticationWorkBudget budget) {
         this.accounts = accounts;
         this.encoder = encoder;
+        this.budget = budget;
     }
 
-    @Transactional
     public AccountSummary execute(String username, String password) {
         String normalized = UsernamePolicy.normalize(username);
         PasswordPolicy.validate(password);
@@ -34,6 +34,7 @@ public class BootstrapAdmin {
             }
             return account;
         }
-        return accounts.insert(normalized, encoder.encode(password), Role.ADMIN);
+        String hash = budget.execute(() -> encoder.encode(password));
+        return accounts.insert(normalized, hash, Role.ADMIN);
     }
 }

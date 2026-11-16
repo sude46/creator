@@ -4,6 +4,7 @@ import com.creator.common.BusinessException;
 import com.creator.common.ErrorCode;
 import com.creator.identity.application.BootstrapAdmin;
 import com.creator.identity.application.RegisterUser;
+import com.creator.identity.application.AuthenticationWorkBudget;
 import com.creator.identity.domain.AccountRepository;
 import com.creator.identity.domain.Role;
 import com.creator.identity.web.RegisterRequest;
@@ -17,12 +18,18 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -33,6 +40,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@Import(IdentityIntegrationTest.HashingObservation.class)
 class IdentityIntegrationTest {
     @Autowired MockMvc mvc;
     @Autowired JdbcTemplate database;
@@ -41,6 +49,7 @@ class IdentityIntegrationTest {
     @Autowired BootstrapAdmin bootstrapAdmin;
     @Autowired PasswordEncoder encoder;
     @Autowired ObjectMapper json;
+    @Autowired AuthenticationWorkBudget workBudget;
 
     @BeforeEach
     void reset() {
@@ -250,6 +259,68 @@ class IdentityIntegrationTest {
             assertTrue(firstResult == ErrorCode.USERNAME_TAKEN || secondResult == ErrorCode.USERNAME_TAKEN);
         }
         assertEquals(1L, database.queryForObject("SELECT COUNT(*) FROM user_account WHERE username = 'racing_user'", Long.class));
+    }
+
+    @Test
+    void saturatedWorkBudgetRejectsLoginAndRegistrationAndRecovers() throws Exception {
+        var occupied = new CountDownLatch(2);
+        var release = new CountDownLatch(1);
+        Callable<Boolean> holdPermit = () -> workBudget.execute(() -> {
+            occupied.countDown();
+            try {
+                return release.await(10, TimeUnit.SECONDS);
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException(exception);
+            }
+        });
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            var first = executor.submit(holdPermit);
+            var second = executor.submit(holdPermit);
+            try {
+                assertTrue(occupied.await(5, TimeUnit.SECONDS));
+                mvc.perform(post("/api/auth/login").with(csrf()).param("username", "unknown_user")
+                        .param("password", "SafePassword123"))
+                        .andExpect(status().isTooManyRequests()).andExpect(header().string("Retry-After", "1"))
+                        .andExpect(jsonPath("$.code").value("AUTH_BUSY"));
+                mvc.perform(post("/api/auth/register").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(new RegisterRequest("budget_user", "SafePassword123"))))
+                        .andExpect(status().isTooManyRequests()).andExpect(header().string("Retry-After", "1"))
+                        .andExpect(jsonPath("$.code").value("AUTH_BUSY"));
+                mvc.perform(get("/api/auth/csrf")).andExpect(status().isOk());
+                assertTrue(accounts.findSummary("budget_user").isEmpty());
+            } finally {
+                release.countDown();
+            }
+            assertTrue(first.get(5, TimeUnit.SECONDS));
+            assertTrue(second.get(5, TimeUnit.SECONDS));
+        }
+        register("budget_user");
+        var session = login("budget_user");
+        mvc.perform(get("/api/me").session(session)).andExpect(status().isOk());
+    }
+
+    @TestConfiguration(proxyBeanMethods = false)
+    static class HashingObservation {
+        @Bean
+        @Primary
+        PasswordEncoder observingPasswordEncoder(@Qualifier("passwordEncoder") PasswordEncoder delegate) {
+            return new PasswordEncoder() {
+                public String encode(CharSequence password) {
+                    assertFalse(TransactionSynchronizationManager.isActualTransactionActive(),
+                            "Password hashing must not hold a database transaction");
+                    return delegate.encode(password);
+                }
+
+                public boolean matches(CharSequence password, String hash) {
+                    return delegate.matches(password, hash);
+                }
+
+                public boolean upgradeEncoding(String hash) {
+                    return delegate.upgradeEncoding(hash);
+                }
+            };
+        }
     }
 
     private void register(String username) throws Exception {

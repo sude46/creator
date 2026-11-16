@@ -13,7 +13,7 @@ public final class ErrorHttpMapping {
             case USERNAME_TAKEN, ADMIN_BOOTSTRAP_CONFLICT -> HttpStatus.CONFLICT;
             case UNAUTHENTICATED, SESSION_INVALID, LOGIN_FAILED -> HttpStatus.UNAUTHORIZED;
             case FORBIDDEN, CSRF_INVALID -> HttpStatus.FORBIDDEN;
-            case AUTH_RATE_LIMITED -> HttpStatus.TOO_MANY_REQUESTS;
+            case AUTH_RATE_LIMITED, AUTH_BUSY -> HttpStatus.TOO_MANY_REQUESTS;
             case NOT_FOUND -> HttpStatus.NOT_FOUND;
             case METHOD_NOT_ALLOWED -> HttpStatus.METHOD_NOT_ALLOWED;
             case UNSUPPORTED_MEDIA_TYPE -> HttpStatus.UNSUPPORTED_MEDIA_TYPE;

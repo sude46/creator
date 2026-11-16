@@ -29,6 +29,9 @@ mybatis-plus:
     banner: false
 creator:
   security:
+    auth-work:
+      max-concurrent: ${AUTH_WORK_MAX_CONCURRENT:2}
+      bcrypt-strength: ${AUTH_BCRYPT_STRENGTH:10}
     auth-rate-limit:
       window-seconds: ${AUTH_RATE_WINDOW_SECONDS:60}
       max-attempts: ${AUTH_RATE_MAX_ATTEMPTS:20}

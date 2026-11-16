@@ -6,6 +6,9 @@ spring:
     driver-class-name: org.h2.Driver
 creator:
   security:
+    auth-work:
+      max-concurrent: 2
+      bcrypt-strength: 10
     auth-rate-limit:
       max-attempts: 1000
   bootstrap:

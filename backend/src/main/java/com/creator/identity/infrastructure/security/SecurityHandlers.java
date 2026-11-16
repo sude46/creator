@@ -64,7 +64,10 @@ public class SecurityHandlers implements AuthenticationEntryPoint, AccessDeniedH
     @Override
     public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response,
             AuthenticationException exception) throws IOException {
-        if (exception instanceof AuthenticationServiceException) {
+        if (exception instanceof AuthenticationCapacityException) {
+            response.setHeader("Retry-After", "1");
+            writer.error(response, ErrorCode.AUTH_BUSY);
+        } else if (exception instanceof AuthenticationServiceException) {
             LOGGER.error("Authentication service unavailable", exception);
             writer.error(response, ErrorCode.SERVICE_UNAVAILABLE);
         } else {

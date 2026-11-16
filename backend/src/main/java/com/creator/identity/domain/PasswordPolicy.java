@@ -9,11 +9,15 @@ public final class PasswordPolicy {
     }
 
     public static void validate(String password) {
-        if (password == null || password.length() < 10 || password.length() > 64
-                || password.getBytes(StandardCharsets.UTF_8).length > 72
+        if (!withinEncodingLimits(password) || password.length() < 10
                 || password.codePoints().noneMatch(Character::isLetter)
                 || password.codePoints().noneMatch(Character::isDigit)) {
             throw new BusinessException(ErrorCode.WEAK_PASSWORD);
         }
+    }
+
+    public static boolean withinEncodingLimits(String password) {
+        return password != null && !password.isEmpty() && password.length() <= 64
+                && password.getBytes(StandardCharsets.UTF_8).length <= 72;
     }
 }
