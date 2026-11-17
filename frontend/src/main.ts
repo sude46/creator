@@ -8,5 +8,6 @@ import App from './App.vue'
 import { router } from './router'
 import './style.css'
 import './studio.css'
+import './public.css'
 
 createApp(App).use(router).use(ElAlert).use(ElButton).use(ElInput).use(ElTag).mount('#app')

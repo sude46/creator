@@ -1,57 +1,14 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { auth } from '../stores/auth'
-import { request } from '../api/http'
-
-const router = useRouter()
-const user = auth.user
-const busy = ref(false)
-const message = ref('')
-const error = ref('')
-
-async function logout() {
-  busy.value = true
-  error.value = ''
-  try {
-    await auth.logout()
-    await router.push('/login')
-  } catch (failure) {
-    error.value = failure instanceof Error ? failure.message : '退出失败，请重试'
-  } finally {
-    busy.value = false
-  }
-}
-
-async function verifyAdmin() {
-  error.value = ''
-  try {
-    const result = await request<{ message: string }>('/admin/overview')
-    message.value = result.message
-  } catch (failure) {
-    error.value = failure instanceof Error ? failure.message : '请求失败'
-  }
-}
+import { onBeforeUnmount, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import WorkspaceShell from '../components/WorkspaceShell.vue'
+import PublicVideoCard from '../components/PublicVideoCard.vue'
+import { publicApi } from '../api/public'
+import type { PublicVideo } from '../api/public'
+import { useStudioError } from '../composables/useStudioError'
+const route = useRoute(); const router = useRouter(); const explain = useStudioError(); const title = ref(''); const videos = ref<PublicVideo[]>([]); const page = ref(1); const total = ref(0); const loading = ref(false); const error = ref(''); let activeRequest: AbortController | undefined
+async function load() { activeRequest?.abort(); const controller = new AbortController(); activeRequest = controller; loading.value = true; error.value = ''; videos.value = []; const queryTitle = typeof route.query.title === 'string' ? route.query.title : ''; const queryPage = Number(route.query.page ?? 1); title.value = queryTitle; if (queryTitle.length > 120 || !Number.isInteger(queryPage) || queryPage < 1 || queryPage > 1000) { error.value = '搜索词最长 120 字，页码须在 1～1000 之间。'; loading.value = false; return } page.value = queryPage; try { const result = await publicApi.list(queryTitle, queryPage, controller.signal); if (controller.signal.aborted) return; videos.value = result.items; total.value = result.total } catch (failure) { if (!controller.signal.aborted) error.value = explain(failure) } finally { if (!controller.signal.aborted) loading.value = false } }
+function navigate(next = 1) { void router.push({ path: '/', query: { ...(title.value.trim() ? { title: title.value.trim() } : {}), page: String(next) } }) }
+watch(() => route.fullPath, load, { immediate: true }); onBeforeUnmount(() => activeRequest?.abort())
 </script>
-
-<template>
-  <div class="workspace">
-    <header class="workspace-header">
-      <RouterLink class="brand" to="/">帧间<span>FRAME ROOM</span></RouterLink>
-      <div class="account-menu"><span>{{ user?.username }}</span><el-tag :type="user?.role === 'ADMIN' ? 'warning' : 'info'">{{ user?.role === 'ADMIN' ? '管理员' : '创作者' }}</el-tag><el-button :loading="busy" @click="logout">退出登录</el-button></div>
-    </header>
-    <main class="workspace-main">
-      <p class="eyebrow">你的创作空间</p>
-      <h1>你好，{{ user?.username }}。</h1>
-      <p class="muted">账号已就绪，期待你的第一部作品。</p>
-      <el-alert v-if="error" :title="error" type="error" :closable="false" show-icon />
-      <section class="module-status">
-        <span class="status-dot"></span><strong>创作中心已开放</strong>
-        <p>创建作品、上传视频，查看处理进度与审核结果。</p>
-        <RouterLink class="studio-entry" to="/studio">进入创作中心 →</RouterLink>
-        <el-button v-if="user?.role === 'ADMIN'" type="primary" @click="verifyAdmin">验证管理权限</el-button>
-        <p v-if="message" role="status">{{ message }}</p>
-      </section>
-    </main>
-  </div>
-</template>
+<template><WorkspaceShell><div class="studio-heading"><div><p class="eyebrow">FRAME ROOM / WATCH</p><h1>{{ route.query.title ? '搜索作品' : '发现作品' }}</h1><p class="muted">浏览创作者发布的视频，找到值得看完的故事。</p></div><RouterLink class="create-link" to="/studio">发布我的作品 ↗</RouterLink></div><form class="public-search" role="search" @submit.prevent="navigate()"><label for="video-search">按标题找作品</label><input id="video-search" v-model="title" type="search" maxlength="120" placeholder="输入视频标题" /><el-button type="primary" native-type="submit">搜索</el-button></form><div class="public-results-heading"><h2>{{ route.query.title ? `“${route.query.title}” 的搜索结果` : '最新发布' }}</h2><span v-if="!loading && !error">{{ total }} 部作品</span><el-button :loading="loading" @click="load">刷新</el-button></div><el-alert v-if="error" :title="error" type="error" :closable="false" role="alert" /><p v-if="loading" class="empty-state" role="status">正在加载作品…</p><div v-else-if="videos.length" class="public-video-grid"><PublicVideoCard v-for="video in videos" :key="video.id" :video="video" /></div><p v-else-if="!error" class="empty-state">{{ route.query.title ? '没有找到匹配的作品，试试更短的标题关键词。' : '还没有已发布的作品。你可以进入创作中心上传视频并提交审核。' }}</p><div class="page-controls"><el-button :disabled="loading || page <= 1" @click="navigate(page - 1)">上一页</el-button><span>第 {{ page }} 页</span><el-button :disabled="loading || !!error || page * 12 >= total || page >= 1000" @click="navigate(page + 1)">下一页</el-button></div></WorkspaceShell></template>
