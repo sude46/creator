@@ -7,6 +7,18 @@ spring:
     password: ${DB_PASSWORD}
   flyway:
     enabled: true
+  rabbitmq:
+    host: ${RABBITMQ_HOST:127.0.0.1}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:creator}
+    password: ${RABBITMQ_PASSWORD:}
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    dynamic: false
+    cache:
+      channel:
+        size: 4
+        checkout-timeout: 5s
   servlet:
     multipart:
       enabled: false
@@ -31,6 +43,18 @@ mybatis-plus:
   global-config:
     banner: false
 creator:
+  processing:
+    dispatch:
+      enabled: ${PROCESSING_DISPATCH_ENABLED:false}
+      provider: rabbitmq
+      batch-size: ${PROCESSING_DISPATCH_BATCH_SIZE:10}
+      confirm-seconds: ${PROCESSING_CONFIRM_SECONDS:5}
+      lease-seconds: ${PROCESSING_DISPATCH_LEASE_SECONDS:45}
+      redrive-seconds: ${PROCESSING_REDRIVE_SECONDS:600}
+      message-ttl-seconds: ${PROCESSING_MESSAGE_TTL_SECONDS:300}
+      max-queue-messages: ${PROCESSING_MAX_QUEUE_MESSAGES:1000}
+      scan-milliseconds: ${PROCESSING_DISPATCH_SCAN_MS:5000}
+      retry-max-seconds: ${PROCESSING_DISPATCH_RETRY_MAX_SECONDS:300}
   upload:
     enabled: ${UPLOAD_ENABLED:false}
     max-concurrent: ${UPLOAD_MAX_CONCURRENT:2}

@@ -10,6 +10,8 @@ import com.creator.identity.application.RegisterUser;
 import com.creator.identity.domain.AccountRepository;
 import com.creator.identity.domain.Actor;
 import com.creator.video.application.*;
+import com.creator.video.application.processing.DispatchService;
+import com.creator.video.application.processing.TaskPublisher;
 import com.creator.video.domain.*;
 import com.creator.video.infrastructure.upload.UploadMaintenance;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -66,6 +68,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         properties = {"server.address=127.0.0.1", "creator.upload.enabled=true", "creator.storage.provider=test",
         "creator.upload.max-bytes=1024", "creator.upload.min-free-bytes=0", "creator.upload.user-quota-bytes=2048",
         "creator.upload.max-pending=2", "creator.upload.temp-directory=../.local/upload-test-temp",
+        "creator.processing.dispatch.enabled=true", "creator.processing.dispatch.provider=test",
+        "creator.processing.dispatch.scan-milliseconds=3600000",
         "creator.upload.cleanup-interval-ms=3600000"})
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
@@ -91,6 +95,8 @@ class UploadIntegrationTest {
     @Autowired FailingAudit failingAudit;
     @Autowired Clock clock;
     @Autowired ObjectMapper json;
+    @Autowired DispatchService dispatcher;
+    @Autowired RecordingTaskPublisher taskPublisher;
     Actor author;
     Actor other;
     long categoryId;
@@ -98,6 +104,7 @@ class UploadIntegrationTest {
     @BeforeEach
     void reset() throws Exception {
         storage.objects.clear();
+        taskPublisher.sent.clear();
         failingAudit.fail = false;
         storage.failWrite = false;
         storage.failDelete = false;
@@ -117,6 +124,21 @@ class UploadIntegrationTest {
         other = actor("upload_other");
         categoryId = categories.create(actor("upload_admin"), "视频", 0).id();
         assertTempEmpty();
+    }
+
+    @Test
+    void uploadTaskOnlyBecomesDispatchableAfterBindingCommits() {
+        long id = draft(author);
+        storage.afterPut = () -> {
+            dispatcher.run();
+            assertTrue(taskPublisher.sent.isEmpty());
+        };
+        uploads.upload(author, id, 0, new ByteArrayInputStream(mp4(1024)), 1024);
+        assertTrue(taskPublisher.sent.isEmpty());
+        dispatcher.run();
+        assertEquals(1, taskPublisher.sent.size());
+        assertEquals(id, taskPublisher.sent.getFirst().videoId());
+        assertNotNull(database.queryForObject("SELECT published_at FROM processing_task WHERE video_id = ?", java.time.LocalDateTime.class, id));
     }
 
     @Test
@@ -469,7 +491,16 @@ class UploadIntegrationTest {
     @TestConfiguration
     static class StorageConfiguration {
         @Bean MemoryStorage memoryStorage() { return new MemoryStorage(); }
+        @Bean RecordingTaskPublisher recordingTaskPublisher() { return new RecordingTaskPublisher(); }
         @Bean @Primary FailingAudit failingAudit(MyBatisAuditLog delegate) { return new FailingAudit(delegate); }
+    }
+    static class RecordingTaskPublisher implements TaskPublisher {
+        final List<DispatchClaim> sent = new java.util.concurrent.CopyOnWriteArrayList<>();
+        @Override public PublicationResult publish(DispatchClaim claim) {
+            assertFalse(TransactionSynchronizationManager.isActualTransactionActive());
+            sent.add(claim);
+            return PublicationResult.CONFIRMED;
+        }
     }
     static class FailingAudit implements AuditLog {
         private final AuditLog delegate;
