@@ -14,7 +14,13 @@ worker profile 独立启动且不开放 Web 服务；API 无媒体进程。Execu
 
 V6 增加执行租约、最多三次执行的自动重试、媒体元信息和 processing_output 清理登记。每次执行专属封面键在上传前登记，清理与完成对登记互斥，提交结果未知时不直接补偿删除。消息非法或基础设施异常进入有界死信，数据库事实和到期扫描恢复，避免无限立即 requeue。FFprobe/FFmpeg 有格式白名单、线程、输出和时间预算，环境不继承凭据；当前尚未验证操作系统沙箱，公网媒体处理上线前仍须落实部署隔离。
 
-H2 和独立 MySQL 8.4.3 两轮完整测试各 104 项通过，包含真实 RabbitMQ 与 FFmpeg、非 Web Worker 消费到结果绑定、重复消息、旧令牌、失败回滚及封面清理；对象存储为 SDK HTTP 合约或故障注入适配器，真实 MinIO、JDK 21 实际运行、生产隔离及容量测试仍待完成。作者手动重试尚未实现，自动重试没有创建新 generation。配置与运行边界见 [Worker 说明](processing-worker-setup.md)。
+H2 和独立 MySQL 8.4.3 两轮完整测试各 104 项通过，包含真实 RabbitMQ 与 FFmpeg、非 Web Worker 消费到结果绑定、重复消息、旧令牌、失败回滚及封面清理；对象存储为 SDK HTTP 合约或故障注入适配器，真实 MinIO、JDK 21 实际运行、生产隔离及容量测试仍待完成。自动重试没有创建新 generation；后续作者手动重试用例负责创建新代次。配置与运行边界见 [Worker 说明](processing-worker-setup.md)。
+
+### 作者处理查询与手动重试（2026-11-17）
+
+CreatorVideoService 提供本人全部作品查询和暂时性终结失败的手动重试。CreatorVideo 聚合可重试规则；CreatorVideoRepository 隔离当前代次任务投影和条件更新。查询只暴露状态与受限错误类别，不泄漏对象键或执行令牌。
+
+重试复用上传的账号行锁和待处理配额，锁顺序为账号 → 作品/当前任务；Worker 不持有账号写锁，不引入反向锁顺序。新代次、版本、PENDING、新任务和审计同事务提交，旧消息和旧执行结果仍受 generation 约束。接口与既有未上传草稿接口分工见 [作者处理说明](creator-video-api.md)。
 
 首版目标是模块化单体，使用 Spring Boot 内嵌 Tomcat。API 与 Worker 来自同一工程，以不同运行配置启动；Worker 不启动 Web 服务。模块通过 Java 调用协作，不通过内部 HTTP 相互调用。
 

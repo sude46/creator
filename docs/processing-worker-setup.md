@@ -53,7 +53,7 @@ API 进程仍需启用 `PROCESSING_DISPATCH_ENABLED=true` 才能将待处理任�
 
 临时目录正常路径在 finally 清理；崩溃遗留按年龄清理，每轮最多检查 100 个目录，不跟随符号链接。临时目录必须为 Worker 专用，每个实例使用不同目录。关闭 Worker 会中断当前任务，媒体进程在 finally 中强制终止并关闭输出管道；未完成数据库状态由租约恢复。
 
-作者手动重试和新 generation 创建用例尚未提供；当前只实现同 generation 的自动重试与过期恢复。
+作者手动重试通过 [作者处理接口](creator-video-api.md) 提供，只有可重试的终结失败可创建新 generation；Worker 内自动重试和过期恢复仍使用原 generation。
 
 ## 格式和资源限制
 
