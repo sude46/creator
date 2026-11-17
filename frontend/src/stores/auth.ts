@@ -45,4 +45,10 @@ async function logout() {
   clearCsrf()
 }
 
-export const auth = { user, load, login, register, logout }
+function expire() {
+  user.value = null
+  loaded = true
+  clearCsrf()
+}
+
+export const auth = { user, load, login, register, logout, expire }

@@ -1,5 +1,7 @@
 # 作者作品与处理重试
 
+创作中心前端已接入本文接口，页面与验证边界见 [创作中心](creator-center-ui.md)。按钮根据状态展示，最终权限和版本仍由后端判断。
+
 | API | 行为 |
 | --- | --- |
 | GET /api/creator/videos | 本人作品分页，page=1、size=20，上限沿用 PageRequest；按 ID 倒序 |

@@ -7,5 +7,6 @@ import 'element-plus/es/components/tag/style/css'
 import App from './App.vue'
 import { router } from './router'
 import './style.css'
+import './studio.css'
 
 createApp(App).use(router).use(ElAlert).use(ElButton).use(ElInput).use(ElTag).mount('#app')

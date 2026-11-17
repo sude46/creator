@@ -20,8 +20,10 @@ export async function request<Result>(path: string, options: RequestInit = {}): 
   }
   let response: Response
   try {
-    response = await fetch(`/api${path}`, { ...options, headers, credentials: 'same-origin' })
-  } catch {
+    response = await fetch(`/api${path}`, { ...options, headers, credentials: 'same-origin', signal: options.signal ?? AbortSignal.timeout(30000) })
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') throw error
+    if (error instanceof DOMException && error.name === 'TimeoutError') throw new ApiFailure(0, '请求等待超时，请先查询状态确认结果')
     throw new ApiFailure(0, '无法连接服务，请检查网络或稍后重试')
   }
   if (!response.ok) {

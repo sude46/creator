@@ -46,8 +46,9 @@ async function verifyAdmin() {
       <p class="muted">账号已就绪，期待你的第一部作品。</p>
       <el-alert v-if="error" :title="error" type="error" :closable="false" show-icon />
       <section class="module-status">
-        <span class="status-dot"></span><strong>账号与权限已接入</strong>
-        <p>视频上传、作品管理和播放功能正在开发，完成后将在这里开放。</p>
+        <span class="status-dot"></span><strong>创作中心已开放</strong>
+        <p>创建作品、上传视频，查看处理进度与审核结果。</p>
+        <RouterLink class="studio-entry" to="/studio">进入创作中心 →</RouterLink>
         <el-button v-if="user?.role === 'ADMIN'" type="primary" @click="verifyAdmin">验证管理权限</el-button>
         <p v-if="message" role="status">{{ message }}</p>
       </section>

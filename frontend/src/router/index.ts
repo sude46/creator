@@ -9,6 +9,8 @@ export const router = createRouter({
     { path: '/login', component: AuthView, meta: { guest: true } },
     { path: '/register', component: AuthView, meta: { guest: true } },
     { path: '/', component: WorkspaceView },
+    { path: '/studio', component: () => import('../views/CreatorCenterView.vue') },
+    { path: '/studio/:id', component: () => import('../views/CreatorVideoView.vue') },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
 })
