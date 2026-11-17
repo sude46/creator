@@ -1,0 +1,20 @@
+spring:
+  main:
+    web-application-type: none
+creator:
+  upload:
+    enabled: false
+  processing:
+    dispatch:
+      enabled: false
+    worker:
+      temp-directory: ${WORKER_TEMP_DIRECTORY:../.local/worker-temp}
+      ffprobe: ${FFPROBE_PATH:}
+      ffmpeg: ${FFMPEG_PATH:}
+      max-attempts: 3
+      task-seconds: 300
+      lease-seconds: 360
+      probe-seconds: 15
+      screenshot-seconds: 45
+      max-source-bytes: 209715200
+      min-free-bytes: 1073741824

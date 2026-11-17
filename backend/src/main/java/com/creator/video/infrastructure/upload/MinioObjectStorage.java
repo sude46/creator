@@ -3,6 +3,10 @@ package com.creator.video.infrastructure.upload;
 import com.creator.common.BusinessException;
 import com.creator.common.ErrorCode;
 import com.creator.video.application.ObjectStorage;
+import com.creator.video.application.processing.ProcessingStorage;
+import com.creator.video.application.processing.ProcessingException;
+import com.creator.video.application.processing.ProcessingWorker;
+import com.creator.video.domain.ProcessingFailure;
 import io.minio.*;
 import io.minio.errors.ErrorResponseException;
 import java.nio.file.Files;
@@ -13,7 +17,7 @@ import okhttp3.OkHttpClient;
 import okhttp3.Call;
 import okhttp3.Request;
 
-public class MinioObjectStorage implements ObjectStorage, AutoCloseable {
+public class MinioObjectStorage implements ObjectStorage, ProcessingStorage, AutoCloseable {
     private final StorageProperties properties;
     private final OkHttpClient http;
 
@@ -81,8 +85,41 @@ public class MinioObjectStorage implements ObjectStorage, AutoCloseable {
         }
     }
 
-    private MinioClient client() {
-        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(properties.operationSeconds());
+    @Override
+    public void verify() { verifyPrivateBucket(); }
+
+    @Override
+    public void download(String key, Path target, long expectedBytes, long deadlineNanos) {
+        try (var input = client(deadlineNanos).getObject(GetObjectArgs.builder().bucket(properties.bucket()).object(key).build());
+                var output = Files.newOutputStream(target, java.nio.file.StandardOpenOption.CREATE_NEW)) {
+            byte[] buffer = new byte[65536];
+            long total = 0;
+            int count;
+            while ((count = input.read(buffer)) != -1) {
+                ProcessingWorker.requireTime(deadlineNanos);
+                total += count;
+                if (total > expectedBytes) throw new ProcessingException(ProcessingFailure.INVALID_MEDIA);
+                output.write(buffer, 0, count);
+            }
+            if (total != expectedBytes) throw new ProcessingException(ProcessingFailure.INVALID_MEDIA);
+        } catch (ProcessingException exception) { throw exception; }
+        catch (Exception exception) { throw new ProcessingException(ProcessingFailure.STORAGE_UNAVAILABLE); }
+    }
+
+    @Override
+    public void uploadCover(String key, Path file, long bytes, long deadlineNanos) {
+        ProcessingWorker.requireTime(deadlineNanos);
+        if (bytes < 1 || bytes > 1048576) throw new ProcessingException(ProcessingFailure.PROCESS_FAILED);
+        try (var input = Files.newInputStream(file)) {
+            client(deadlineNanos).putObject(PutObjectArgs.builder().bucket(properties.bucket()).object(key)
+                    .stream(input, bytes, 5L * 1024 * 1024).contentType("image/jpeg").build());
+        } catch (Exception exception) { throw new ProcessingException(ProcessingFailure.STORAGE_UNAVAILABLE); }
+    }
+
+    private MinioClient client() { return client(Long.MAX_VALUE); }
+
+    private MinioClient client(long overallDeadline) {
+        long deadline = Math.min(overallDeadline, System.nanoTime() + TimeUnit.SECONDS.toNanos(properties.operationSeconds()));
         var bounded = new OkHttpClient(http.newBuilder()) {
             @Override
             public Call newCall(Request request) {

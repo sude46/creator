@@ -3,6 +3,7 @@ package com.creator.identity.infrastructure.security;
 import com.creator.identity.application.AccountQueryService;
 import com.creator.identity.application.AuthenticationWorkBudget;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.security.config.Customizer;
 import java.time.Clock;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -57,6 +58,7 @@ public class SecurityConfig {
     }
 
     @Bean
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
     SecurityFilterChain securityFilterChain(HttpSecurity http, SecurityHandlers handlers,
             AccountQueryService accounts, SecurityResponseWriter writer, AuthRateLimiter limiter,
             AuthRateLimitProperties properties, AuthenticationManager authenticationManager,

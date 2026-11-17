@@ -9,7 +9,8 @@ import org.apache.ibatis.annotations.*;
 public interface DispatchMapper {
     String ELIGIBLE = "EXISTS (SELECT 1 FROM video v JOIN user_account a ON a.id = v.owner_id"
             + " WHERE v.id = processing_task.video_id AND a.status = 'ACTIVE' AND v.deleted_at IS NULL"
-            + " AND v.moderation_blocked = FALSE AND v.source_asset_id IS NOT NULL AND v.processing_status = 'PENDING')";
+            + " AND v.moderation_blocked = FALSE AND v.source_asset_id IS NOT NULL AND v.processing_status = 'PENDING'"
+            + " AND v.processing_generation = processing_task.generation)";
     String DUE = "state = 'PENDING' AND next_dispatch_at <= #{now}"
             + " AND (dispatch_lease_until IS NULL OR dispatch_lease_until <= #{now}) AND " + ELIGIBLE;
 

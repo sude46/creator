@@ -52,6 +52,7 @@ public class RabbitMessagingConfiguration {
         return template;
     }
     @Bean
+    @ConditionalOnProperty(name = "creator.processing.dispatch.enabled", havingValue = "true")
     TaskPublisher taskPublisher(@Qualifier("processingRabbitTemplate") RabbitTemplate template,
             ObjectMapper json, DispatchProperties properties) {
         return new RabbitTaskPublisher(template, json, properties);

@@ -4,7 +4,7 @@
 
 上传绑定事务已写入 processing_task。本模块定量扫描可发送的 PENDING 任务，先以条件更新领取数据库派发租约，事务结束后发送 RabbitMQ 消息，再用派发令牌写回确认结果。数据库是任务事实来源，RabbitMQ 是运输通道；没有把数据库和 MQ 组合成跨服务原子事务。
 
-当前仅交付 producer/派发恢复，尚无 Worker 消费、执行租约、FFprobe、FFmpeg 和处理重试。processing_task.dispatch_attempts 只统计派发次数，不是视频执行次数。投递成功后 processing_task 和视频处理状态仍为 PENDING，审核及发布状态也不改变。
+本文描述 producer/派发恢复；后续独立 [Worker](processing-worker-setup.md) 已接入消费、执行租约、FFprobe、FFmpeg 和自动重试。processing_task.dispatch_attempts 只统计派发次数，不是视频执行次数。单纯投递成功不会改变 processing_task 或视频处理状态，审核及发布状态也不改变。
 
 ## 启用
 
@@ -52,7 +52,7 @@ RabbitAdmin 与 RabbitTemplate 的专用 publisher connection 对齐，首次创
 5. 写回确认/失败必须匹配未过期的派发令牌，过期或已被新租约替代的令牌不能覆盖新结果。若未来消费者已将任务领取成 RUNNING，迟到的派发确认也不能把它改回待发送。
 6. 发送成功后进程崩溃、数据库写回失败或提交结果未知时，旧租约到期后允许重复发送。即使已有 published_at，只要 PENDING 超过默认 600 秒仍会重新派发；这样消息过期、队列丢失或从未被领取都可恢复。
 
-重新派发间隔必须大于消息 TTL 并留至少 30 秒余量，避免长期无 Worker 时每轮扫描都往队列堆副本。死信队列仅作有限诊断，任务恢复仍以数据库为准。未来消费者必须用数据库执行租约、generation 和执行令牌实现重复消息安全，不能宣称 exactly-once。
+重新派发间隔必须大于消息 TTL 并留至少 30 秒余量，避免长期无 Worker 时每轮扫描都往队列堆副本。死信队列仅作有限诊断，任务恢复仍以数据库为准。消费者通过数据库执行租约、generation 和执行令牌保护重复消息，不能宣称 exactly-once。
 
 ## 有界运行
 

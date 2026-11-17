@@ -35,6 +35,43 @@ class MinioObjectStorageTest {
     }
 
     @Test
+    void realSdkBoundsDownloadsAndUsesJpegCoverContentType() throws Exception {
+        byte[] payload = new byte[] {1, 2, 3, 4};
+        var contentType = new AtomicReference<String>();
+        var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/", exchange -> {
+            try {
+                byte[] response;
+                if (exchange.getRequestURI().getQuery() != null) {
+                    response = "<LocationConstraint xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\">us-east-1</LocationConstraint>".getBytes(StandardCharsets.UTF_8);
+                } else if (exchange.getRequestMethod().equals("PUT")) {
+                    contentType.set(exchange.getRequestHeaders().getFirst("Content-Type"));
+                    exchange.getRequestBody().readAllBytes();
+                    exchange.getResponseHeaders().set("ETag", "\"test-etag\"");
+                    exchange.sendResponseHeaders(200, -1);
+                    return;
+                } else { response = payload; }
+                exchange.sendResponseHeaders(200, response.length);
+                exchange.getResponseBody().write(response);
+            } finally { exchange.close(); }
+        });
+        server.start();
+        try (var storage = new MinioObjectStorage(properties(server))) {
+            long deadline = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(10);
+            var target = directory.resolve("download.mp4");
+            storage.download("sources/test.mp4", target, payload.length, deadline);
+            assertArrayEquals(payload, Files.readAllBytes(target));
+            var exception = assertThrows(com.creator.video.application.processing.ProcessingException.class,
+                    () -> storage.download("sources/test.mp4", directory.resolve("too-large.mp4"), 3, deadline));
+            assertEquals(com.creator.video.domain.ProcessingFailure.INVALID_MEDIA, exception.failure());
+            assertThrows(com.creator.video.application.processing.ProcessingException.class,
+                    () -> storage.download("sources/test.mp4", directory.resolve("too-short.mp4"), 5, deadline));
+            storage.uploadCover("covers/test.jpg", target, payload.length, deadline);
+            assertEquals("image/jpeg", contentType.get());
+        } finally { server.stop(0); }
+    }
+
+    @Test
     void bucketWithPolicyIsRejectedBeforeAcceptingUploads() throws Exception {
         var server = server(true, true, new AtomicReference<>(), new AtomicBoolean(), new AtomicBoolean(true));
         try (var storage = new MinioObjectStorage(properties(server))) {

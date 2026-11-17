@@ -5,8 +5,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Profile;
 
 @Component
+@Profile("!worker")
 public class AdminBootstrap implements ApplicationRunner {
     private final BootstrapAdmin bootstrapAdmin;
     private final String username;
