@@ -37,7 +37,7 @@ async function verifyAdmin() {
 <template>
   <div class="workspace">
     <header class="workspace-header">
-      <RouterLink class="brand" to="/">映作<span>CREATOR STUDIO</span></RouterLink>
+      <RouterLink class="brand" to="/">帧间<span>FRAME ROOM</span></RouterLink>
       <div class="account-menu"><span>{{ user?.username }}</span><el-tag :type="user?.role === 'ADMIN' ? 'warning' : 'info'">{{ user?.role === 'ADMIN' ? '管理员' : '创作者' }}</el-tag><el-button :loading="busy" @click="logout">退出登录</el-button></div>
     </header>
     <main class="workspace-main">
