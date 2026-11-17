@@ -13,6 +13,7 @@ export const router = createRouter({
     { path: '/studio/:id', component: () => import('../views/CreatorVideoView.vue') },
     { path: '/admin/reviews', component: () => import('../views/AdminReviewView.vue') },
     { path: '/videos/:id', component: () => import('../views/PublicVideoView.vue') },
+    { path: '/favorites', component: () => import('../views/FavoritesView.vue') },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
 })
