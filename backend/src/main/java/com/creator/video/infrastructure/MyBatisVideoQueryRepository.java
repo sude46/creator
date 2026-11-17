@@ -15,6 +15,10 @@ public class MyBatisVideoQueryRepository implements VideoQueryRepository {
     }
     public long count(VideoSearch search) { return mapper.count(search.title().isEmpty() ? null : search.title(), search.pattern(), search.categoryId()); }
     public Optional<PublicVideo> findPublic(long videoId) { return Optional.ofNullable(mapper.findPublic(videoId)); }
+    public List<PublicVideo> findPublicByIds(List<Long> videoIds) {
+        if (videoIds.size() > PageRequest.MAX_SIZE) throw new IllegalArgumentException("Too many video IDs");
+        return videoIds.isEmpty() ? List.of() : mapper.findPublicByIds(videoIds);
+    }
     public Optional<MediaTarget> media(long videoId, long actorId, MediaPurpose purpose, MediaKind kind, Long version, Long round) {
         return Optional.ofNullable(mapper.media(videoId, actorId, purpose, kind, version, round));
     }

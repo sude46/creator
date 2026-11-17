@@ -30,6 +30,10 @@ public interface VideoQueryMapper {
     @Select("SELECT " + COLUMNS + FROM + " WHERE " + PUBLIC + " AND v.id = #{videoId}")
     PublicVideo findPublic(long videoId);
 
+    @Select("<script>SELECT " + COLUMNS + FROM + " WHERE " + PUBLIC
+            + " AND v.id IN <foreach collection='videoIds' item='videoId' open='(' separator=',' close=')'>#{videoId}</foreach></script>")
+    List<PublicVideo> findPublicByIds(@Param("videoIds") List<Long> videoIds);
+
     @Select("<script>SELECT asset.object_key, asset.size_bytes" + FROM
             + " JOIN media_asset asset ON asset.video_id = v.id AND asset.kind = #{kind}"
             + " WHERE v.id = #{videoId} AND " + READY

@@ -8,5 +8,6 @@ public interface VideoQueryRepository {
     List<PublicVideo> findPage(VideoSearch search, PageRequest page);
     long count(VideoSearch search);
     Optional<PublicVideo> findPublic(long videoId);
+    List<PublicVideo> findPublicByIds(List<Long> videoIds);
     Optional<MediaTarget> media(long videoId, long actorId, MediaPurpose purpose, MediaKind kind, Long version, Long round);
 }
