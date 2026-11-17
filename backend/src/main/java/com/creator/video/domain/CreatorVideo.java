@@ -8,7 +8,8 @@ public record CreatorVideo(long id, long ownerId, long categoryId, String title,
         long version, long processingGeneration, boolean sourceUploaded, boolean moderationBlocked,
         String processingStatus, String reviewStatus, String publicationStatus, String taskState,
         ProcessingFailure failureCode, int executionAttempts, LocalDateTime nextAttemptAt,
-        Long durationMillis, Integer mediaWidth, Integer mediaHeight) {
+        Long durationMillis, Integer mediaWidth, Integer mediaHeight, long reviewRound,
+        LocalDateTime reviewSubmittedAt, LocalDateTime publishedAt) {
     public boolean retryAllowed() {
         return sourceUploaded && !moderationBlocked && processingStatus.equals("FAILED") && "FAILED".equals(taskState)
                 && failureCode != null && failureCode.retryable() && reviewStatus.equals("NOT_SUBMITTED")
@@ -21,5 +22,30 @@ public record CreatorVideo(long id, long ownerId, long categoryId, String title,
 
     public void requireRetryAllowed() {
         if (!retryAllowed()) throw new BusinessException(ErrorCode.PROCESSING_RETRY_NOT_ALLOWED);
+    }
+
+    public void requireReady() {
+        if (moderationBlocked || !sourceUploaded || !processingStatus.equals("READY") || !"SUCCEEDED".equals(taskState)
+                || durationMillis == null || mediaWidth == null || mediaHeight == null) {
+            throw new BusinessException(ErrorCode.REVIEW_STATE_CONFLICT);
+        }
+    }
+
+    public void requireEditable() {
+        requireReady();
+        if (reviewStatus.equals("PENDING")) throw new BusinessException(ErrorCode.REVIEW_STATE_CONFLICT);
+    }
+
+    public void requireSubmittable() {
+        requireReady();
+        if (!(reviewStatus.equals("NOT_SUBMITTED") || reviewStatus.equals("REJECTED")) || reviewRound == Long.MAX_VALUE
+                || publicationStatus.equals("PUBLISHED")) throw new BusinessException(ErrorCode.REVIEW_STATE_CONFLICT);
+    }
+
+    public void requirePending(long expectedRound) {
+        requireReady();
+        if (!reviewStatus.equals("PENDING") || reviewRound != expectedRound || expectedRound < 1) {
+            throw new BusinessException(ErrorCode.REVIEW_STATE_CONFLICT);
+        }
     }
 }

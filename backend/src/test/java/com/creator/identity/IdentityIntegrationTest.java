@@ -54,6 +54,7 @@ class IdentityIntegrationTest {
     @BeforeEach
     void reset() {
         database.update("DELETE FROM operation_log");
+        database.update("DELETE FROM review_record");
         database.update("DELETE FROM processing_task");
         database.update("DELETE FROM upload_attempt");
         database.update("UPDATE video SET source_asset_id = NULL");

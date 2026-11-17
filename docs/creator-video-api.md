@@ -16,4 +16,4 @@
 
 接口不直接发送 MQ，不依赖上传功能开关。新任务通过既有数据库派发器进入 RabbitMQ，再由 Worker 处理；关闭派发器或 Worker 时会保持可追踪的 PENDING。
 
-原 `/api/creator/drafts` 继续服务创建和未上传草稿编辑；新接口负责全生命周期状态查询，避免上传后在创作中心失去作品。编辑已处理作品和审核接口随审核模块提供。
+原 `/api/creator/drafts` 继续服务创建和未上传草稿编辑；新接口负责全生命周期状态查询，避免上传后在创作中心失去作品。编辑已处理作品和审核接口见 [审核接口](video-review-api.md)。详情同时返回 reviewRound、reviewSubmittedAt、publishedAt，审核命令必须使用当前 version。

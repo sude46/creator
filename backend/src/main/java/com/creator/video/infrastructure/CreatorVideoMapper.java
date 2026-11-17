@@ -10,7 +10,7 @@ public interface CreatorVideoMapper {
             + " (v.source_asset_id IS NOT NULL) AS source_uploaded, v.moderation_blocked, v.processing_status,"
             + " v.review_status, v.publication_status, task.state AS task_state, task.failure_code,"
             + " COALESCE(task.execution_attempts, 0) AS execution_attempts, task.next_attempt_at,"
-            + " v.duration_millis, v.media_width, v.media_height";
+            + " v.duration_millis, v.media_width, v.media_height, v.review_round, v.review_submitted_at, v.published_at";
     String FROM = " FROM video v LEFT JOIN processing_task task ON task.video_id = v.id AND task.generation = v.processing_generation";
     String OWNED = " WHERE v.owner_id = #{ownerId} AND v.deleted_at IS NULL";
 

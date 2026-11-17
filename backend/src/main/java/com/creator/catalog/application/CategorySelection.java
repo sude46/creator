@@ -21,4 +21,9 @@ public class CategorySelection {
             throw new BusinessException(ErrorCode.CATEGORY_UNAVAILABLE);
         }
     }
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void requireExisting(long id) {
+        if (categories.findByIdForUpdate(id).isEmpty()) throw new BusinessException(ErrorCode.CATEGORY_UNAVAILABLE);
+    }
 }

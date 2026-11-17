@@ -37,7 +37,7 @@ public class DraftController {
 
     @PutMapping("/{id}")
     public DraftView update(@RequestAttribute("currentActor") Actor actor, @PathVariable long id,
-            @Valid @RequestBody UpdateDraftRequest request) {
+            @Valid @RequestBody UpdateVideoRequest request) {
         return DraftView.from(drafts.update(actor, id, request.version(), request.metadata()));
     }
 }

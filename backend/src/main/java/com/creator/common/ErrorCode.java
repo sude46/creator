@@ -29,6 +29,8 @@ public enum ErrorCode {
     UPLOAD_QUOTA_EXCEEDED("存储配额或待处理作品数量已达上限"),
     SOURCE_ALREADY_BOUND("该作品已上传源文件，请查询状态"),
     PROCESSING_RETRY_NOT_ALLOWED("当前作品不允许重试处理"),
+    REVIEW_STATE_CONFLICT("作品状态或审核轮次已变化，当前操作不可用"),
+    INVALID_REVIEW_REASON("审核结果无效，驳回原因必填且最多 500 位"),
     VALIDATION_FAILED("请检查输入内容"),
     NOT_FOUND("请求的资源不存在"),
     METHOD_NOT_ALLOWED("请求方法不支持"),

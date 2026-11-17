@@ -4,6 +4,7 @@ import com.creator.common.PageRequest;
 import com.creator.common.PageResult;
 import com.creator.identity.domain.Actor;
 import com.creator.video.application.CreatorVideoService;
+import com.creator.video.application.ReviewService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
@@ -11,7 +12,8 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/creator/videos")
 public class CreatorVideoController {
     private final CreatorVideoService videos;
-    public CreatorVideoController(CreatorVideoService videos) { this.videos = videos; }
+    private final ReviewService reviews;
+    public CreatorVideoController(CreatorVideoService videos, ReviewService reviews) { this.videos = videos; this.reviews = reviews; }
     @GetMapping("/{id}")
     public CreatorVideoView get(@RequestAttribute("currentActor") Actor actor, @PathVariable long id) {
         return CreatorVideoView.from(videos.get(actor, id));
@@ -26,5 +28,26 @@ public class CreatorVideoController {
     public CreatorVideoView retry(@RequestAttribute("currentActor") Actor actor, @PathVariable long id,
             @Valid @RequestBody VersionRequest request) {
         return CreatorVideoView.from(videos.retry(actor, id, request.version()));
+    }
+    @PutMapping("/{id}")
+    public CreatorVideoView update(@RequestAttribute("currentActor") Actor actor, @PathVariable long id,
+            @Valid @RequestBody UpdateVideoRequest request) {
+        return CreatorVideoView.from(reviews.update(actor, id, request.version(), request.metadata()));
+    }
+    @PostMapping("/{id}/review-submissions")
+    public CreatorVideoView submit(@RequestAttribute("currentActor") Actor actor, @PathVariable long id,
+            @Valid @RequestBody VersionRequest request) {
+        return CreatorVideoView.from(reviews.submit(actor, id, request.version()));
+    }
+    @PostMapping("/{id}/review-withdrawal")
+    public CreatorVideoView withdraw(@RequestAttribute("currentActor") Actor actor, @PathVariable long id,
+            @Valid @RequestBody VersionRequest request) {
+        return CreatorVideoView.from(reviews.withdraw(actor, id, request.version()));
+    }
+    @GetMapping("/{id}/reviews")
+    public PageResult<ReviewRecordView> history(@RequestAttribute("currentActor") Actor actor, @PathVariable long id,
+            @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int size) {
+        var result = reviews.ownerHistory(actor, id, new PageRequest(page, size));
+        return new PageResult<>(result.items().stream().map(ReviewRecordView::from).toList(), result.total(), result.page(), result.size());
     }
 }
