@@ -14,7 +14,7 @@ public class MyBatisAuditLog implements AuditLog {
     }
 
     @Override
-    public void record(Actor actor, String action, String targetType, long targetId) {
-        mapper.insert(actor.id(), action, targetType, targetId, MDC.get("requestId"));
+    public void record(Actor actor, String action, String targetType, long targetId, String reason) {
+        mapper.insert(actor.id(), action, targetType, targetId, MDC.get("requestId"), reason);
     }
 }

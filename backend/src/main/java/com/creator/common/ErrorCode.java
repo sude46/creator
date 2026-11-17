@@ -31,6 +31,8 @@ public enum ErrorCode {
     PROCESSING_RETRY_NOT_ALLOWED("当前作品不允许重试处理"),
     REVIEW_STATE_CONFLICT("作品状态或审核轮次已变化，当前操作不可用"),
     INVALID_REVIEW_REASON("审核结果无效，驳回原因必填且最多 500 位"),
+    PUBLICATION_STATE_CONFLICT("作品当前状态不允许上下架或封禁操作"),
+    INVALID_MODERATION_REASON("封禁和解禁原因必填且最多 500 位"),
     VALIDATION_FAILED("请检查输入内容"),
     NOT_FOUND("请求的资源不存在"),
     METHOD_NOT_ALLOWED("请求方法不支持"),

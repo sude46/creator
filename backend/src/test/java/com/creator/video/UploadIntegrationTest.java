@@ -507,8 +507,8 @@ class UploadIntegrationTest {
         private final AuditLog delegate;
         volatile boolean fail;
         FailingAudit(AuditLog delegate) { this.delegate = delegate; }
-        @Override public void record(Actor actor, String action, String targetType, long targetId) {
-            delegate.record(actor, action, targetType, targetId);
+        @Override public void record(Actor actor, String action, String targetType, long targetId, String reason) {
+            delegate.record(actor, action, targetType, targetId, reason);
             if (fail) throw new DataIntegrityViolationException("Injected audit failure");
         }
     }

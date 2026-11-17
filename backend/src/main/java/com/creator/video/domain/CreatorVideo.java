@@ -25,10 +25,32 @@ public record CreatorVideo(long id, long ownerId, long categoryId, String title,
     }
 
     public void requireReady() {
-        if (moderationBlocked || !sourceUploaded || !processingStatus.equals("READY") || !"SUCCEEDED".equals(taskState)
-                || durationMillis == null || mediaWidth == null || mediaHeight == null) {
+        if (moderationBlocked || !processed()) {
             throw new BusinessException(ErrorCode.REVIEW_STATE_CONFLICT);
         }
+    }
+
+    public void requireOffline() {
+        if (!processed() || moderationBlocked || !reviewStatus.equals("APPROVED") || !publicationStatus.equals("PUBLISHED")) {
+            throw new BusinessException(ErrorCode.PUBLICATION_STATE_CONFLICT);
+        }
+    }
+
+    public void requirePublish() {
+        if (!processed() || moderationBlocked || !reviewStatus.equals("APPROVED") || !publicationStatus.equals("OFFLINE")) {
+            throw new BusinessException(ErrorCode.PUBLICATION_STATE_CONFLICT);
+        }
+    }
+
+    public void requireModeration(boolean expectedBlocked) {
+        if (!processed() || moderationBlocked != expectedBlocked) {
+            throw new BusinessException(ErrorCode.PUBLICATION_STATE_CONFLICT);
+        }
+    }
+
+    private boolean processed() {
+        return sourceUploaded && processingStatus.equals("READY") && "SUCCEEDED".equals(taskState)
+                && durationMillis != null && mediaWidth != null && mediaHeight != null;
     }
 
     public void requireEditable() {
