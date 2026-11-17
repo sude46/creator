@@ -1,0 +1,43 @@
+package com.creator.video.infrastructure;
+
+import com.creator.video.domain.*;
+import java.util.List;
+import org.apache.ibatis.annotations.*;
+
+@Mapper
+public interface VideoQueryMapper {
+    String FROM = " FROM video v JOIN user_account owner ON owner.id = v.owner_id"
+            + " JOIN video_category category ON category.id = v.category_id";
+    String READY = "v.processing_status = 'READY' AND v.deleted_at IS NULL AND v.moderation_blocked = FALSE"
+            + " AND owner.status = 'ACTIVE' AND v.duration_millis IS NOT NULL AND v.media_width IS NOT NULL AND v.media_height IS NOT NULL"
+            + " AND EXISTS (SELECT 1 FROM media_asset source WHERE source.id = v.source_asset_id AND source.video_id = v.id AND source.kind = 'SOURCE')"
+            + " AND EXISTS (SELECT 1 FROM media_asset cover WHERE cover.video_id = v.id AND cover.kind = 'COVER')"
+            + " AND EXISTS (SELECT 1 FROM processing_task task WHERE task.video_id = v.id AND task.generation = v.processing_generation AND task.state = 'SUCCEEDED')";
+    String PUBLIC = READY + " AND v.review_status = 'APPROVED' AND v.publication_status = 'PUBLISHED' AND v.published_at IS NOT NULL";
+    String COLUMNS = "v.id, v.owner_id, owner.username AS author_name, v.category_id, category.name AS category_name,"
+            + " v.title, v.description, v.duration_millis, v.media_width, v.media_height, v.published_at";
+    String FILTER = "<if test='title != null'> AND v.title LIKE #{pattern} ESCAPE '!'</if>"
+            + "<if test='categoryId != null'> AND v.category_id = #{categoryId}</if>";
+
+    @Select("<script>SELECT " + COLUMNS + FROM + " WHERE " + PUBLIC + FILTER
+            + " ORDER BY v.published_at DESC, v.id DESC LIMIT #{limit} OFFSET #{offset}</script>")
+    List<PublicVideo> findPage(@Param("title") String title, @Param("pattern") String pattern,
+            @Param("categoryId") Long categoryId, @Param("limit") int limit, @Param("offset") int offset);
+
+    @Select("<script>SELECT COUNT(*)" + FROM + " WHERE " + PUBLIC + FILTER + "</script>")
+    long count(@Param("title") String title, @Param("pattern") String pattern, @Param("categoryId") Long categoryId);
+
+    @Select("SELECT " + COLUMNS + FROM + " WHERE " + PUBLIC + " AND v.id = #{videoId}")
+    PublicVideo findPublic(long videoId);
+
+    @Select("<script>SELECT asset.object_key, asset.size_bytes" + FROM
+            + " JOIN media_asset asset ON asset.video_id = v.id AND asset.kind = #{kind}"
+            + " WHERE v.id = #{videoId} AND " + READY
+            + "<choose><when test=\"purpose.name() == 'PUBLIC_PLAY'\"> AND " + PUBLIC + "</when>"
+            + "<when test=\"purpose.name() == 'OWNER_PREVIEW'\"> AND v.owner_id = #{actorId}</when>"
+            + "<when test=\"purpose.name() == 'REVIEW_PREVIEW'\"> AND v.owner_id != #{actorId} AND v.review_status = 'PENDING'"
+            + " AND v.version = #{version} AND v.review_round = #{round}</when><otherwise> AND 1 = 0</otherwise></choose>"
+            + "<if test=\"kind.name() == 'SOURCE'\"> AND asset.id = v.source_asset_id</if></script>")
+    MediaTarget media(@Param("videoId") long videoId, @Param("actorId") long actorId, @Param("purpose") MediaPurpose purpose,
+            @Param("kind") MediaKind kind, @Param("version") Long version, @Param("round") Long round);
+}

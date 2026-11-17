@@ -439,6 +439,16 @@ UploadTransactions.reserve 按账号 → 作品锁定，校验所有权、版本
 
 最终后端 59 项测试通过，上传新增 14 项集成测试、3 项资源测试和 4 项真实 SDK HTTP 契约测试；包含真实嵌入式 Tomcat 的 Session/CSRF 原始文件请求、双线程绑定/配额竞争、存储与审计故障、提交结果异常、清理领取互斥、临时文件恢复、缺权限/CSRF 时 body 未读及跨 SDK HTTP 调用的整体时间预算。数据库为 H2，存储为故障注入适配器或本机契约端点，尚未完成真实 MySQL/MinIO、FFprobe 规格检查和浏览器联调。
 
+### 公开查询与媒体授权后端实施记录
+
+链路为 PublicVideoController → PublicVideoService → VideoQueryRepository/MyBatis；媒体为 MediaController → MediaAuthorizationService → VideoQueryRepository → MediaSigner/MinioMediaSigner。领域搜索与媒体用途不依赖 HTTP 或 SDK。公开 SQL 在列表、详情与签发共享，要求有效作者、未删除/封禁、READY、当前代次成功、完整源/封面与元信息、APPROVED/PUBLISHED；停用分类不自动撤下已有发布内容。V8 追加发布状态/发布时间/ID 索引，标题使用参数化 LIKE 字面转义，页大小与页数有界，包含查询及 COUNT 的大规模成本仍需执行计划和压测。
+
+作者预览校验本人归属；审核预览校验 ADMIN、非本人、PENDING 和精确版本/轮次。内部用例重新核对 Actor，不能仅靠 Controller 角色注解。授权目标读取先于 SDK 签名，关闭媒体后合法目标 503、不可见目标 404；签名不占数据库事务，显式地域避免 SDK 为签名访问存储。签发只生成短期凭证，没有业务写入或补偿需求，重复调用允许签新链接。
+
+签名使用最终浏览器端点与 SDK 原生 GET，禁止签后替换域名；SOURCE/COVER 固定 MIME、inline 与 private/no-store。链接 TTL 15～120 秒，响应禁止缓存，值对象日志脱敏。查询至签名存在状态变化窗口，旧链接不能立刻撤销；过期不能中断已开始的下载。首版没有媒体网关。下架/封禁管理接口尚待实现；测试数据库状态变化不能当作管理接口已交付。
+
+接口、环境变量、故障行为、测试条件及真实存储限制见 [公开查询与媒体授权](public-media-api.md)。真实 MinIO、浏览器、反向代理/CORS、JDK 21 运行和容量均待验证，不能将 SDK 签名及数据库测试视作完整播放验收。
+
 ## 10 实施与 Git 提交顺序
 
 1. 本次提交设计与审核规则，供用户检查。

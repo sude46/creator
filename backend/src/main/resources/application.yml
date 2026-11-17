@@ -43,6 +43,11 @@ mybatis-plus:
   global-config:
     banner: false
 creator:
+  media:
+    enabled: ${MEDIA_ENABLED:false}
+    public-endpoint: ${MEDIA_PUBLIC_ENDPOINT:}
+    region: ${STORAGE_REGION:us-east-1}
+    link-seconds: ${MEDIA_LINK_SECONDS:60}
   processing:
     dispatch:
       enabled: ${PROCESSING_DISPATCH_ENABLED:false}

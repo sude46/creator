@@ -2,13 +2,13 @@
 
 ## 当前范围
 
-后端支持单文件源视频上传、私有对象写入、事务绑定和失败补偿。只接收 MP4 请求体并检查 ftyp 主品牌 isom、iso2、mp41、mp42、avc1；这不是完整媒体校验。编码白名单、音轨、时长、分辨率和封面生成由后续隔离 Worker 实现，当前没有可播放或可公开的媒体入口。
+后端支持单文件源视频上传、私有对象写入、事务绑定和失败补偿。只接收 MP4 请求体并检查 ftyp 主品牌 isom、iso2、mp41、mp42、avc1；这不是完整媒体校验。编码白名单、音轨、时长、分辨率和封面生成已由独立 [Worker](processing-worker-setup.md) 接入；[公开查询与媒体授权](public-media-api.md) 另有权限和发布状态检查，不能绕过审核直接播放源对象。
 
-上传事务会创建真实的 PENDING processing_task，RabbitMQ 调度器尚未接入，任务会等待后续模块，不会假装处理成功。已绑定源文件的作品退出草稿入口，暂通过上传状态 API 查看；处理期间的文本编辑将在创作者作品用例接入时扩展。
+上传事务创建真实的 PENDING processing_task，可靠 RabbitMQ 调度器和消费 Worker 已接入，均需按配置启用。投递成功不表示处理成功。已绑定源文件的作品退出草稿入口，通过 [作者作品接口](creator-video-api.md) 查询状态和有界手动重试；READY 作品通过 [审核接口](video-review-api.md) 编辑、提交和重审。
 
 ## 存储准备
 
-Java SDK 固定为 io.minio:minio:8.5.17，其发布 POM 声明 Apache License 2.0。SDK 版本和许可不代表 MinIO 服务端选型已确认；服务端版本、镜像来源、许可和维护状态须在实际部署前核实，当前未添加未经确认的 MinIO 镜像或下载脚本。
+Java SDK 固定为 io.minio:minio:8.5.17，其发布 POM 声明 Apache License 2.0。2026-11-17 核对测试候选服务端 RELEASE.2025-04-22T22-12-26Z 的源码 LICENSE 为 GNU AGPL v3；Docker Hub 镜像及 quay.io 拉取分别被拒绝，未完成服务端运行验证。SDK 许可不代表服务端许可；正式服务端版本、镜像来源、许可适用与维护状态须在部署前确认，当前未在 Compose 添加 MinIO 服务。
 
 先在独立的 MinIO 服务建立 `creator-private` 桶及专用应用账号。该桶要求无匿名 bucket policy、版本化状态为 OFF；不能使用曾启用后仅 Suspended 的桶。应用启动会读取并验证这些设置，无权限读取或设置不符时拒绝启动。不要用 root 管理凭据作为应用凭据。
 
@@ -90,4 +90,4 @@ SDK 使用 5 MiB 分片，HTTP 连接/读写超时、跨请求整体预算均有
 
 集成测试使用 H2、真实 Spring Security 及嵌入式 Tomcat；业务存储故障注入使用内存适配器，SDK 测试使用本机 HTTP 契约服务。覆盖并发竞争、配额、清理与绑定互斥、审计回滚、提交成功后响应异常，以及缺身份/CSRF/越权时 body 尚未读取。微型 MP4 测试体仅用于文件头和传输测试，不作为可解码视频样本。
 
-真实 MySQL 和 MinIO、JDK 21 实际运行、服务端镜像/许可、FFprobe 规格验证、RabbitMQ 投递、生产代理和容量压测仍待后续完成；前端上传页面尚未接入。
+后续模块已在真实 MySQL 8.4.3、RabbitMQ 4.0.5 和 FFmpeg 9.0.2 完成回归，包含 FFprobe 规格验证、投递与处理。真实 MinIO、JDK 21 实际运行、正式服务端选型、生产代理和容量压测仍待完成；前端上传页面尚未接入。新增真实 MinIO 测试及启用条件见 [媒体接口说明](public-media-api.md)，当前未运行，不能用 SDK 合约测试替代。
