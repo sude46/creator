@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
+import { ElMessageBox } from 'element-plus'
+import 'element-plus/es/components/message-box/style/css'
 import WorkspaceShell from '../components/WorkspaceShell.vue'
 import { categoryApi } from '../api/categories'
 import type { ManagedCategory } from '../api/categories'
@@ -24,6 +26,22 @@ const listError = ref('')
 const notice = ref('')
 let activeRequest: AbortController | undefined
 let stopped = false
+
+async function confirmAction(message: string, label: string) {
+  try {
+    await ElMessageBox.confirm(message, '确认分类操作', {
+      confirmButtonText: label,
+      cancelButtonText: '取消',
+      type: 'warning',
+      closeOnClickModal: false,
+      distinguishCancelAndClose: true,
+    })
+    return !stopped
+  } catch (failure) {
+    if (failure === 'cancel' || failure === 'close') return false
+    throw failure
+  }
+}
 
 async function load(next = page.value) {
   activeRequest?.abort()
@@ -74,13 +92,19 @@ async function save() {
     error.value = '名称需为 1～32 位非控制字符，排序值需为 0～10000 的整数。'
     return
   }
-  if (editing.value && editing.value.enabled !== enabled.value && !window.confirm(enabled.value ? '确认启用此分类？' : '停用后作者无法选择此分类或使用它送审，确认停用？')) return
+  const snapshot = editing.value ? { ...editing.value } : undefined
+  const targetEnabled = enabled.value
   busy.value = true
   error.value = ''
   notice.value = ''
   try {
+    if (snapshot && snapshot.enabled !== targetEnabled) {
+      const label = targetEnabled ? '确认启用' : '确认停用'
+      const message = targetEnabled ? `启用分类“${normalized}”？` : `停用分类“${normalized}”后，作者无法选择此分类或使用它送审。`
+      if (!await confirmAction(message, label)) return
+    }
     const input = { name: normalized, sortOrder: order }
-    const result = editing.value ? await categoryApi.update(editing.value, input, enabled.value) : await categoryApi.create(input)
+    const result = snapshot ? await categoryApi.update(snapshot, input, targetEnabled) : await categoryApi.create(input)
     if (stopped) return
     editing.value = { ...result }
     name.value = result.name
@@ -94,12 +118,13 @@ async function save() {
 
 async function remove(category: ManagedCategory) {
   if (busy.value || loading.value || needsRefresh.value) return
-  if (!window.confirm(`确认删除分类“${category.name}”？已被作品引用的分类不能删除，可改为停用。`)) return
+  const snapshot = { ...category }
   busy.value = true
   error.value = ''
   notice.value = ''
   try {
-    await categoryApi.remove(category)
+    if (!await confirmAction(`删除分类“${snapshot.name}”？已被作品引用的分类不能删除，可改为停用。`, '确认删除')) return
+    await categoryApi.remove(snapshot)
     if (stopped) return
     if (editing.value?.id === category.id) { editing.value = undefined; name.value = ''; sortOrder.value = 0; enabled.value = true }
     notice.value = '分类已删除。'
@@ -119,7 +144,7 @@ async function refresh() {
 function leave(event: BeforeUnloadEvent) { if (busy.value) event.preventDefault() }
 onBeforeRouteLeave(() => !busy.value || window.confirm('请求仍在进行，离开后需核对结果。确认离开？'))
 onMounted(() => { void load(); window.addEventListener('beforeunload', leave) })
-onBeforeUnmount(() => { stopped = true; activeRequest?.abort(); window.removeEventListener('beforeunload', leave) })
+onBeforeUnmount(() => { stopped = true; activeRequest?.abort(); ElMessageBox.close(); window.removeEventListener('beforeunload', leave) })
 </script>
 
 <template>
