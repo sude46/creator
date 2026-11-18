@@ -34,10 +34,6 @@ class MinioMediaIntegrationTest {
         byte[] cover = {(byte)255, (byte)216, (byte)255, 1};
         client.makeBucket(MakeBucketArgs.builder().bucket(bucket).build());
         try (var storage = new MinioObjectStorage(properties)) {
-            var rule = new LifecycleRule(Status.ENABLED, new AbortIncompleteMultipartUpload(1), null,
-                    new RuleFilter("sources/"), "abort-incomplete", null, null, null);
-            client.setBucketLifecycle(SetBucketLifecycleArgs.builder().bucket(bucket)
-                    .config(new LifecycleConfiguration(List.of(rule))).build());
             storage.verifyPrivateBucket();
             var source = Files.write(directory.resolve("source.mp4"), content);
             storage.put("sources/sample.mp4", source, content.length);

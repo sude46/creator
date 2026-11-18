@@ -8,9 +8,20 @@ import org.springframework.validation.annotation.Validated;
 @ConfigurationProperties("creator.storage")
 public record StorageProperties(@NotBlank String endpoint, @NotBlank String accessKey,
         @NotBlank String secretKey, @Pattern(regexp = "[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]") String bucket,
-        @Min(5) @Max(120) int operationSeconds) {
+        @Min(5) @Max(120) int operationSeconds, @NotNull IncompleteUploadCleanup incompleteUploadCleanup) {
+    public StorageProperties(String endpoint, String accessKey, String secretKey, String bucket, int operationSeconds) {
+        this(endpoint, accessKey, secretKey, bucket, operationSeconds, IncompleteUploadCleanup.MINIO_DEFAULT);
+    }
+
+    public enum IncompleteUploadCleanup {
+        /** MinIO server-side stale upload cleanup (default 24h expiry). */
+        MINIO_DEFAULT,
+        /** Require a one-day AbortIncompleteMultipartUpload bucket lifecycle rule. */
+        BUCKET_LIFECYCLE
+    }
+
     @Override
     public String toString() {
-        return "StorageProperties[credentials=REDACTED]";
+        return "StorageProperties[credentials=REDACTED, incompleteUploadCleanup=" + incompleteUploadCleanup + "]";
     }
 }

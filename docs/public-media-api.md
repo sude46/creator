@@ -59,7 +59,7 @@ mvn -s maven-settings.xml '-Dmaven.repo.local=../.local/m2' '-Dtest=MinioMediaIn
 
 该测试包含生产存储适配器写入/下载、私有桶校验、真实签名 GET、206 Range、JPEG 响应头、匿名拒绝、签名/Host 篡改及过期拒绝。样本字节只验证 HTTP 传输，不表示视频可解码。未设置变量时明确跳过，不能算作通过。
 
-2026-11-17 本地尝试拉取 MinIO RELEASE.2025-04-22T22-12-26Z，Docker Hub 配置镜像返回 403，quay.io 返回 401，未启动真实 MinIO；该测试暂未执行。已核对该源码标签 LICENSE 为 GNU AGPL v3，SDK 8.5.17 为 Apache 2.0。服务端标签仅为此次测试候选，正式部署还需确认维护状态、镜像来源、许可适用与老师要求。
+2026-11-18 已使用本地 MinIO RELEASE.2025-04-22T22-12-26Z 测试实例运行真实私有桶、签名、Range 和匿名拒绝测试并通过。该源码标签 LICENSE 为 GNU AGPL v3，SDK 8.5.17 为 Apache 2.0；服务端标签仅为测试候选，正式部署还需确认维护状态、镜像来源、许可适用与老师要求。MinIO 不接受仅 AbortIncompleteMultipartUpload 的生命周期规则，清理模式见 [上传接入说明](upload-storage-setup.md)。
 
 最终 MySQL 8.4.3 + RabbitMQ 4.0.5 + FFmpeg 9.0.2 全量回归 147 项：146 通过、1 项真实 MinIO 测试跳过、零失败/错误。新增数据库/授权集成测试 12 项与 SDK 签名 2 项通过；V8 实际迁移通过。运行使用 JDK 23 编译到 Java 21。
 

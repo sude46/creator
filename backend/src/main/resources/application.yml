@@ -77,6 +77,7 @@ creator:
     secret-key: ${STORAGE_SECRET_KEY:}
     bucket: ${STORAGE_BUCKET:creator-private}
     operation-seconds: ${STORAGE_OPERATION_SECONDS:60}
+    incomplete-upload-cleanup: ${STORAGE_INCOMPLETE_UPLOAD_CLEANUP:MINIO_DEFAULT}
   security:
     auth-work:
       max-concurrent: ${AUTH_WORK_MAX_CONCURRENT:2}

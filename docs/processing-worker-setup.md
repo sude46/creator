@@ -8,7 +8,7 @@
 
 ## 启动
 
-先安装经过核验的原生 FFprobe、FFmpeg，配置与 API 相同的数据库、私有存储以及 RabbitMQ vhost。沿用 [上传配置](upload-storage-setup.md) 的私有桶要求，封面使用同一个私有桶中的 `covers/` 前缀，应用账号必须拥有对应的读写和删除权限。版本控制必须关闭，源文件的未完成分片上传需配置一天清理；封面上限 1 MiB，使用单对象上传。
+先安装经过核验的原生 FFprobe、FFmpeg，配置与 API 相同的数据库、私有存储以及 RabbitMQ vhost。沿用 [上传配置](upload-storage-setup.md) 的私有桶要求，封面使用同一个私有桶中的 `covers/` 前缀，应用账号必须拥有对应的读写和删除权限。版本控制必须关闭；源文件的未完成分片由 `STORAGE_INCOMPLETE_UPLOAD_CLEANUP` 选择 MinIO 服务端回收或 S3 bucket lifecycle，不能对当前 MinIO 测试版本使用仅 AbortIncompleteMultipartUpload 的规则。封面上限 1 MiB，使用单对象上传。
 
 在 `backend` 目录运行：
 
@@ -85,6 +85,6 @@ $env:CREATOR_FFMPEG_IT_DIR = 'D:\tools\ffmpeg\bin'
 mvn -s maven-settings.xml '-Dmaven.repo.local=../.local/m2' test
 ```
 
-测试 broker 必须为专用实例，账号 creator_test / integration-only-password；除投递模块的 vhost 外还需 creator_worker_it，授权 creator.processing 前缀配置/读/写权限。完整 Worker 用例在非 Web 上下文中实际消费 RabbitMQ，执行真实 FFprobe/FFmpeg，绑定结果并验证毒消息死信；对象存储使用故障可控适配器。SDK 合约端点不是真实 MinIO 部署。使用真库测试时通过 SPRING_DATASOURCE_* 环境变量指定独立测试库，绝不能使用业务数据库。
+测试 broker 必须为专用实例，账号 creator_test / integration-only-password；除投递模块的 vhost 外还需 creator_worker_it，授权 creator.processing 前缀配置/读/写权限。完整 Worker 用例在非 Web 上下文中实际消费 RabbitMQ，执行真实 FFprobe/FFmpeg，绑定结果并验证毒消息死信；对象存储使用故障可控适配器，真实 MinIO 测试镜像另行运行。SDK 合约端点不是真实 MinIO 部署。使用真库测试时通过 SPRING_DATASOURCE_* 环境变量指定独立测试库，绝不能使用业务数据库。
 
 本次工具来自 FFmpeg 官网列出的 Gyan Windows 构建，实测版本 9.0.2，下载压缩包 SHA-256 为 `60F467265B1E312373DBCD92200C2618A74850F98D3D078E94296BB3FA2047BA`；二进制留在忽略的本地缓存，不入 Git。此记录用于复现，不表示未来下载的同名 release URL 内容不变；部署应固定经验证版本并复核许可证及安全更新。

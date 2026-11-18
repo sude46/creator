@@ -91,15 +91,36 @@ class MinioObjectStorageTest {
     }
 
     @Test
-    void bucketWithoutIncompleteMultipartCleanupIsRejected() throws Exception {
+    void minioDefaultCleanupModeDoesNotRequireBucketLifecycle() throws Exception {
         var server = server(false, false, new AtomicReference<>(), new AtomicBoolean(), new AtomicBoolean(true));
         try (var storage = new MinioObjectStorage(properties(server))) {
+            storage.verifyPrivateBucket();
+        } finally { server.stop(0); }
+    }
+
+    @Test
+    void bucketLifecycleModeRejectsMissingIncompleteMultipartCleanup() throws Exception {
+        var server = server(false, false, new AtomicReference<>(), new AtomicBoolean(), new AtomicBoolean(true));
+        try (var storage = new MinioObjectStorage(properties(server, StorageProperties.IncompleteUploadCleanup.BUCKET_LIFECYCLE))) {
             assertThrows(IllegalStateException.class, storage::verifyPrivateBucket);
         } finally { server.stop(0); }
     }
 
+    @Test
+    void bucketLifecycleModeAcceptsOneDayAbortRule() throws Exception {
+        var server = server(false, true, new AtomicReference<>(), new AtomicBoolean(), new AtomicBoolean(true));
+        try (var storage = new MinioObjectStorage(properties(server, StorageProperties.IncompleteUploadCleanup.BUCKET_LIFECYCLE))) {
+            storage.verifyPrivateBucket();
+        } finally { server.stop(0); }
+    }
+
     private StorageProperties properties(HttpServer server) {
-        return new StorageProperties("http://127.0.0.1:" + server.getAddress().getPort(), "test-access", "test-secret-12345", "creator-private", 5);
+        return properties(server, StorageProperties.IncompleteUploadCleanup.MINIO_DEFAULT);
+    }
+
+    private StorageProperties properties(HttpServer server, StorageProperties.IncompleteUploadCleanup cleanup) {
+        return new StorageProperties("http://127.0.0.1:" + server.getAddress().getPort(), "test-access", "test-secret-12345",
+                "creator-private", 5, cleanup);
     }
 
     private HttpServer server(boolean publicPolicy, boolean abortIncomplete, AtomicReference<byte[]> uploaded, AtomicBoolean deleted,

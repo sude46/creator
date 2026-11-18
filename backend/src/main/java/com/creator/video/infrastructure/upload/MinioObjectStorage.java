@@ -16,8 +16,11 @@ import java.util.concurrent.TimeUnit;
 import okhttp3.OkHttpClient;
 import okhttp3.Call;
 import okhttp3.Request;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class MinioObjectStorage implements ObjectStorage, ProcessingStorage, AutoCloseable {
+    private static final Logger LOGGER = LoggerFactory.getLogger(MinioObjectStorage.class);
     private final StorageProperties properties;
     private final OkHttpClient http;
 
@@ -41,18 +44,23 @@ public class MinioObjectStorage implements ObjectStorage, ProcessingStorage, Aut
                     != io.minio.messages.VersioningConfiguration.Status.OFF) {
                 throw new IllegalStateException("Storage bucket versioning must be off for source cleanup");
             }
-            requirement = "one-day incomplete multipart lifecycle";
-            var lifecycle = client.getBucketLifecycle(GetBucketLifecycleArgs.builder().bucket(properties.bucket()).build());
-            boolean abortsIncomplete = lifecycle.rules() != null && lifecycle.rules().stream().anyMatch(rule -> {
-                var filter = rule.filter();
-                boolean coversSources = filter == null || (filter.prefix() != null && "sources/".startsWith(filter.prefix())
-                        && filter.andOperator() == null && filter.tag() == null
-                        && filter.objectSizeLessThan() == null && filter.objectSizeGreaterThan() == null);
-                return coversSources && rule.status() == io.minio.messages.Status.ENABLED
-                        && rule.abortIncompleteMultipartUpload() != null
-                        && rule.abortIncompleteMultipartUpload().daysAfterInitiation() == 1;
-            });
-            if (!abortsIncomplete) throw new IllegalStateException("Storage requires one-day incomplete multipart cleanup for sources");
+            if (properties.incompleteUploadCleanup() == StorageProperties.IncompleteUploadCleanup.BUCKET_LIFECYCLE) {
+                requirement = "one-day incomplete multipart lifecycle";
+                var lifecycle = client.getBucketLifecycle(GetBucketLifecycleArgs.builder().bucket(properties.bucket()).build());
+                boolean abortsIncomplete = lifecycle.rules() != null && lifecycle.rules().stream().anyMatch(rule -> {
+                    var filter = rule.filter();
+                    boolean coversSources = filter == null || (filter.prefix() != null && "sources/".startsWith(filter.prefix())
+                            && filter.andOperator() == null && filter.tag() == null
+                            && filter.objectSizeLessThan() == null && filter.objectSizeGreaterThan() == null);
+                    return coversSources && rule.status() == io.minio.messages.Status.ENABLED
+                            && rule.abortIncompleteMultipartUpload() != null
+                            && rule.abortIncompleteMultipartUpload().daysAfterInitiation() == 1;
+                });
+                if (!abortsIncomplete) throw new IllegalStateException("Storage requires one-day incomplete multipart cleanup for sources");
+            } else {
+                LOGGER.info("Incomplete multipart cleanup relies on MinIO api stale_uploads_expiry (default 24h) and "
+                        + "stale_uploads_cleanup_interval; verify this setting with the storage operator");
+            }
             requirement = "no anonymous bucket policy";
             try {
                 String policy = client.getBucketPolicy(GetBucketPolicyArgs.builder().bucket(properties.bucket()).build());

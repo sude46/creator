@@ -8,11 +8,14 @@
 
 ## 存储准备
 
-Java SDK 固定为 io.minio:minio:8.5.17，其发布 POM 声明 Apache License 2.0。2026-11-17 核对测试候选服务端 RELEASE.2025-04-22T22-12-26Z 的源码 LICENSE 为 GNU AGPL v3；Docker Hub 镜像及 quay.io 拉取分别被拒绝，未完成服务端运行验证。SDK 许可不代表服务端许可；正式服务端版本、镜像来源、许可适用与维护状态须在部署前确认，当前未在 Compose 添加 MinIO 服务。
+Java SDK 固定为 io.minio:minio:8.5.17，其发布 POM 声明 Apache License 2.0。2026-11-18 已在本地运行测试候选服务端 RELEASE.2025-04-22T22-12-26Z，核对源码 LICENSE 为 GNU AGPL v3。SDK 许可不代表服务端许可；正式服务端版本、镜像来源、许可适用与维护状态须在部署前确认，当前未在 Compose 添加 MinIO 服务。
 
 先在独立的 MinIO 服务建立 `creator-private` 桶及专用应用账号。该桶要求无匿名 bucket policy、版本化状态为 OFF；不能使用曾启用后仅 Suspended 的桶。应用启动会读取并验证这些设置，无权限读取或设置不符时拒绝启动。不要用 root 管理凭据作为应用凭据。
 
-桶还须配置以下生命周期规则，回收中断上传留下的未完成分片；删除对象并不能代替清理未完成分片。仅设置 AbortIncompleteMultipartUpload，不给已绑定源文件添加自动过期或转移规则：
+未完成分片的回收方式由 `STORAGE_INCOMPLETE_UPLOAD_CLEANUP` 显式选择：
+
+- `MINIO_DEFAULT`（默认，目标为 MinIO）：依赖 MinIO 服务端 `api stale_uploads_expiry` 和 `stale_uploads_cleanup_interval` 自动回收。应用凭据通常无权读取服务端 admin 配置，因此启动时无法核验；运维必须执行 `mc admin config get <alias> api`，确认 `stale_uploads_expiry` 不大于 24h（当前测试镜像默认 `24h`，扫描间隔 `6h`）。该镜像不接受仅含 AbortIncompleteMultipartUpload 的生命周期规则（返回 400），且会在混合规则中丢弃 abort 字段，因此**不要对 MinIO 配置该 JSON**。
+- `BUCKET_LIFECYCLE`（目标为支持该规则的 S3 兼容存储）：应用读取并强制校验一天期 `AbortIncompleteMultipartUpload` 规则，缺失则拒绝启动。示例：
 
 ```json
 {
@@ -25,7 +28,7 @@ Java SDK 固定为 io.minio:minio:8.5.17，其发布 POM 声明 Apache License 2
 }
 ```
 
-应用需要对配置桶读取位置、策略、版本化、生命周期配置的权限，以及写入/删除 `sources/*` 和完成/中止分片上传的权限。运行时不修改桶策略或生命周期；由运维配置并保持。当前适配针对上述 MinIO 私有桶约束，未验证其他 S3 服务的 ACL/公共访问语义。
+MinIO 默认模式下，应用需要对配置桶读取位置、策略和版本化的权限，以及写入/删除 `sources/*` 和完成/中止分片上传的权限；只有 `BUCKET_LIFECYCLE` 模式还需要读取生命周期配置。运行时不修改桶策略或生命周期；由运维配置并保持。当前适配针对上述 MinIO 私有桶约束，未验证其他 S3 服务的 ACL/公共访问语义。
 
 在启动 Java 的 PowerShell 中设置，值均为示例，实际凭据不入 Git：
 
@@ -35,6 +38,7 @@ $env:STORAGE_ENDPOINT = 'http://127.0.0.1:9000'
 $env:STORAGE_BUCKET = 'creator-private'
 $env:STORAGE_ACCESS_KEY = '替换为应用账号'
 $env:STORAGE_SECRET_KEY = '替换为应用密钥'
+$env:STORAGE_INCOMPLETE_UPLOAD_CLEANUP = 'MINIO_DEFAULT'
 $env:UPLOAD_TEMP_DIRECTORY = 'D:/creator/.local/upload-temp'
 ```
 
@@ -67,6 +71,7 @@ $env:UPLOAD_TEMP_DIRECTORY = 'D:/creator/.local/upload-temp'
 | `UPLOAD_MAX_PENDING` | 5 | 每账号待处理源文件及未回收上传凭据各自的数量上限，范围 1～20 |
 | `UPLOAD_ATTEMPT_SECONDS` | 900 | 上传凭据宽限期；须至少为接收预算 + 240 秒 |
 | `STORAGE_OPERATION_SECONDS` | 60 | 单次存储操作的整体 HTTP 预算，范围 5～120 秒 |
+| `STORAGE_INCOMPLETE_UPLOAD_CLEANUP` | MINIO_DEFAULT | `MINIO_DEFAULT` 依赖 MinIO 服务端过期分片清理；`BUCKET_LIFECYCLE` 强制校验 S3 生命周期规则 |
 
 同账号的最终配额计算在账号行锁内完成，上传预检查之后仍在绑定事务重新检查。未回收凭据包括 UPLOADING、CLEANING，清理失败不会释放这部分名额，避免同一账号积累无界孤立对象。逻辑配额保守统计所有已绑定源文件，当前未实现逻辑删除后释放配额；未绑定对象不计入逻辑配额，但受凭据数量限制。对象存储自身的容量、全局用户规模和备份预算仍须独立配置监测。
 
@@ -76,7 +81,7 @@ $env:UPLOAD_TEMP_DIRECTORY = 'D:/creator/.local/upload-temp'
 
 临时文件在成功/异常路径关闭并删除；每分钟扫描最多 100 个同前缀临时文件，清理超过 1 小时且非本进程活跃的残留。单实例可预估至少并发数 × 文件上限 + 低水位的临时目录容量，Worker 目录及真实存储数据另算。生产应将目录隔离为应用私有目录，设置文件系统容量限制；本机低水位检查不能代表远程 MinIO 磁盘也充足。
 
-SDK 使用 5 MiB 分片，HTTP 连接/读写超时、跨请求整体预算均有界，不把整个视频读入 JVM；复制缓冲为 64 KiB。实际堆峰值、SDK 分片失败、断连回收和慢网时间边界仍需真实 MinIO 压测。
+SDK 使用 5 MiB 分片，HTTP 连接/读写超时、跨请求整体预算均有界，不把整个视频读入 JVM；复制缓冲为 64 KiB。真实 MinIO 传输测试已覆盖私有桶、上传、下载和签名 Range；堆峰值、分片异常、断连回收、慢网和容量边界仍需压测。
 
 ## 事务与补偿
 
@@ -90,4 +95,4 @@ SDK 使用 5 MiB 分片，HTTP 连接/读写超时、跨请求整体预算均有
 
 集成测试使用 H2、真实 Spring Security 及嵌入式 Tomcat；业务存储故障注入使用内存适配器，SDK 测试使用本机 HTTP 契约服务。覆盖并发竞争、配额、清理与绑定互斥、审计回滚、提交成功后响应异常，以及缺身份/CSRF/越权时 body 尚未读取。微型 MP4 测试体仅用于文件头和传输测试，不作为可解码视频样本。
 
-后续模块已在真实 MySQL 8.4.3、RabbitMQ 4.0.5 和 FFmpeg 9.0.2 完成回归，包含 FFprobe 规格验证、投递与处理。真实 MinIO、JDK 21 实际运行、正式服务端选型、生产代理和容量压测仍待完成；前端上传页面尚未接入。新增真实 MinIO 测试及启用条件见 [媒体接口说明](public-media-api.md)，当前未运行，不能用 SDK 合约测试替代。
+历史回归已在 MySQL 8.4.3、RabbitMQ 4.0.5 和 FFmpeg 9.0.2 完成，包含 FFprobe 规格验证、投递与处理。2026-11-18 在 JDK 21 下以测试镜像运行真实 MinIO 上传、下载、签名 Range 和私有桶校验，`MinioMediaIntegrationTest` 通过；正式服务端版本与许可证、生产桶策略、JDK 21 真实 MySQL 全量回归、生产代理和容量压测仍待完成。前端上传页面已接入。真实 MinIO 测试启用条件见 [媒体接口说明](public-media-api.md)，SDK 合约测试不能替代真实服务端验证。
