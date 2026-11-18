@@ -26,9 +26,11 @@ public class MinioObjectStorage implements ObjectStorage, ProcessingStorage, Aut
 
     public MinioObjectStorage(StorageProperties properties) {
         this.properties = properties;
+        // PUT/GET/DELETE used here are idempotent; retry only stale pooled connections.
+        // The operation callTimeout still bounds the total attempt.
         http = new OkHttpClient.Builder().connectTimeout(Duration.ofSeconds(5))
                 .readTimeout(Duration.ofSeconds(15)).writeTimeout(Duration.ofSeconds(15))
-                .callTimeout(Duration.ofSeconds(properties.operationSeconds())).retryOnConnectionFailure(false).build();
+                .callTimeout(Duration.ofSeconds(properties.operationSeconds())).retryOnConnectionFailure(true).build();
     }
 
     @Override
@@ -80,6 +82,7 @@ public class MinioObjectStorage implements ObjectStorage, ProcessingStorage, Aut
             client().putObject(PutObjectArgs.builder().bucket(properties.bucket()).object(objectKey)
                     .stream(input, size, 5L * 1024 * 1024).contentType("video/mp4").build());
         } catch (Exception exception) {
+            LOGGER.warn("Object storage put failed [key={}, failure={}, message={}]", objectKey, exception.getClass().getSimpleName(), exception.getMessage(), exception);
             throw new BusinessException(ErrorCode.SERVICE_UNAVAILABLE);
         }
     }
@@ -89,6 +92,7 @@ public class MinioObjectStorage implements ObjectStorage, ProcessingStorage, Aut
         try {
             client().removeObject(RemoveObjectArgs.builder().bucket(properties.bucket()).object(objectKey).build());
         } catch (Exception exception) {
+            LOGGER.warn("Object storage delete failed [key={}, failure={}, message={}]", objectKey, exception.getClass().getSimpleName(), exception.getMessage(), exception);
             throw new BusinessException(ErrorCode.SERVICE_UNAVAILABLE);
         }
     }

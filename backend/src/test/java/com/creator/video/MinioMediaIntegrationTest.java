@@ -27,7 +27,7 @@ class MinioMediaIntegrationTest {
         String bucket = "creator-media-it-" + UUID.randomUUID();
         var client = MinioClient.builder().endpoint(endpoint).region("us-east-1")
                 .credentials("creator_test", "integration-only-password").build();
-        var properties = new StorageProperties(endpoint, "creator_test", "integration-only-password", bucket, 5);
+        var properties = new StorageProperties(endpoint, "creator_test", "integration-only-password", bucket, 5, StorageProperties.IncompleteUploadCleanup.MINIO_DEFAULT);
         var http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build();
         byte[] content = new byte[4096];
         new Random(1).nextBytes(content);

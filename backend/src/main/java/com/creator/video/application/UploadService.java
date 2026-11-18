@@ -29,6 +29,7 @@ public class UploadService {
             storage.put(attempt.objectKey(), staged.path(), staged.size());
             return transactions.bind(actor, attempt, staged.size(), version);
         } catch (IOException exception) {
+            LOGGER.warn("Upload staging failed [videoId={}, failure={}]", videoId, exception.getClass().getSimpleName());
             if (exception instanceof java.net.SocketTimeoutException) throw new BusinessException(ErrorCode.UPLOAD_TIMEOUT);
             throw new BusinessException(ErrorCode.SERVICE_UNAVAILABLE);
         } finally {

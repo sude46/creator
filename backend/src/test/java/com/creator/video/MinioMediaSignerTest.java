@@ -46,7 +46,7 @@ class MinioMediaSignerTest {
         }
     }
 
-    static StorageProperties storage() { return new StorageProperties("http://storage.internal:9000", "test-access", "test-secret-12345", "creator-private", 5); }
+    static StorageProperties storage() { return new StorageProperties("http://storage.internal:9000", "test-access", "test-secret-12345", "creator-private", 5, StorageProperties.IncompleteUploadCleanup.MINIO_DEFAULT); }
     static Map<String, String> query(URI uri) {
         var result = new HashMap<String, String>();
         for (String part : uri.getRawQuery().split("&")) {
