@@ -36,6 +36,10 @@ class RabbitBrokerIntegrationTest {
         template.setMandatory(true);
         admin = new RabbitAdmin(connection);
         var properties = new DispatchProperties(2, 3, 45, 600, 1, 1, 3600000, 300);
+        // The dedicated test broker may have queues left by an earlier app/test run.
+        // Recreate them so queue arguments are deterministic.
+        admin.deleteQueue(ProcessingTopology.QUEUE);
+        admin.deleteQueue(ProcessingTopology.DEAD_QUEUE);
         for (var declaration : ProcessingTopology.declarations(properties).getDeclarables()) {
             if (declaration instanceof Exchange exchange) admin.declareExchange(exchange);
             else if (declaration instanceof Queue declaredQueue) {
