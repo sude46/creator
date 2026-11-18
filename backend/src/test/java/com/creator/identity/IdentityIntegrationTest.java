@@ -104,7 +104,7 @@ class IdentityIntegrationTest {
         mvc.perform(get("/api/me").session(session)).andExpect(status().isOk())
                 .andExpect(jsonPath("$.username").value("author_one"))
                 .andExpect(jsonPath("$.passwordHash").doesNotExist());
-        mvc.perform(get("/api/admin/overview").session(session)).andExpect(status().isForbidden());
+        mvc.perform(get("/api/admin/categories").session(session)).andExpect(status().isForbidden());
         mvc.perform(post("/api/auth/logout").session(session).with(csrf())).andExpect(status().isNoContent());
         assertTrue(session.isInvalid());
         mvc.perform(get("/api/me")).andExpect(status().isUnauthorized());
@@ -125,7 +125,7 @@ class IdentityIntegrationTest {
     void adminCanAccessAdminEndpointAndWrongPasswordIsRejected() throws Exception {
         bootstrapAdmin.execute("admin_one", "SafePassword123");
         var session = login("admin_one");
-        mvc.perform(get("/api/admin/overview").session(session)).andExpect(status().isOk());
+        mvc.perform(get("/api/admin/categories").session(session)).andExpect(status().isOk());
         mvc.perform(post("/api/auth/login").with(csrf()).param("username", "admin_one")
                 .param("password", "wrong")).andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("LOGIN_FAILED"));
@@ -204,11 +204,11 @@ class IdentityIntegrationTest {
         bootstrapAdmin.execute("studio_admin", "SafePassword123");
         var session = login("studio_admin");
         database.update("UPDATE user_account SET role = 'USER' WHERE username = ?", "studio_admin");
-        mvc.perform(get("/api/admin/overview").session(session)).andExpect(status().isUnauthorized())
+        mvc.perform(get("/api/admin/categories").session(session)).andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("SESSION_INVALID"));
         assertTrue(session.isInvalid());
         var newSession = login("studio_admin");
-        mvc.perform(get("/api/admin/overview").session(newSession)).andExpect(status().isForbidden())
+        mvc.perform(get("/api/admin/categories").session(newSession)).andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("FORBIDDEN"));
     }
 
