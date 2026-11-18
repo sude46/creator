@@ -10,9 +10,13 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.regex.Pattern;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.util.UriUtils;
 
 public class UploadAdmissionFilter extends OncePerRequestFilter {
+    private static final Pattern SOURCE_PATH = Pattern.compile("/api/creator/videos/[0-9]+/source");
     private final UploadAdmission admission;
     private final SecurityResponseWriter writer;
     public UploadAdmissionFilter(UploadAdmission admission, SecurityResponseWriter writer) {
@@ -21,7 +25,18 @@ public class UploadAdmissionFilter extends OncePerRequestFilter {
     }
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return !request.getRequestURI().substring(request.getContextPath().length()).matches("/api/creator/videos/[0-9]+/source");
+        return !SOURCE_PATH.matcher(path(request)).matches();
+    }
+    private static String path(HttpServletRequest request) {
+        String path = request.getServletPath();
+        if (path == null || path.isEmpty()) path = request.getPathInfo();
+        if (path != null && !path.isEmpty()) return path;
+        String raw = request.getRequestURI().substring(request.getContextPath().length());
+        try {
+            return UriUtils.decode(raw, StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException exception) {
+            return raw;
+        }
     }
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
