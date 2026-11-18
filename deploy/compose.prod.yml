@@ -1,0 +1,143 @@
+# Production-like Compose. TLS termination, MinIO and backups are external.
+services:
+  mysql:
+    image: mysql:8.4.3
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:?Set MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER:?Set MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD}
+      TZ: UTC
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:4.0.5-management
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:?Set RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    image: ${BACKEND_IMAGE:-creator-backend:latest}
+    build:
+      context: ../backend
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:?Set MYSQL_DATABASE}?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&characterEncoding=UTF-8
+      DB_USERNAME: ${MYSQL_USER:?Set MYSQL_USER}
+      DB_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER:?Set RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD}
+      UPLOAD_ENABLED: "true"
+      PROCESSING_DISPATCH_ENABLED: "true"
+      MEDIA_ENABLED: "true"
+      UPLOAD_TEMP_DIRECTORY: /work/uploads
+      STORAGE_ENDPOINT: ${STORAGE_ENDPOINT:?Set STORAGE_ENDPOINT}
+      STORAGE_BUCKET: ${STORAGE_BUCKET:?Set STORAGE_BUCKET}
+      STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY:?Set STORAGE_ACCESS_KEY}
+      STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY:?Set STORAGE_SECRET_KEY}
+      STORAGE_INCOMPLETE_UPLOAD_CLEANUP: ${STORAGE_INCOMPLETE_UPLOAD_CLEANUP:-MINIO_DEFAULT}
+      MEDIA_PUBLIC_ENDPOINT: ${MEDIA_PUBLIC_ENDPOINT:?Set MEDIA_PUBLIC_ENDPOINT}
+      MEDIA_LINK_SECONDS: ${MEDIA_LINK_SECONDS:-60}
+      COOKIE_SECURE: "true"
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+    volumes:
+      - api_upload:/work
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=128m
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 256
+    mem_limit: 768m
+    cpus: 1.0
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/api/auth/csrf >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  worker:
+    image: ${BACKEND_IMAGE:-creator-backend:latest}
+    build:
+      context: ../backend
+    environment:
+      SPRING_PROFILES_ACTIVE: worker
+      DB_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:?Set MYSQL_DATABASE}?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&characterEncoding=UTF-8
+      DB_USERNAME: ${MYSQL_USER:?Set MYSQL_USER}
+      DB_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER:?Set RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD}
+      STORAGE_ENDPOINT: ${STORAGE_ENDPOINT:?Set STORAGE_ENDPOINT}
+      STORAGE_BUCKET: ${STORAGE_BUCKET:?Set STORAGE_BUCKET}
+      STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY:?Set STORAGE_ACCESS_KEY}
+      STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY:?Set STORAGE_SECRET_KEY}
+      STORAGE_INCOMPLETE_UPLOAD_CLEANUP: ${STORAGE_INCOMPLETE_UPLOAD_CLEANUP:-MINIO_DEFAULT}
+      FFPROBE_PATH: /usr/bin/ffprobe
+      FFMPEG_PATH: /usr/bin/ffmpeg
+      WORKER_TEMP_DIRECTORY: /work
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    tmpfs:
+      - /work:rw,noexec,nosuid,size=512m
+      - /tmp:rw,noexec,nosuid,size=64m
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 128
+    mem_limit: 768m
+    cpus: 1.0
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    image: ${FRONTEND_IMAGE:-creator-frontend:latest}
+    build:
+      context: ../frontend
+    ports:
+      - "127.0.0.1:8080:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+  rabbitmq_data:
+  api_upload:
