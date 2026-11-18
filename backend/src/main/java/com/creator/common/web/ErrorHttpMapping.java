@@ -14,7 +14,7 @@ public final class ErrorHttpMapping {
             case UNAUTHENTICATED, SESSION_INVALID, LOGIN_FAILED -> HttpStatus.UNAUTHORIZED;
             case FORBIDDEN, CSRF_INVALID -> HttpStatus.FORBIDDEN;
             case AUTH_RATE_LIMITED, AUTH_BUSY, UPLOAD_BUSY -> HttpStatus.TOO_MANY_REQUESTS;
-            case UPLOAD_TOO_LARGE -> HttpStatus.PAYLOAD_TOO_LARGE;
+            case UPLOAD_TOO_LARGE, REQUEST_TOO_LARGE -> HttpStatus.PAYLOAD_TOO_LARGE;
             case UPLOAD_TIMEOUT -> HttpStatus.REQUEST_TIMEOUT;
             case NOT_FOUND -> HttpStatus.NOT_FOUND;
             case METHOD_NOT_ALLOWED -> HttpStatus.METHOD_NOT_ALLOWED;

@@ -241,6 +241,15 @@ class IdentityIntegrationTest {
     }
 
     @Test
+    void oversizedJsonRequestIsRejectedBeforeController() throws Exception {
+        mvc.perform(post("/api/auth/register").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"author_one\",\"password\":\"SafePassword123\",\"padding\":\""
+                                + "x".repeat(1_100_000) + "\"}"))
+                .andExpect(status().is(413))
+                .andExpect(jsonPath("$.code").value("REQUEST_TOO_LARGE"));
+    }
+
+    @Test
     void concurrentRegistrationCreatesExactlyOneAccount() throws Exception {
         var ready = new CountDownLatch(2);
         var start = new CountDownLatch(1);

@@ -13,6 +13,7 @@ public enum ErrorCode {
     AUTH_RATE_LIMITED("请求过于频繁，请稍后再试"),
     AUTH_BUSY("认证服务繁忙，请稍后重试"),
     INVALID_REQUEST("请求格式错误或包含不支持的字段"),
+    REQUEST_TOO_LARGE("请求体超过允许大小"),
     INVALID_PAGE("页码应为 1～1000，单页数量应为 1～50"),
     INVALID_CATEGORY("分类名称需为 1～32 位非控制字符，排序值应为 0～10000"),
     CATEGORY_NAME_TAKEN("分类名称已存在"),

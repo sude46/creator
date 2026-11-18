@@ -18,14 +18,14 @@
 
 | 范围 | 状态 | 证据或剩余边界 |
 | --- | --- | --- |
-| 后端账号、分类、草稿、上传、派发、Worker、审核、发布、媒体授权、收藏 | 已实现 | 历史真实 MySQL + RabbitMQ + FFmpeg 回归；2026-11-18 JDK 21 下 H2 186 项通过 |
+| 后端账号、分类、草稿、上传、派发、Worker、审核、发布、媒体授权、收藏 | 已实现 | 历史真实 MySQL + RabbitMQ + FFmpeg 回归；2026-11-18 JDK 21 下 H2 190 项通过 |
 | 前端登录、公开首页、播放、创作中心、审核、作品管理、分类管理、收藏 | 已接入 | 类型检查和生产构建通过；完整浏览器链路仍待逐项验收 |
 | 真实对象存储 | 测试镜像通过 | 测试镜像私有桶、上传、签名和 Range 通过；正式版本、许可、生产桶策略仍待确认 |
 | JDK 21 实际运行 | 部分验证 | 2026-11-18 H2 全量 180 项在 JDK 21 运行通过；真实 MySQL 与浏览器仍待验证 |
 | Docker Compose 部署 | 未验收 | 本轮仅校验 Compose 配置，未启动应用服务 |
 | 生产安全、容量、备份恢复 | 未验收 | 仅有设计预算和自动化测试，不能替代真实环境压测与演练 |
 
-2026-11-18 检查记录：JDK 21.0.13 下后端测试 186 项通过、9 项条件测试跳过；前端 `npm ci` 和生产构建通过，生产依赖审计 0 个漏洞；真实 MinIO 测试镜像通过。本轮未启动真实 MySQL、RabbitMQ 和浏览器端到端联调，不能将上述结果扩大为生产验收。
+2026-11-18 检查记录：JDK 21.0.13 下后端测试 190 项通过、9 项条件测试跳过；前端 `npm ci` 和生产构建通过，生产依赖审计 0 个漏洞；真实 MinIO 测试镜像通过。本轮未启动真实 MySQL、RabbitMQ 和浏览器端到端联调，不能将上述结果扩大为生产验收。
 
 历史验证段落保留用于追溯；判断当前是否可交付时以本表和各模块文档的最新边界为准。
 
@@ -87,6 +87,8 @@
 配置方法、资源预算、接口与失败处理见 [上传与对象存储接入](docs/upload-storage-setup.md)。上传默认关闭，不需要存储服务即可运行账号、分类和草稿模块；开启后启动时核验私有桶和关闭版本化。未完成分片由 `STORAGE_INCOMPLETE_UPLOAD_CLEANUP` 选择 MinIO 服务端过期清理（默认）或强制校验 S3 bucket lifecycle，检查不通过则停止启动。
 
 `PUT /api/creator/videos/{id}/source` 直接以 `video/mp4` 请求体发送文件，携带 Session Cookie、`X-CSRF-TOKEN` 和 `X-Video-Version`，不使用 FormData。`GET /api/creator/videos/{id}/upload` 查询本人作品是否已绑定源文件及当前版本。响应不返回内部对象键或存储地址。默认文件上限 200 MiB、实例并发 2、每账号 1；文件头初筛通过仅表示等待处理，实际编码/时长仍须后续 Worker 验证。
+
+JSON API 请求体默认最多 1 MiB，可用 `HTTP_MAX_JSON_BYTES` 配置为 1 KiB～10 MiB；超限返回 413 `REQUEST_TOO_LARGE`。`video/mp4` 上传不适用该限制，继续走独立的 200 MiB 上传准入。登录等表单请求受 1 MiB Tomcat form 上限约束。API 数据库连接池默认 8、Worker 默认 2，连接等待默认 5 秒，可用 `DB_MAX_POOL_SIZE`、`WORKER_DB_MAX_POOL_SIZE`、`DB_CONNECTION_TIMEOUT_MS` 调整；这些是候选配置，生产值需结合真实 MySQL 和压测确定。
 
 ### RabbitMQ 可靠投递
 
