@@ -253,7 +253,7 @@ onBeforeUnmount(() => {
     <RouterLink class="back-link" to="/studio">← 我的作品</RouterLink>
     <el-alert v-if="error" :title="error" type="error" :closable="false" role="alert" />
     <el-alert v-if="notice" :title="notice" type="success" :closable="false" role="status" />
-    <div class="studio-heading"><div><p class="eyebrow">作品 #{{ id }}</p><h1>{{ video?.title ?? '作品管理' }}</h1></div><el-button :loading="loading" :disabled="busy || editorBusy || editing" @click="load()">刷新状态</el-button></div>
+    <div class="studio-heading"><div><p class="eyebrow">FRAME ROOM / WORK</p><h1>{{ video?.title ?? '作品管理' }}</h1></div><el-button :loading="loading" :disabled="busy || editorBusy || editing" @click="load()">刷新状态</el-button></div>
     <p v-if="!video && loading" class="empty-state" role="status">正在读取作品…</p>
     <template v-if="video">
       <section class="studio-panel">
