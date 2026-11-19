@@ -10,6 +10,8 @@
 *.iml
 .vscode/
 *.log
+__pycache__/
+*.pyc
 /.local/
 /uploads/
 /tmp/
