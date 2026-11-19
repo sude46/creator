@@ -1,0 +1,62 @@
+# Pre-ICP HTTP demo on port 8080.
+#
+# Mainland China blocks unfiled domains on 80/443, and the host's 80/443 may
+# already be used by another site. This example keeps the existing default
+# server untouched and serves the platform on 8080 for the listed hostnames.
+#
+# 1. Point A records for all server_name values at the host public IP.
+# 2. Use WEB_PORT=8081 when starting deploy/compose.prod.yml so Nginx can bind
+#    8080 while the web container listens on 127.0.0.1:8081.
+# 3. Set MEDIA_PUBLIC_ENDPOINT=http://creator.example.com:8080 and keep the
+#    bucket name in sync with STORAGE_BUCKET (`creator-private` by default).
+# 4. Replace example.com with the real domain, then:
+#      sudo nginx -t && sudo systemctl reload nginx
+#
+# This is temporary HTTP-only demo configuration: cookies are not Secure and
+# there is no TLS. Replace it with deploy/nginx/tls.conf.example after ICP
+# filing and certificate issuance.
+
+server {
+    listen 8080;
+    server_name creator.example.com www.example.com example.com;
+
+    client_max_body_size 220m;
+
+    # MinIO signed media URLs are generated against the public origin and use
+    # the bucket name as the first path segment.
+    location /creator-private/ {
+        proxy_pass http://127.0.0.1:9002;
+        proxy_http_version 1.1;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;
+        proxy_request_buffering off;
+        proxy_read_timeout 180s;
+        proxy_send_timeout 180s;
+    }
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:8081;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_request_buffering off;
+        proxy_read_timeout 180s;
+        proxy_send_timeout 180s;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:8081;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 180s;
+        proxy_send_timeout 180s;
+    }
+}

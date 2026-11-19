@@ -7,8 +7,13 @@
 - `frontend/nginx/default.conf`：SPA、`/api` 反代、220 MiB 请求体上限、基础安全响应头。
 - `deploy/compose.prod.yml`：MySQL、RabbitMQ、API、Worker、Web；API 和 Worker 只读根文件系统、`cap_drop: ALL`、`no-new-privileges`、PID/内存/CPU 限制。
 - `deploy/nginx/tls.conf.example`：外部 TLS 终止示例，包含 HSTS 和安全头。
+- `deploy/nginx/http-8080.conf.example`：备案前 8080 端口 HTTP 演示示例，保留现有 80/443 站点，并把签名媒体路径反代到 MinIO。
 - `deploy/check-minio.sh`：检查 MinIO `api stale_uploads_expiry` 不超过 24h。
 - `.github/workflows/ci.yml`：JDK 21 后端 H2 回归、前端生产构建、生产依赖审计、Compose 配置校验。
+
+## 备案前 8080 演示
+
+大陆机房未备案域名不能使用 80/443。临时演示将宿主机 Nginx 放在 8080，Web 容器通过 `WEB_PORT=8081` 只监听 `127.0.0.1:8081`；示例见 `deploy/nginx/http-8080.conf.example`。`MEDIA_PUBLIC_ENDPOINT` 必须与浏览器访问的公网源一致，媒体签名 URL 才能通过同源 Nginx 访问。2026-11-19 已在主机上以 `creator.llllzzzjjjj.ltd` 的 Host 头完成登录、管理页面、封面签名与媒体读取验证；公网 DNS 当时仍为 NXDOMAIN，需先为所有域名添加指向主机公网 IP 的 A 记录。该模式没有 TLS，不能作为生产验收。
 
 ## 2026-11-18 验证结果
 

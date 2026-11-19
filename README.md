@@ -151,6 +151,15 @@ npm.cmd run dev
 
 生产环境必须配置 HTTPS、`COOKIE_SECURE=true` 和同源反向代理，不直接使用开发服务器。容器镜像与正式媒体存储部署将在对应模块接入时完善。
 
+备案完成前如需用域名临时演示，可使用 8080 端口，不占用现有 80/443 站点：
+
+```bash
+# 宿主机 Nginx 监听 8080，Web 容器改到 127.0.0.1:8081
+WEB_PORT=8081 docker compose -p creator-prod --env-file .env -f deploy/compose.prod.yml up -d
+```
+
+按 `deploy/nginx/http-8080.conf.example` 配置宿主机 Nginx，把其中的 `example.com` 替换为实际域名，并将 `MEDIA_PUBLIC_ENDPOINT` 设为同一公网源（例如 `http://creator.example.com:8080`）。所有 `server_name` 的 A 记录必须指向主机公网 IP；DNS 未生效时域名无法打开。8080 演示仍是明文 HTTP，只用于功能查看，不能替代备案后的 HTTPS 验收。
+
 ## 初始化管理员
 
 注册接口只生成普通用户。首次启动前，在后端终端临时设置：
