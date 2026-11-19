@@ -3,7 +3,8 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import WorkspaceShell from '../components/WorkspaceShell.vue'
 import { adminApi } from '../api/admin'
 import type { ManagedVideo } from '../api/admin'
-import { formatTime, processingLabels } from '../api/creator'
+import { formatTime } from '../api/creator'
+import { adminStatus } from '../api/videoStatus'
 import { useStudioError } from '../composables/useStudioError'
 
 const explain = useStudioError()
@@ -49,6 +50,7 @@ function select(item: ManagedVideo) {
 }
 
 const selected = computed(() => items.value.find(item => item.video.id === selectedId.value))
+const selectedActive = computed(() => !!selected.value && ['PENDING', 'PROCESSING'].includes(selected.value.video.processingStatus))
 
 async function cancel() {
   const item = selected.value
@@ -63,7 +65,7 @@ async function cancel() {
   try {
     const result = await adminApi.cancelProcessing(item.video, explanation)
     if (stopped) return
-    notice.value = `已取消处理，作者可在失败状态下手动重试。当前状态：${processingLabels[result.processingStatus]}。`
+    notice.value = `已取消处理，作者可在失败状态下手动重试。当前状态：${adminStatus(result).label}。`
     selectedId.value = ''
     reason.value = ''
     succeeded = true
@@ -79,36 +81,38 @@ onBeforeUnmount(() => { stopped = true; activeRequest?.abort() })
 <template>
   <WorkspaceShell>
     <div class="studio-heading">
-      <div><p class="eyebrow">FRAME ROOM / PIPELINE</p><h1>处理中作品</h1><p class="muted">查看等待或正在转码的作品；异常时可由管理员取消当前任务并记录原因。</p></div>
+      <div><p class="eyebrow">FRAME ROOM / PIPELINE</p><h1>异常处理</h1><p class="muted">查看处理中或处理失败的作品；处理中可取消，失败任务由作者重试或删除。</p></div>
       <RouterLink to="/admin/videos">已完成作品 →</RouterLink>
     </div>
     <el-alert v-if="error" :title="error" type="error" :closable="false" role="alert" />
     <el-alert v-if="notice" :title="notice" type="success" :closable="false" role="status" />
     <div class="management-layout">
       <section class="studio-panel" :aria-busy="loading" aria-label="处理中作品">
-        <div class="section-heading"><h2>处理中 <span class="count">{{ total }}</span></h2><el-button :loading="loading" :disabled="busy" @click="load()">刷新列表</el-button></div>
+        <div class="section-heading"><h2>处理任务 <span class="count">{{ total }}</span></h2><el-button :loading="loading" :disabled="busy" @click="load()">刷新列表</el-button></div>
         <p v-if="loading" role="status">正在读取处理任务…</p>
         <button v-for="item in items" v-else :key="item.video.id" class="managed-row" :class="{ active: selectedId === item.video.id }" :disabled="busy" :aria-pressed="selectedId === item.video.id" @click="select(item)">
-          <strong>{{ item.video.title }}</strong><span>作品 #{{ item.video.id }} · 作者 #{{ item.ownerId }} · {{ processingLabels[item.video.processingStatus] }} · 任务 {{ item.video.taskState || '—' }}</span>
+          <strong>{{ item.video.title }}</strong><span>作品 #{{ item.video.id }} · 作者 #{{ item.ownerId }} · {{ adminStatus(item.video).label }} · 任务 {{ item.video.taskState || '—' }}</span>
         </button>
-        <p v-if="!loading && !error && !items.length" class="empty-state">当前没有等待或处理中的作品。</p>
+        <p v-if="!loading && !error && !items.length" class="empty-state">当前没有处理中或处理失败的作品。</p>
         <div class="page-controls"><el-button :disabled="loading || busy || page <= 1" @click="load(page - 1)">上一页</el-button><span>{{ page }}</span><el-button :disabled="loading || busy || page * 20 >= total || page >= 1000" @click="load(page + 1)">下一页</el-button></div>
       </section>
       <section class="studio-panel" aria-label="取消处理">
         <div class="section-heading"><h2>取消处理</h2></div>
         <template v-if="selected">
           <h3>{{ selected.video.title }}</h3>
-          <p class="muted">作品 #{{ selected.video.id }} · 当前状态 {{ processingLabels[selected.video.processingStatus] }} · 版本 {{ selected.video.version }}</p>
+          <p class="muted">作品 #{{ selected.video.id }} · {{ adminStatus(selected.video).label }} · 版本 {{ selected.video.version }}</p>
           <dl class="video-facts"><div><dt>任务状态</dt><dd>{{ selected.video.taskState || '—' }}</dd></div><div><dt>执行代次</dt><dd>{{ selected.video.processingGeneration }}</dd></div><div><dt>已尝试</dt><dd>{{ selected.video.executionAttempts }} 次</dd></div><div><dt>下次重试</dt><dd>{{ selected.video.nextAttemptAt ? formatTime(selected.video.nextAttemptAt) : '—' }}</dd></div><div><dt>失败码</dt><dd>{{ selected.video.failureCode || '—' }}</dd></div></dl>
           <p class="video-description">{{ selected.video.description || '作者未填写简介。' }}</p>
-          <form class="studio-form" @submit.prevent="cancel">
+          <p class="muted">{{ adminStatus(selected.video).detail }}</p>
+          <form v-if="selectedActive" class="studio-form" @submit.prevent="cancel">
             <label for="cancel-reason">取消原因（必填）</label>
             <textarea id="cancel-reason" v-model="reason" required maxlength="500" rows="4" :disabled="busy" />
             <p class="muted">取消会停止当前任务并保留源文件；作者之后可以重新发起处理。</p>
             <div class="inline-actions"><el-button type="danger" native-type="submit" :loading="busy" :disabled="loading">确认取消处理</el-button></div>
           </form>
+          <p v-else class="muted">当前任务已失败或已结束。作者可在作品详情重试；管理员可查看诊断后决定是否删除作品。</p>
         </template>
-        <p v-else class="empty-state">从左侧选择一部处理中的作品。</p>
+        <p v-else class="empty-state">从左侧选择一部处理任务。</p>
       </section>
     </div>
   </WorkspaceShell>

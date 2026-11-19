@@ -29,10 +29,10 @@ public interface PublicationMapper {
     long managedCount();
 
     @Select("SELECT " + CreatorVideoMapper.COLUMNS + CreatorVideoMapper.FROM
-            + " WHERE v.processing_status IN ('PENDING','PROCESSING') AND v.deleted_at IS NULL ORDER BY v.id DESC LIMIT #{limit} OFFSET #{offset}")
+            + " WHERE v.processing_status IN ('PENDING','PROCESSING','FAILED') AND v.deleted_at IS NULL ORDER BY v.id DESC LIMIT #{limit} OFFSET #{offset}")
     List<CreatorVideo> processing(@Param("limit") int limit, @Param("offset") int offset);
 
-    @Select("SELECT COUNT(*) FROM video WHERE processing_status IN ('PENDING','PROCESSING') AND deleted_at IS NULL")
+    @Select("SELECT COUNT(*) FROM video WHERE processing_status IN ('PENDING','PROCESSING','FAILED') AND deleted_at IS NULL")
     long processingCount();
 
     @Update("UPDATE video SET publication_status = 'OFFLINE', published_at = NULL, version = version + 1, updated_at = CURRENT_TIMESTAMP(6)"

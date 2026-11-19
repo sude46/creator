@@ -6,10 +6,12 @@ export type Decision = 'APPROVED' | 'REJECTED'
 export type AdminModerationRecord = { id: string; actorId: string; action: string; reason: string; createdAt: string }
 export type AdminUser = { id: string; username: string; role: 'USER' | 'ADMIN'; status: 'ACTIVE' | 'DISABLED' }
 export type AuditRecord = { id: string; actorId: string; action: string; targetType: string; targetId: string; reason: string | null; requestId: string | null; createdAt: string }
+export type AdminOverview = { pendingReviews: string; failedProcessing: string; todayUsers: string; recentDecisions: { id: string; videoId: string; reviewerId: string; outcome: 'APPROVED' | 'REJECTED'; reason: string; title: string; createdAt: string }[] }
 
 const boundedRead = <Result>(path: string, signal: AbortSignal) => request<Result>(path, { signal: AbortSignal.any([signal, AbortSignal.timeout(30000)]) })
 
 export const adminApi = {
+  overview: (signal: AbortSignal) => boundedRead<AdminOverview>('/admin/overview', signal),
   audit: (page: number, filters: { actorId?: string; action?: string; targetType?: string; from?: string; to?: string }, signal: AbortSignal) => {
     const query = new URLSearchParams({ page: String(page), size: '20' })
     for (const [key, value] of Object.entries(filters)) if (value) query.set(key, value)

@@ -155,7 +155,7 @@ onBeforeUnmount(() => {
   <WorkspaceShell>
     <div class="studio-heading">
       <div><p class="eyebrow">FRAME ROOM / MODERATION</p><h1>作品管理</h1><p class="muted">管理处理完成的作品，查看封禁与解禁记录。</p></div>
-      <div class="inline-actions"><RouterLink to="/admin/reviews">待审核队列 →</RouterLink><RouterLink to="/admin/processing">处理中作品 →</RouterLink></div>
+      <div class="inline-actions"><RouterLink to="/admin/reviews">待审核队列 →</RouterLink><RouterLink to="/admin/processing">异常处理 →</RouterLink></div>
     </div>
     <el-alert v-if="error" :title="error" type="error" :closable="false" role="alert" />
     <div class="management-layout">

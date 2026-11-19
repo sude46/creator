@@ -11,6 +11,7 @@ export const router = createRouter({
     { path: '/', component: WorkspaceView },
     { path: '/studio', component: () => import('../views/CreatorCenterView.vue') },
     { path: '/studio/:id', component: () => import('../views/CreatorVideoView.vue') },
+    { path: '/admin', component: () => import('../views/AdminOverviewView.vue') },
     { path: '/admin/reviews', component: () => import('../views/AdminReviewView.vue') },
     { path: '/admin/videos', component: () => import('../views/AdminVideosView.vue') },
     { path: '/admin/processing', component: () => import('../views/AdminProcessingView.vue') },
@@ -30,6 +31,6 @@ router.beforeEach(async (to) => {
     if (!to.meta.guest) return '/login'
   }
   if (!to.meta.guest && !auth.user.value) return '/login'
-  if (to.path.startsWith('/admin/') && auth.user.value?.role !== 'ADMIN') return '/'
+  if ((to.path === '/admin' || to.path.startsWith('/admin/')) && auth.user.value?.role !== 'ADMIN') return '/'
   if (to.meta.guest && auth.user.value) return '/'
 })
