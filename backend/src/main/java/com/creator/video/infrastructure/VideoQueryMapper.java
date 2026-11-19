@@ -32,6 +32,25 @@ public interface VideoQueryMapper {
     @Select("SELECT " + COLUMNS + FROM + " WHERE " + PUBLIC + " AND v.id = #{videoId}")
     PublicVideo findPublic(long videoId);
 
+    @Select("<script>SELECT " + COLUMNS + FROM + " WHERE " + PUBLIC + " AND v.id = #{videoId}" + FILTER + "</script>")
+    PublicVideo findPublicInSearch(@Param("videoId") long videoId, @Param("title") String title,
+            @Param("pattern") String pattern, @Param("categoryId") Long categoryId);
+
+    @Select("<script>SELECT * FROM (SELECT " + COLUMNS + FROM + " WHERE " + PUBLIC + FILTER
+            + " AND (v.published_at &gt; #{publishedAt} OR (v.published_at = #{publishedAt} AND v.id &gt; #{videoId}))"
+            + " ORDER BY v.published_at ASC, v.id ASC LIMIT #{limit}) newer"
+            + " ORDER BY newer.published_at DESC, newer.id DESC</script>")
+    List<PublicVideo> findNewer(@Param("title") String title, @Param("pattern") String pattern,
+            @Param("categoryId") Long categoryId, @Param("publishedAt") java.time.LocalDateTime publishedAt,
+            @Param("videoId") long videoId, @Param("limit") int limit);
+
+    @Select("<script>SELECT " + COLUMNS + FROM + " WHERE " + PUBLIC + FILTER
+            + " AND (v.published_at &lt; #{publishedAt} OR (v.published_at = #{publishedAt} AND v.id &lt; #{videoId}))"
+            + " ORDER BY v.published_at DESC, v.id DESC LIMIT #{limit}</script>")
+    List<PublicVideo> findOlder(@Param("title") String title, @Param("pattern") String pattern,
+            @Param("categoryId") Long categoryId, @Param("publishedAt") java.time.LocalDateTime publishedAt,
+            @Param("videoId") long videoId, @Param("limit") int limit);
+
     @Select("<script>SELECT " + COLUMNS + FROM + " WHERE " + PUBLIC
             + " AND v.id IN <foreach collection='videoIds' item='videoId' open='(' separator=',' close=')'>#{videoId}</foreach></script>")
     List<PublicVideo> findPublicByIds(@Param("videoIds") List<Long> videoIds);

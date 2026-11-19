@@ -33,6 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class PublicMediaIntegrationTest {
     @Autowired JdbcTemplate database;
     @Autowired PublicVideoService publicVideos;
+    @Autowired com.creator.video.application.PublicVideoAnchorService anchorVideos;
     @Autowired CreatorVideoService creatorVideos;
     @Autowired DraftService drafts;
     @Autowired ReviewService reviews;
@@ -113,6 +114,23 @@ class PublicMediaIntegrationTest {
         assertInvisible(id);
         assertEquals(ErrorCode.NOT_FOUND, failure(() -> grant(author, id, MediaPurpose.OWNER_PREVIEW, MediaKind.SOURCE)));
         assertTrue(signer.calls.isEmpty());
+    }
+
+    @Test
+    void anchoredWindowReturnsAnchorIndexAndFallsBackForUnknownIds() {
+        long first = published("anchor one");
+        long second = published("anchor two");
+        published("anchor three");
+        var window = anchorVideos.anchor(new VideoSearch("", null), first, 1, 1);
+        assertEquals(1, window.anchorIndex());
+        assertEquals(first, window.items().get(window.anchorIndex()).id());
+        assertEquals(second, window.items().getFirst().id());
+        assertTrue(window.hasBefore());
+        assertFalse(window.hasAfter());
+        var missing = anchorVideos.anchor(new VideoSearch("", null), 999999, 3, 4);
+        assertNull(missing.anchorIndex());
+        assertFalse(missing.hasBefore());
+        assertFalse(missing.hasAfter());
     }
 
     @Test
