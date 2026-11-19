@@ -20,7 +20,7 @@ export const router = createRouter({
     { path: '/admin/audit', component: () => import('../views/AdminAuditView.vue') },
     { path: '/videos/:id', component: () => import('../views/PublicVideoView.vue') },
     { path: '/favorites', component: () => import('../views/FavoritesView.vue') },
-    { path: '/:pathMatch(.*)*', redirect: '/' },
+    { path: '/:pathMatch(.*)*', component: () => import('../views/NotFoundView.vue') },
   ],
 })
 
