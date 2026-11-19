@@ -12,7 +12,7 @@ export type CreatorVideo = Draft & {
   taskState: string | null; failureCode: string | null; executionAttempts: number
   nextAttemptAt: string | null; retryAllowed: boolean; durationMillis: number | null
   width: number | null; height: number | null; reviewRound: number
-  reviewSubmittedAt: string | null; publishedAt: string | null
+  reviewSubmittedAt: string | null; publishedAt: string | null; hasCover: boolean; coverKey: string | null
 }
 export type ReviewRecord = { id: string; reviewRound: number; outcome: string; reason: string; title: string; createdAt: string }
 export type ModerationRecord = { id: string; action: string; reason: string; createdAt: string }

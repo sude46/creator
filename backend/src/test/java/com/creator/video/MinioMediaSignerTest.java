@@ -16,7 +16,7 @@ class MinioMediaSignerTest {
     @Test
     void presignUsesBrowserEndpointRegionShortExpiryAndSignedResponseHeadersWithoutNetwork() {
         var storage = storage();
-        var properties = new MediaProperties("https://media.example.invalid:9443", "test-region", 60);
+        var properties = new MediaProperties("https://media.example.invalid:9443", "test-region", 60, 300);
         var clock = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC);
         var signer = new MinioMediaSigner(storage, properties, clock);
         var grant = signer.sign(new MediaTarget("sources/private file.mp4", 100), MediaKind.SOURCE);
@@ -35,7 +35,11 @@ class MinioMediaSignerTest {
         assertEquals(clock.instant().plusSeconds(60), grant.expiresAt());
         assertFalse(grant.toString().contains("X-Amz"));
         assertFalse(new MediaTarget("private-key", 100).toString().contains("private-key"));
-        assertEquals("image/jpeg", query(URI.create(signer.sign(new MediaTarget("covers/cover.jpg", 10), MediaKind.COVER).url())).get("response-content-type"));
+        var cover = signer.sign(new MediaTarget("covers/cover.jpg", 10), MediaKind.COVER);
+        var coverQuery = query(URI.create(cover.url()));
+        assertEquals("300", coverQuery.get("X-Amz-Expires"));
+        assertEquals("image/jpeg", coverQuery.get("response-content-type"));
+        assertEquals(clock.instant().plusSeconds(300), cover.expiresAt());
         var download = signer.sign(new MediaTarget("sources/private file.mp4", 100), MediaKind.SOURCE, true);
         assertEquals("attachment; filename=\"video.mp4\"", query(URI.create(download.url())).get("response-content-disposition"));
     }
@@ -44,7 +48,7 @@ class MinioMediaSignerTest {
     void publicEndpointCannotContainCredentialsPrefixOrQuery() {
         for (String endpoint : List.of("https://name:password@example.test", "https://example.test/prefix", "https://example.test?token=1",
                 "file:///tmp/object", "https://example.test#fragment")) {
-            assertThrows(IllegalArgumentException.class, () -> new MinioMediaSigner(storage(), new MediaProperties(endpoint, "us-east-1", 60), Clock.systemUTC()));
+            assertThrows(IllegalArgumentException.class, () -> new MinioMediaSigner(storage(), new MediaProperties(endpoint, "us-east-1", 60, 300), Clock.systemUTC()));
         }
     }
 

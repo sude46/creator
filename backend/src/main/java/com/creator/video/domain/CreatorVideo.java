@@ -9,7 +9,7 @@ public record CreatorVideo(long id, long ownerId, long categoryId, String title,
         String processingStatus, String reviewStatus, String publicationStatus, String taskState,
         ProcessingFailure failureCode, int executionAttempts, LocalDateTime nextAttemptAt,
         Long durationMillis, Integer mediaWidth, Integer mediaHeight, long reviewRound,
-        LocalDateTime reviewSubmittedAt, LocalDateTime publishedAt) {
+        LocalDateTime reviewSubmittedAt, LocalDateTime publishedAt, String coverKey) {
     public boolean retryAllowed() {
         boolean failed = "FAILED".equals(taskState) && failureCode != null && failureCode.retryable();
         boolean cancelled = "CANCELLED".equals(taskState);

@@ -3,6 +3,7 @@ import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { onBeforeRouteLeave, useRouter } from 'vue-router'
 import { creatorApi } from '../api/creator'
 import { creatorStatus } from '../api/videoStatus'
+import { cachedCover } from '../api/coverCache'
 import type { CreatorVideo, Draft } from '../api/creator'
 import WorkspaceShell from '../components/WorkspaceShell.vue'
 import VideoEditor from '../components/VideoEditor.vue'
@@ -27,10 +28,10 @@ function coverTone(id: string) {
 }
 
 async function loadCovers(items: CreatorVideo[]) {
-  await Promise.allSettled(items.filter(video => video.sourceUploaded && video.processingStatus === 'READY').map(async video => {
+  await Promise.allSettled(items.filter(video => video.sourceUploaded && video.processingStatus === 'READY' && video.hasCover).map(async video => {
     try {
-      const signed = await creatorApi.cover(video.id)
-      covers.value = { ...covers.value, [video.id]: signed.url }
+      const entry = await cachedCover(`creator:${video.id}:${video.coverKey ?? ''}`, () => creatorApi.cover(video.id))
+      covers.value = { ...covers.value, [video.id]: entry.url }
     } catch { /* processed videos without a readable cover keep the placeholder */ }
   }))
 }

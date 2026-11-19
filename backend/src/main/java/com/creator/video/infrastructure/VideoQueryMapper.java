@@ -15,7 +15,9 @@ public interface VideoQueryMapper {
             + " AND EXISTS (SELECT 1 FROM processing_task task WHERE task.video_id = v.id AND task.generation = v.processing_generation AND task.state = 'SUCCEEDED')";
     String PUBLIC = READY + " AND v.review_status = 'APPROVED' AND v.publication_status = 'PUBLISHED' AND v.published_at IS NOT NULL";
     String COLUMNS = "v.id, v.owner_id, owner.username AS author_name, v.category_id, category.name AS category_name,"
-            + " v.title, v.description, v.duration_millis, v.media_width, v.media_height, v.published_at";
+            + " v.title, v.description, v.duration_millis, v.media_width, v.media_height, v.published_at,"
+            + " (SELECT cover.object_key FROM media_asset cover WHERE cover.video_id = v.id AND cover.kind = 'COVER'"
+            + " ORDER BY cover.id DESC LIMIT 1) AS cover_key";
     String FILTER = "<if test='title != null'> AND v.title LIKE #{pattern} ESCAPE '!'</if>"
             + "<if test='categoryId != null'> AND v.category_id = #{categoryId}</if>";
 

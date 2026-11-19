@@ -48,7 +48,8 @@ public class CosMediaSigner implements MediaSigner {
 
     @Override
     public SignedMedia sign(MediaTarget target, MediaKind kind, boolean attachment) {
-        Instant expires = clock.instant().plusSeconds(properties.linkSeconds());
+        int seconds = kind == MediaKind.COVER ? properties.coverLinkSeconds() : properties.linkSeconds();
+        Instant expires = clock.instant().plusSeconds(seconds);
         String disposition = attachment
                 ? "attachment; filename=\"" + (kind == MediaKind.SOURCE ? "video.mp4" : "cover.jpg") + "\""
                 : "inline";

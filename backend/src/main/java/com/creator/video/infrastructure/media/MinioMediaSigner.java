@@ -38,13 +38,14 @@ public class MinioMediaSigner implements MediaSigner {
 
     @Override
     public SignedMedia sign(MediaTarget target, MediaKind kind, boolean attachment) {
-        Instant expires = clock.instant().plusSeconds(properties.linkSeconds());
+        int seconds = kind == MediaKind.COVER ? properties.coverLinkSeconds() : properties.linkSeconds();
+        Instant expires = clock.instant().plusSeconds(seconds);
         String disposition = attachment
                 ? "attachment; filename=\"" + (kind == MediaKind.SOURCE ? "video.mp4" : "cover.jpg") + "\""
                 : "inline";
         try {
             String url = client.getPresignedObjectUrl(GetPresignedObjectUrlArgs.builder().method(Method.GET)
-                    .bucket(storage.bucket()).object(target.objectKey()).expiry(properties.linkSeconds())
+                    .bucket(storage.bucket()).object(target.objectKey()).expiry(seconds)
                     .extraQueryParams(Map.of("response-content-type", kind.contentType(),
                             "response-content-disposition", disposition,
                             "response-cache-control", "private, no-store")).build());

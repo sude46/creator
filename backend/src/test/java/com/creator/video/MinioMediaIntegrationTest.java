@@ -42,7 +42,7 @@ class MinioMediaIntegrationTest {
             assertArrayEquals(content, Files.readAllBytes(downloaded));
             var coverFile = Files.write(directory.resolve("cover.jpg"), cover);
             storage.uploadCover("covers/sample.jpg", coverFile, cover.length, System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(10));
-            var signer = new MinioMediaSigner(properties, new MediaProperties(endpoint, "us-east-1", 60), Clock.systemUTC());
+            var signer = new MinioMediaSigner(properties, new MediaProperties(endpoint, "us-east-1", 60, 300), Clock.systemUTC());
             var signed = signer.sign(new MediaTarget("sources/sample.mp4", content.length), MediaKind.SOURCE);
             var range = http.send(HttpRequest.newBuilder(URI.create(signed.url())).timeout(Duration.ofSeconds(5))
                     .header("Range", "bytes=32-63").build(), HttpResponse.BodyHandlers.ofByteArray());

@@ -24,6 +24,8 @@
 
 授权查询先于签名；无权限时不调用签名器。签名在数据库事务外执行，没有对象存储 HTTP 请求持有数据库锁。列表和详情只读；签发没有业务状态变更或补偿记录，重复请求可得到新的短期链接。存储关闭时，合法目标返回 503，越权或不可见目标仍返回 404。
 
+列表和详情现在返回 `hasCover` 与 `coverKey`，不返回 `coverUrl`。封面仍由卡片进入视口后单独签名；封面 TTL 由 `MEDIA_COVER_LINK_SECONDS` 控制，默认 300 秒，源文件/播放保持 `MEDIA_LINK_SECONDS`（默认 120 秒）。前端并发上限为 4，缓存到 `expiresAt - 30s` 再重签。
+
 腾讯 COS provider 使用原生 COS SDK 生成 virtual-hosted 签名 URL；`MEDIA_PUBLIC_ENDPOINT` 必须等于 `https://{bucket}.cos.{region}.myqcloud.com`。媒体直连 COS 时由桶 CORS 允许应用来源的 GET/HEAD；不能用 MinIO SDK 的 path-style endpoint 代替。2026-11-19 已实测签名 URL 的 Range 206、匿名访问 403 和 Firefox 播放。
 
 授权只保证查询时刻的状态。查询与签名之间可能发生编辑或下架；已签发链接是持有者可使用的临时凭证，后续账号禁用、编辑撤下、退出或审核完成不能立即撤销。过期约束新请求，不能中断已经开始的下载，也不能撤回已保存的内容。需要即时撤销时必须另做媒体网关。[上下架/封禁管理接口](publication-moderation-api.md) 已在后续模块接入，包含真实用例操作后公开查询和新签发拒绝的回归；真实浏览器与存储验证仍待完成。
