@@ -47,4 +47,4 @@ V10 追加 video_favorite，含自增 ID、user_id、video_id、created_at；唯
 
 FavoriteIntegrationTest 覆盖重复添加/取消与排序、用户及管理员边界、私有目标/资源缺失、下架/编辑/封禁/停用/删除/旧代次隐藏、分类停用语义、稳定分页和不可用占位、内部身份复核、写入后故障回滚、HTTP CSRF 和敏感字段排除，以及三次并发重复添加、收藏与下架竞争。测试包含真实迁移/Mapper/过滤链，媒体数据为数据库样本；不代表真实存储或浏览器播放已验收。
 
-2026-11-17：H2 专项 14 项通过；最终真实 MySQL 8.4.3 + RabbitMQ 4.0.5 + FFmpeg 9.0.2 全量 180 项，179 通过、1 项真实 MinIO 跳过、零失败/错误。V10 在 MySQL 实际迁移通过，收藏专项 14 项在全量真库回归中全部通过。运行使用 JDK 23 编译到 Java 21，Flyway 已升级到 13.12.2，MySQL 8.4 迁移通过。2026-11-18 已在 JDK 21 下完成 MySQL 8.4.3、RabbitMQ 4.0.5、FFmpeg 和 MinIO 测试镜像全量 205 项回归，0 跳过；Firefox/Chromium 浏览器测试完成，生产容量仍待验证。
+2026-11-17：H2 专项 14 项通过；最终真实 MySQL 8.4.3 + RabbitMQ 4.0.5 + FFmpeg 9.0.2 全量 180 项，179 通过、1 项真实 MinIO 跳过、零失败/错误。V10 在 MySQL 实际迁移通过，收藏专项 14 项在全量真库回归中全部通过。运行使用 JDK 23 编译到 Java 21，Flyway 已升级到 13.12.2，MySQL 8.4 迁移通过。2026-11-18 已在 JDK 21 下完成 MySQL 8.4.3、RabbitMQ 4.0.5、FFmpeg 和 MinIO 测试镜像全量 206 项回归，0 跳过；Firefox/Chromium 浏览器测试完成，生产容量仍待验证。

@@ -38,7 +38,7 @@
 - Web 封面从 COS 加载；播放器从 COS 播放，Firefox `readyState=4`
 - 新建作品上传到 COS，Worker 从 COS 下载、生成封面并上传回 COS；作品达到待审核状态后可作者预览
 - 删除作品后 `video_deletion.state=DONE`，对象清理使用 COS provider
-- 全量真实依赖回归 205 项、0 失败/错误/跳过（包含真实 COS 集成测试）
+- 全量真实依赖回归 206 项、0 失败/错误/跳过（包含真实 COS 集成测试）
 
 边界：未做跨地域复制、COS 正式容量/配额压测、CDN、生命周期规则变更自动化和密钥轮换演练。
 
@@ -107,7 +107,7 @@ OK: stale_uploads_expiry=24h, stale_uploads_cleanup_interval=6h
 
 ### Flyway
 
-Flyway 从 11.7.2 升级到 13.12.2。MySQL 8.4.3 迁移实际通过，启动日志不再出现“MySQL 8.4 超出已测试版本范围”的警告。升级后全量 205 项真实依赖测试通过。
+Flyway 从 11.7.2 升级到 13.12.2。MySQL 8.4.3 迁移实际通过，启动日志不再出现“MySQL 8.4 超出已测试版本范围”的警告。升级后全量 206 项真实依赖测试通过。
 
 ## 仍需生产环境确认
 
