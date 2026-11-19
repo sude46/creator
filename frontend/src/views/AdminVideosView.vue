@@ -4,7 +4,8 @@ import { onBeforeRouteLeave } from 'vue-router'
 import WorkspaceShell from '../components/WorkspaceShell.vue'
 import { adminApi } from '../api/admin'
 import type { AdminModerationRecord, ManagedVideo } from '../api/admin'
-import { formatTime, publicationLabels, reviewLabels } from '../api/creator'
+import { formatTime } from '../api/creator'
+import { adminStatus } from '../api/videoStatus'
 import { useStudioError } from '../composables/useStudioError'
 
 const explain = useStudioError()
@@ -162,7 +163,7 @@ onBeforeUnmount(() => {
         <div class="section-heading"><h2>作品列表 <span class="count">{{ total }}</span></h2><el-button :loading="loading" :disabled="busy" @click="load()">刷新列表</el-button></div>
         <p v-if="loading" role="status">正在读取作品…</p>
         <button v-for="item in items" :key="item.video.id" class="managed-row" :class="{ active: selectedId === item.video.id }" :disabled="busy" :aria-pressed="selectedId === item.video.id" @click="select(item.video.id)">
-          <strong>{{ item.video.title }}</strong><span>作者 #{{ item.ownerId }} · {{ item.video.moderationBlocked ? '已封禁' : publicationLabels[item.video.publicationStatus] }}</span>
+          <strong>{{ item.video.title }}</strong><span>作者 #{{ item.ownerId }} · {{ adminStatus(item.video).label }}</span>
         </button>
         <p v-if="!loading && !error && !items.length" class="empty-state">本页没有处理完成的作品。</p>
         <div class="page-controls"><el-button :disabled="loading || busy || page <= 1" @click="load(page - 1)">上一页</el-button><span>{{ page }}</span><el-button :disabled="loading || busy || !!error || page * 20 >= total || page >= 1000" @click="load(page + 1)">下一页</el-button></div>
@@ -175,7 +176,7 @@ onBeforeUnmount(() => {
         <template v-if="selected">
           <h3>{{ selected.video.title }}</h3>
           <p class="muted">作品 #{{ selected.video.id }} · 作者 #{{ selected.ownerId }} · 版本 {{ selected.video.version }}</p>
-          <div class="status-group"><el-tag :type="selected.video.moderationBlocked ? 'danger' : 'info'">{{ selected.video.moderationBlocked ? '已封禁' : '未封禁' }}</el-tag><el-tag>{{ reviewLabels[selected.video.reviewStatus] }}</el-tag><el-tag>{{ publicationLabels[selected.video.publicationStatus] }}</el-tag></div>
+          <div class="status-group"><el-tag :type="adminStatus(selected.video).tone">{{ adminStatus(selected.video).label }}</el-tag><el-tag type="info">{{ adminStatus(selected.video).visibilityLabel }}</el-tag></div><p class="muted">{{ adminStatus(selected.video).detail }}</p>
           <p class="video-description">{{ selected.video.description || '作者未填写简介。' }}</p>
           <form class="studio-form" @submit.prevent="moderate">
             <label for="moderation-reason">{{ selected.video.moderationBlocked ? '解禁原因' : '封禁原因' }}（必填）</label>

@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
-import { creatorApi, failureLabels, formatTime, processingLabels, publicationLabels, reviewLabels } from '../api/creator'
+import { creatorApi, formatTime } from '../api/creator'
 import type { CreatorCommand, CreatorVideo, ModerationRecord, ReviewRecord, SignedMedia } from '../api/creator'
 import { ApiFailure } from '../api/http'
+import { validateVideoFile } from '../api/uploadFile'
+import { creatorStatus } from '../api/videoStatus'
 import WorkspaceShell from '../components/WorkspaceShell.vue'
 import VideoEditor from '../components/VideoEditor.vue'
 import { useStudioError } from '../composables/useStudioError'
@@ -36,6 +38,8 @@ const moderationTotal = ref(0)
 const historyError = ref('')
 const historyLoading = ref(false)
 const explain = useStudioError()
+const display = computed(() => video.value ? creatorStatus(video.value) : undefined)
+const uploadPanel = ref<HTMLElement>()
 let activeRequest: AbortController | undefined
 let uploadRequest: AbortController | undefined
 let historyRequest: AbortController | undefined
@@ -122,12 +126,16 @@ async function command(action: CreatorCommand) {
     else error.value += '。请先刷新状态确认结果，不要连续重复提交。'
   } finally { busy.value = false; schedule() }
 }
+function focusUpload() {
+  uploadPanel.value?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  fileInput.value?.focus()
+}
 function chooseFile(event: Event) {
   file.value = undefined
   const selected = (event.target as HTMLInputElement).files?.[0]
   if (!selected) return
-  if (!/\.mp4$/i.test(selected.name) || (selected.type && selected.type !== 'video/mp4')) error.value = '请选择 MP4 文件，实际编码与内容还需服务端检查。'
-  else if (selected.size === 0 || selected.size > 200 * 1024 * 1024) error.value = '文件不能为空，且不能超过 200 MiB。'
+  const problem = validateVideoFile(selected)
+  if (problem) error.value = problem
   else { file.value = selected; error.value = '' }
 }
 async function confirmUpload() {
@@ -249,28 +257,30 @@ onBeforeUnmount(() => {
     <p v-if="!video && loading" class="empty-state" role="status">正在读取作品…</p>
     <template v-if="video">
       <section class="studio-panel">
-        <div class="status-group"><el-tag :type="video.processingStatus === 'FAILED' ? 'danger' : 'info'">{{ video.sourceUploaded ? processingLabels[video.processingStatus] : '等待上传' }}</el-tag><el-tag>{{ reviewLabels[video.reviewStatus] }}</el-tag><el-tag :type="video.moderationBlocked ? 'danger' : 'info'">{{ video.moderationBlocked ? '已封禁' : publicationLabels[video.publicationStatus] }}</el-tag></div>
+        <div class="status-group"><el-tag :type="display?.tone">{{ display?.label }}</el-tag><el-tag type="info">{{ display?.visibilityLabel }}</el-tag></div>
         <p class="video-description">{{ video.description || '暂未填写简介' }}</p>
-        <dl class="video-facts"><div><dt>当前版本</dt><dd>{{ video.version }}</dd></div><div><dt>视频时长</dt><dd>{{ video.durationMillis === null ? '—' : `${(video.durationMillis / 1000).toFixed(1)} 秒` }}</dd></div><div><dt>画面尺寸</dt><dd>{{ video.width && video.height ? `${video.width} × ${video.height}` : '—' }}</dd></div><div><dt>审核轮次</dt><dd>{{ video.reviewRound }}</dd></div><div><dt>发布时间</dt><dd>{{ formatTime(video.publishedAt) }}</dd></div></dl>
-        <p v-if="video.failureCode" class="field-error">{{ failureLabels[video.failureCode] ?? '处理失败，请联系管理员' }} · 已尝试 {{ video.executionAttempts }} 次</p>
+        <dl class="video-facts"><div><dt>视频时长</dt><dd>{{ video.durationMillis === null ? '—' : `${(video.durationMillis / 1000).toFixed(1)} 秒` }}</dd></div><div><dt>发布时间</dt><dd>{{ formatTime(video.publishedAt) }}</dd></div><div><dt>可见范围</dt><dd>{{ display?.visibilityLabel }}</dd></div></dl>
+        <p class="status-detail">{{ display?.detail }}</p>
+        <p v-if="video.failureCode" class="field-error">已尝试 {{ video.executionAttempts }} 次{{ video.retryAllowed ? '，可以重试处理' : '，请联系管理员或删除作品' }}</p>
         <p v-if="video.nextAttemptAt && video.taskState === 'RETRY_WAIT'" class="muted">预计下次处理：{{ formatTime(video.nextAttemptAt) }}</p>
         <p v-if="polling" class="muted" role="status">页面可见时每 10 秒查询一次状态；连续失败三次后暂停，可手动刷新。</p>
         <p v-if="video.moderationBlocked" class="field-error">作品已被封禁，请查看下方处理原因。解禁后仍需重新送审。</p>
         <div class="inline-actions" v-if="!editing">
+          <el-button v-if="display?.key === 'NEEDS_UPLOAD'" type="primary" :disabled="blocked" @click="focusUpload">上传视频</el-button>
+          <el-button v-if="submitAllowed" type="primary" :disabled="blocked" @click="command('review-submissions')">提交审核</el-button>
+          <el-button v-if="ready" type="primary" :disabled="blocked" @click="openPreview">{{ preview ? '重新播放' : '播放我的作品' }}</el-button>
+          <el-button v-if="display?.key === 'PENDING_REVIEW'" :disabled="blocked" @click="command('review-withdrawal')">撤回审核</el-button>
+          <el-button v-if="display?.key === 'PUBLISHED'" :disabled="blocked" @click="command('offline')">下架作品</el-button>
+          <el-button v-if="display?.key === 'OFFLINE' || display?.key === 'READY_TO_PUBLISH'" type="primary" :disabled="blocked" @click="command('publication')">再次发布</el-button>
+          <el-button v-if="video.retryAllowed" type="primary" :disabled="blocked" @click="command('processing-retry')">重试处理</el-button>
+          <el-button v-if="video.processingStatus === 'PENDING' || video.processingStatus === 'PROCESSING'" :loading="busy" :disabled="blocked" @click="cancelProcessing">取消处理</el-button>
           <el-button v-if="editable" :disabled="blocked" @click="editing = true">编辑信息</el-button>
-          <el-button v-if="ready" :disabled="blocked" @click="openPreview">{{ preview ? '重新获取预览' : '预览视频' }}</el-button>
           <el-button v-if="ready" :loading="downloadBusy" :disabled="blocked" @click="download">下载源文件</el-button>
           <el-button type="danger" :loading="deleteBusy" :disabled="blocked" @click="remove">删除作品</el-button>
-          <el-button v-if="submitAllowed" type="primary" :disabled="blocked" @click="command('review-submissions')">提交审核</el-button>
-          <el-button v-if="ready && video.reviewStatus === 'PENDING'" :disabled="blocked" @click="command('review-withdrawal')">撤回审核</el-button>
-          <el-button v-if="video.processingStatus === 'PENDING' || video.processingStatus === 'PROCESSING'" :loading="busy" :disabled="blocked" @click="cancelProcessing">取消处理</el-button>
-          <el-button v-if="video.retryAllowed" type="primary" :disabled="blocked" @click="command('processing-retry')">重试处理</el-button>
-          <el-button v-if="ready && video.publicationStatus === 'PUBLISHED'" :disabled="blocked" @click="command('offline')">下架作品</el-button>
-          <el-button v-if="ready && video.publicationStatus === 'OFFLINE' && video.reviewStatus === 'APPROVED'" type="primary" :disabled="blocked" @click="command('publication')">再次发布</el-button>
         </div>
       </section>
       <VideoEditor v-if="editing" :key="video.id" :video="video" @saved="saved" @cancel="editing = false; load()" @busy="editorBusy = $event" />
-      <section v-if="draft && !editing" class="studio-panel">
+      <section v-if="draft && !editing" ref="uploadPanel" class="studio-panel">
         <h2>上传源视频</h2><p class="muted">MP4 / H.264 / yuv420p，可含一条 AAC 音频；最长 10 分钟、最高 60 帧，每边不超过 1920 像素且总像素不超过 1920 × 1080。最大 200 MiB（以服务端限制为准）。上传成功不代表已审核发布。</p>
         <label class="file-picker" for="source-video">选择视频文件</label><input id="source-video" ref="fileInput" type="file" accept=".mp4,video/mp4" :disabled="blocked || uploadUnknown" @change="chooseFile" />
         <p v-if="file" class="muted">{{ file.name }} · {{ (file.size / 1024 / 1024).toFixed(2) }} MiB</p>

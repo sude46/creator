@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { onBeforeRouteLeave, useRouter } from 'vue-router'
-import { creatorApi, processingLabels, publicationLabels, reviewLabels } from '../api/creator'
+import { creatorApi } from '../api/creator'
+import { creatorStatus } from '../api/videoStatus'
 import type { CreatorVideo, Draft } from '../api/creator'
 import WorkspaceShell from '../components/WorkspaceShell.vue'
 import VideoEditor from '../components/VideoEditor.vue'
@@ -19,18 +20,8 @@ const error = ref('')
 const explain = useStudioError()
 let activeRequest: AbortController | undefined
 
-function nextAction(video: CreatorVideo) {
-  if (video.moderationBlocked) return '等待管理员解除封禁'
-  if (!video.sourceUploaded) return '上传原始视频'
-  if (video.processingStatus === 'FAILED') return '检查处理失败原因'
-  if (video.processingStatus !== 'READY') return '等待媒体处理完成'
-  if (video.reviewStatus === 'REJECTED') return '修改后重新送审'
-  if (video.reviewStatus === 'NOT_SUBMITTED') return '提交审核'
-  if (video.reviewStatus === 'PENDING') return '等待审核结果'
-  if (video.publicationStatus === 'PUBLISHED') return '查看已发布作品'
-  return '发布作品'
-}
-
+function statusOf(video: CreatorVideo) { return creatorStatus(video) }
+function itemNumber(index: number) { return String((page.value - 1) * 10 + index + 1).padStart(2, '0') }
 function coverTone(id: string) {
   return `cover-tone-${(Number(id) % 4) + 1}`
 }
@@ -80,15 +71,17 @@ onBeforeUnmount(() => { activeRequest?.abort(); window.removeEventListener('befo
       <div class="section-heading"><h2>我的作品 <span class="count">{{ total }}</span></h2><el-button :loading="loading" @click="load()">刷新列表</el-button></div>
       <p v-if="loading" class="empty-state" role="status">正在加载作品…</p>
       <div v-else-if="videos.length" class="video-grid">
-        <article v-for="video in videos" :key="video.id" class="creator-card">
-          <RouterLink class="creator-cover" :class="coverTone(video.id)" :to="`/studio/${video.id}`" :aria-label="`打开作品：${video.title}`"><img v-if="covers[video.id]" :src="covers[video.id]" alt="" loading="lazy" referrerpolicy="no-referrer" @error="coverFailed(video.id)" /><span class="cover-index">{{ String(video.id).padStart(2, '0') }}</span><span class="cover-caption">{{ covers[video.id] ? '打开作品' : '封面暂未接入 · 打开作品' }}</span></RouterLink>
-          <div class="creator-card-body"><div class="card-number">作品 #{{ video.id }}</div><h3><RouterLink :to="`/studio/${video.id}`">{{ video.title }}</RouterLink></h3>
+        <article v-for="(video, index) in videos" :key="video.id" class="creator-card">
+          <RouterLink class="creator-cover" :class="coverTone(video.id)" :to="`/studio/${video.id}`" :aria-label="`打开作品：${video.title}`"><img v-if="covers[video.id]" :src="covers[video.id]" alt="" loading="lazy" referrerpolicy="no-referrer" @error="coverFailed(video.id)" /><span class="cover-index">{{ itemNumber(index) }}</span><span class="cover-caption">打开作品</span></RouterLink>
+          <div class="creator-card-body"><div class="card-number">{{ statusOf(video).visibilityLabel }}</div><h3><RouterLink :to="`/studio/${video.id}`">{{ video.title }}</RouterLink></h3>
           <p class="card-description">{{ video.description || '还没有简介，补充一句作品想表达什么。' }}</p>
-          <div class="status-group"><el-tag :type="video.processingStatus === 'FAILED' ? 'danger' : 'info'">{{ video.sourceUploaded ? processingLabels[video.processingStatus] : '等待上传' }}</el-tag><el-tag>{{ reviewLabels[video.reviewStatus] }}</el-tag><el-tag :type="video.moderationBlocked ? 'danger' : 'info'">{{ video.moderationBlocked ? '已封禁' : publicationLabels[video.publicationStatus] }}</el-tag></div>
-          <div class="card-next"><span>下一步</span><strong>{{ nextAction(video) }}</strong></div><RouterLink class="card-open" :to="`/studio/${video.id}`">打开工作台 <span aria-hidden="true">↗</span></RouterLink></div>
+          <div class="status-group"><el-tag :type="statusOf(video).tone">{{ statusOf(video).label }}</el-tag></div>
+          <p class="card-status-detail">{{ statusOf(video).detail }}</p>
+          <div class="card-next"><span>下一步</span><strong>{{ statusOf(video).nextAction }}</strong></div><RouterLink class="card-open" :to="`/studio/${video.id}`">打开工作台 <span aria-hidden="true">↗</span></RouterLink></div>
         </article>
       </div>
-      <p v-else class="empty-state">{{ error ? '作品未能加载，请重试。' : total > 0 ? '本页暂无作品，请返回上一页。' : '还没有作品。点击“新建作品”，填写信息后上传视频。' }}</p>
+      <p v-else class="empty-state">{{ error ? '作品未能加载，请重试。' : total > 0 ? '本页暂无作品，请返回上一页。' : '还没有作品。点击“新建作品”，填写信息并选择视频，平台会开始处理。' }}</p>
+      <div v-if="error" class="inline-actions empty-retry"><el-button @click="load()">重新加载</el-button></div>
       <div class="page-controls"><el-button :disabled="loading || page <= 1" @click="load(page - 1)">上一页</el-button><span>第 {{ page }} 页</span><el-button :disabled="loading || page * 10 >= total || page >= 1000" @click="load(page + 1)">下一页</el-button></div>
     </section>
   </WorkspaceShell>

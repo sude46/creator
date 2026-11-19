@@ -18,6 +18,7 @@ export type ReviewRecord = { id: string; reviewRound: number; outcome: string; r
 export type ModerationRecord = { id: string; action: string; reason: string; createdAt: string }
 export type UploadState = { videoId: string; version: number; sourceUploaded: boolean; processingStatus: string }
 export type SignedMedia = { url: string; expiresAt: string }
+export type UploadTarget = { id: string; version: number }
 export type CreatorCommand = 'processing-retry' | 'review-submissions' | 'review-withdrawal' | 'offline' | 'publication'
 
 const json = (method: string, body: unknown): RequestInit => ({ method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
@@ -33,7 +34,7 @@ export const creatorApi = {
   update: (video: CreatorVideo, metadata: Metadata) => request<Draft>(video.sourceUploaded ? `/creator/videos/${video.id}` : `/creator/drafts/${video.id}`,
     json('PUT', { ...metadata, version: video.version })),
   command: (video: CreatorVideo, command: CreatorCommand) => request<CreatorVideo>(`/creator/videos/${video.id}/${command}`, json('POST', { version: video.version })),
-  upload: (video: CreatorVideo, file: File, signal: AbortSignal) => request<UploadState>(`/creator/videos/${video.id}/source`, {
+  upload: (video: UploadTarget, file: File, signal: AbortSignal) => request<UploadState>(`/creator/videos/${video.id}/source`, {
     method: 'PUT', headers: { 'Content-Type': 'video/mp4', 'X-Video-Version': String(video.version) }, body: file, signal,
   }),
   uploadState: (id: string) => read<UploadState>(`/creator/videos/${id}/upload`),
