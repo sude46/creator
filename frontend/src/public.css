@@ -14,14 +14,10 @@
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .public-hero{margin-bottom:20px}
 .public-hero h1{font-size:30px;margin-bottom:0}
-.public-toolbar{display:flex;align-items:center;gap:14px;border:1px solid var(--color-border);border-radius:999px;background:var(--color-surface);padding:8px 10px 8px 18px;margin:0 0 26px;box-shadow:0 8px 22px rgba(28,40,34,.05)}
-.public-toolbar .public-search{flex:1;min-width:240px;border:0;margin:0;padding:0}
-.public-toolbar .category-chips{flex:1 1 auto;flex-wrap:nowrap;justify-content:flex-end;margin:0;overflow-x:auto;scrollbar-width:none}
-.public-toolbar .category-chips::-webkit-scrollbar{display:none}
 .public-video-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
 @media(max-width:1279px){.public-video-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:1023px){.public-video-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:599px){.public-video-grid{grid-template-columns:1fr}.public-hero h1{font-size:26px}.public-toolbar{align-items:stretch;flex-direction:column;gap:10px;border-radius:16px;padding:12px}.public-toolbar .category-chips{justify-content:flex-start}.public-toolbar .public-search{min-width:0}.home-actions{width:100%;justify-content:flex-end}}
+@media(max-width:599px){.public-video-grid{grid-template-columns:1fr}.public-hero h1{font-size:26px}.home-actions{width:100%;justify-content:flex-end}}
 .public-author a{color:inherit}.public-author a:hover{color:var(--color-accent)}
 
 .home-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -30,3 +26,10 @@
 .home-action.secondary:hover{background:var(--color-primary-soft);border-color:var(--color-primary)}
 .home-action.primary:hover{background:var(--color-primary-dark)}
 .home-action span{font-size:16px;line-height:1}
+
+.public-search{display:flex;align-items:center;gap:12px;border:1px solid var(--color-border);border-radius:999px;background:var(--color-surface);padding:8px 10px 8px 18px;margin:0 0 14px;box-shadow:0 8px 22px rgba(28,40,34,.05)}
+.public-search label{font-size:12px;color:var(--color-muted)}
+.public-search input{flex:1;min-width:0;border:0;background:transparent;color:var(--color-text);padding:9px 2px;font-size:16px;outline:0}
+.public-search input:focus{border-color:transparent}
+.category-chips{margin:0 0 26px}
+@media(max-width:599px){.public-search{padding:7px 9px 7px 15px}.public-search input{font-size:15px}}

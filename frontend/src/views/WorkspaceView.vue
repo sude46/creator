@@ -82,16 +82,14 @@ onBeforeUnmount(() => { stopped = true; activeRequest?.abort(); categoryRequest?
       <div class="home-actions"><RouterLink class="home-action secondary" to="/feed"><span aria-hidden="true">▷</span>竖屏浏览</RouterLink><RouterLink class="home-action primary" to="/studio"><span aria-hidden="true">＋</span>发布作品</RouterLink></div>
     </div>
 
-    <div class="public-toolbar">
-      <form class="public-search" role="search" @submit.prevent="navigate()">
-        <label class="sr-only" for="video-search">按标题找作品</label>
-        <input id="video-search" v-model="title" type="search" maxlength="120" placeholder="按标题搜索作品" />
-        <el-button type="primary" native-type="submit">搜索</el-button>
-      </form>
-      <div class="category-chips" aria-label="按分类筛选">
-        <button type="button" :class="{ active: !category }" @click="navigate(1, '')">全部</button>
-        <button v-for="item in categories" :key="item.id" type="button" :class="{ active: category === item.id }" @click="navigate(1, item.id)">{{ item.name }}</button>
-      </div>
+    <form class="public-search" role="search" @submit.prevent="navigate()">
+      <label class="sr-only" for="video-search">按标题找作品</label>
+      <input id="video-search" v-model="title" type="search" maxlength="120" placeholder="按标题搜索作品" />
+      <el-button type="primary" native-type="submit">搜索</el-button>
+    </form>
+    <div class="category-chips" aria-label="按分类筛选">
+      <button type="button" :class="{ active: !category }" @click="navigate(1, '')">全部</button>
+      <button v-for="item in categories" :key="item.id" type="button" :class="{ active: category === item.id }" @click="navigate(1, item.id)">{{ item.name }}</button>
     </div>
     <el-alert v-if="categoryError" :title="categoryError" type="error" :closable="false" role="alert" />
 
