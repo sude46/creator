@@ -18,6 +18,7 @@ class StoragePropertiesBindingTest {
                     "creator.storage.access-key=test-access",
                     "creator.storage.secret-key=test-secret-12345",
                     "creator.storage.bucket=creator-private",
+                    "creator.storage.region=us-east-1",
                     "creator.storage.operation-seconds=5",
                     "creator.storage.incomplete-upload-cleanup=MINIO_DEFAULT").applyTo(context);
             ConfigurationPropertiesBindingPostProcessor.register(context);

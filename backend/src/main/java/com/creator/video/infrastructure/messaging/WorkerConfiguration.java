@@ -114,4 +114,11 @@ public class WorkerConfiguration {
         @Bean
         ProcessingStorage processingStorage(StorageProperties properties) { return new MinioObjectStorage(properties); }
     }
+
+    @ConditionalOnProperty(name = "creator.storage.provider", havingValue = "cos")
+    @EnableConfigurationProperties(StorageProperties.class)
+    static class CosWorkerStorageConfiguration {
+        @Bean
+        ProcessingStorage processingStorage(StorageProperties properties) { return new CosObjectStorage(properties); }
+    }
 }

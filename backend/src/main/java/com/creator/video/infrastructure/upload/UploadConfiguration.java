@@ -24,7 +24,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 @ConditionalOnProperty(name = "creator.upload.enabled", havingValue = "true")
 @EnableConfigurationProperties(UploadProperties.class)
 @EnableScheduling
-@Import(UploadConfiguration.MinioConfiguration.class)
+@Import({UploadConfiguration.MinioConfiguration.class, UploadConfiguration.CosConfiguration.class})
 public class UploadConfiguration {
     @Bean
     UploadStaging uploadStaging(UploadProperties properties) throws IOException { return new UploadStaging(properties); }
@@ -62,5 +62,12 @@ public class UploadConfiguration {
     static class MinioConfiguration {
         @Bean
         ObjectStorage objectStorage(StorageProperties properties) { return new MinioObjectStorage(properties); }
+    }
+
+    @ConditionalOnProperty(name = "creator.storage.provider", havingValue = "cos")
+    @EnableConfigurationProperties(StorageProperties.class)
+    static class CosConfiguration {
+        @Bean
+        ObjectStorage objectStorage(StorageProperties properties) { return new CosObjectStorage(properties); }
     }
 }

@@ -120,7 +120,7 @@ class MinioObjectStorageTest {
 
     private StorageProperties properties(HttpServer server, StorageProperties.IncompleteUploadCleanup cleanup) {
         return new StorageProperties("http://127.0.0.1:" + server.getAddress().getPort(), "test-access", "test-secret-12345",
-                "creator-private", 5, cleanup);
+                "creator-private", "us-east-1", 5, cleanup);
     }
 
     private HttpServer server(boolean publicPolicy, boolean abortIncomplete, AtomicReference<byte[]> uploaded, AtomicBoolean deleted,

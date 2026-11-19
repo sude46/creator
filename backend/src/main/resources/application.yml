@@ -82,11 +82,12 @@ creator:
     max-pending: ${UPLOAD_MAX_PENDING:5}
     attempt-seconds: ${UPLOAD_ATTEMPT_SECONDS:900}
   storage:
-    provider: minio
+    provider: ${STORAGE_PROVIDER:minio}
     endpoint: ${STORAGE_ENDPOINT:}
     access-key: ${STORAGE_ACCESS_KEY:}
     secret-key: ${STORAGE_SECRET_KEY:}
     bucket: ${STORAGE_BUCKET:creator-private}
+    region: ${STORAGE_REGION:us-east-1}
     operation-seconds: ${STORAGE_OPERATION_SECONDS:60}
     incomplete-upload-cleanup: ${STORAGE_INCOMPLETE_UPLOAD_CLEANUP:MINIO_DEFAULT}
   security:
