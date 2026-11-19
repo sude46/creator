@@ -54,7 +54,8 @@ services:
       STORAGE_INCOMPLETE_UPLOAD_CLEANUP: ${STORAGE_INCOMPLETE_UPLOAD_CLEANUP:-MINIO_DEFAULT}
       MEDIA_PUBLIC_ENDPOINT: ${MEDIA_PUBLIC_ENDPOINT:?Set MEDIA_PUBLIC_ENDPOINT}
       MEDIA_LINK_SECONDS: ${MEDIA_LINK_SECONDS:-60}
-      COOKIE_SECURE: "true"
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      SERVER_FORWARD_HEADERS_STRATEGY: ${SERVER_FORWARD_HEADERS_STRATEGY:-FRAMEWORK}
       ADMIN_USERNAME: ${ADMIN_USERNAME:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
     volumes:
@@ -106,8 +107,9 @@ services:
       WORKER_TEMP_DIRECTORY: /work
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    volumes:
+      - worker_work:/work
     tmpfs:
-      - /work:rw,noexec,nosuid,size=512m
       - /tmp:rw,noexec,nosuid,size=64m
     read_only: true
     security_opt:
@@ -141,3 +143,4 @@ volumes:
   mysql_data:
   rabbitmq_data:
   api_upload:
+  worker_work:
