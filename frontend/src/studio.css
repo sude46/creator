@@ -7,3 +7,5 @@
 .status-detail{margin:18px 0 0;padding:12px 14px;border-left:3px solid #245e52;background:#f3f6f2;color:#40544a;font-size:14px;line-height:1.7}
 .card-status-detail{margin:10px 0 0;color:#6f7d75;font-size:12px;line-height:1.6;overflow-wrap:anywhere}
 .empty-retry{justify-content:center}
+.reason-presets{display:flex;flex-wrap:wrap;gap:6px;margin:9px 0 0}
+.reason-presets .el-button+.el-button{margin-left:0}
