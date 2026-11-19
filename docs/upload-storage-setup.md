@@ -8,7 +8,7 @@
 
 ## 存储准备
 
-Java SDK 固定为 io.minio:minio:8.5.17，其发布 POM 声明 Apache License 2.0。2026-11-18 已在本地运行测试候选服务端 RELEASE.2025-04-22T22-12-26Z，核对源码 LICENSE 为 GNU AGPL v3。SDK 许可不代表服务端许可；正式服务端版本、镜像来源、许可适用与维护状态须在部署前确认，当前未在 Compose 添加 MinIO 服务。
+MinIO provider 使用 io.minio:minio:8.5.17，其发布 POM 声明 Apache License 2.0；腾讯 COS provider 使用 com.qcloud:cos_api:5.6.247。2026-11-18 已在本地运行测试候选服务端 RELEASE.2025-04-22T22-12-26Z，核对源码 LICENSE 为 GNU AGPL v3。SDK 许可不代表服务端许可；正式服务端版本、镜像来源、许可适用与维护状态须在部署前确认，当前未在 Compose 添加 MinIO 服务。
 
 先在独立的 MinIO 服务建立 `creator-private` 桶及专用应用账号。该桶要求无匿名 bucket policy、版本化状态为 OFF；不能使用曾启用后仅 Suspended 的桶。应用启动会读取并验证这些设置，无权限读取或设置不符时拒绝启动。不要用 root 管理凭据作为应用凭据。
 
@@ -43,6 +43,54 @@ $env:UPLOAD_TEMP_DIRECTORY = 'D:/creator/.local/upload-temp'
 ```
 
 随后按 README 的数据库配置启动后端。`.env.example` 仅是配置参考，Compose 的环境文件不会自动注入本地 Java 进程。生产存储连接使用可信 TLS 或经过验证的私有网络，桶名及对象存储端点变更需要先迁移现存对象与清理记录。
+
+## 腾讯 COS provider
+
+2026-11-19 已验证腾讯 COS 原生接入。COS 要求 virtual-hosted bucket domain，MinIO Java SDK 会生成 path-style 请求并被 COS 拒绝，因此不能只改 `STORAGE_ENDPOINT`；应用按 `creator.storage.provider` 选择独立 provider。
+
+```env
+STORAGE_PROVIDER=cos
+STORAGE_ENDPOINT=https://cos.ap-guangzhou.myqcloud.com
+STORAGE_REGION=ap-guangzhou
+STORAGE_BUCKET=example-private-1250000000
+STORAGE_ACCESS_KEY=仅限该桶的子账号SecretId
+STORAGE_SECRET_KEY=仅限该桶的子账号SecretKey
+STORAGE_INCOMPLETE_UPLOAD_CLEANUP=BUCKET_LIFECYCLE
+MEDIA_PUBLIC_ENDPOINT=https://example-private-1250000000.cos.ap-guangzhou.myqcloud.com
+```
+
+约束：
+
+- `MEDIA_PUBLIC_ENDPOINT` 必须精确等于 `https://{bucket}.cos.{region}.myqcloud.com`，否则应用拒绝启动。
+- COS 必须使用 `BUCKET_LIFECYCLE`，并配置 `sources/` 前缀的一天期 `AbortIncompleteMultipartUpload`；缺失时启动失败。
+- 桶必须私有。启动时会写入 `_verify/` 临时对象、读取、匿名 GET 必须返回 403/401、最后删除；匿名可读取则拒绝启动。
+- `MinioObjectStorage` 的 `STORAGE_FORCE_PATH_STYLE` 不适用于 COS，当前代码也不读取该变量。
+- 应用使用 COS 原生预签名；直连 COS 时需在桶上配置媒体域 CORS。若继续走 Nginx 代理，需要另行实现可重写 Host 的签名，当前未提供。
+
+建议的最小权限（桶级）：
+
+```text
+cos:HeadBucket
+cos:GetBucketVersioning
+cos:GetBucketLifecycle
+cos:GetBucketPolicy（可选；不可读时应用仍执行匿名探测）
+cos:PutObject
+cos:GetObject
+cos:DeleteObject
+```
+
+需要应用自动配置生命周期时再增加 `cos:PutBucketLifecycle`；当前实现只读取并校验，不在运行时修改。CORS 需要 `cos:PutBucketCORS` 或由控制台配置。
+
+直连 COS 的 CORS 建议允许：
+
+```text
+来源：应用实际来源（例如 http://111.230.231.233:8080）
+方法：GET, HEAD
+头部：*
+暴露：ETag, Content-Length, Content-Range, Accept-Ranges
+```
+
+2026-11-19 实测：29 个 MinIO 对象迁移到 COS；原生 provider 上传/下载/删除、预签名 GET、Range `206`、匿名访问 `403`、Worker 上传/封面/审核/播放/删除回收和 Firefox 浏览器均通过。全量真实依赖回归 201 项、0 跳过。
 
 ## 接口
 
@@ -95,4 +143,4 @@ SDK 使用 5 MiB 分片，HTTP 连接/读写超时、跨请求整体预算均有
 
 集成测试使用 H2、真实 Spring Security 及嵌入式 Tomcat；业务存储故障注入使用内存适配器，SDK 测试使用本机 HTTP 契约服务。覆盖并发竞争、配额、清理与绑定互斥、审计回滚、提交成功后响应异常，以及缺身份/CSRF/越权时 body 尚未读取。微型 MP4 测试体仅用于文件头和传输测试，不作为可解码视频样本。
 
-历史回归已在 MySQL 8.4.3、RabbitMQ 4.0.5 和 FFmpeg 9.0.2 完成，包含 FFprobe 规格验证、投递与处理。2026-11-18 在 JDK 21 下以测试镜像运行真实 MinIO 上传、下载、签名 Range 和私有桶校验，`MinioMediaIntegrationTest` 通过；同日 MySQL 8.4.3、RabbitMQ 4.0.5、FFmpeg 6.1.1 和 MinIO 测试镜像全量 200 项通过、0 跳过。正式服务端版本与许可证、生产桶策略、生产代理和容量压测仍待完成；Firefox 真实上传/播放和 Chromium 冒烟已完成。前端上传页面已接入。真实 MinIO 测试启用条件见 [媒体接口说明](public-media-api.md)，SDK 合约测试不能替代真实服务端验证。
+历史回归已在 MySQL 8.4.3、RabbitMQ 4.0.5 和 FFmpeg 9.0.2 完成，包含 FFprobe 规格验证、投递与处理。2026-11-18 在 JDK 21 下以测试镜像运行真实 MinIO 上传、下载、签名 Range 和私有桶校验，`MinioMediaIntegrationTest` 通过；同日 MySQL 8.4.3、RabbitMQ 4.0.5、FFmpeg 6.1.1 和 MinIO 测试镜像全量 201 项通过、0 跳过。正式服务端版本与许可证、生产桶策略、生产代理和容量压测仍待完成；Firefox 真实上传/播放和 Chromium 冒烟已完成。前端上传页面已接入。真实 MinIO 测试启用条件见 [媒体接口说明](public-media-api.md)，SDK 合约测试不能替代真实服务端验证。

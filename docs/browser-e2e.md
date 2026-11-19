@@ -56,6 +56,17 @@ E2E PASS smoke chromium
 
 该轮仍是 HTTP 演示环境，不替代目标浏览器、TLS、容量和正式存储验收。
 
+## 2026-11-19 COS 媒体复测
+
+将存储切换到腾讯 COS 私有桶后，在 Firefox 中验证：
+
+- 首页封面直接从 `*.cos.ap-guangzhou.myqcloud.com` 加载。
+- 公开播放页从 COS 签名 URL 播放，`readyState=4`，无页面错误或媒体请求失败。
+- 新建作品上传到 COS 后，Worker 完成处理并上传封面；作者预览同样使用 COS，`readyState=4`。
+- 删除作品后清理任务完成，COS 对象不再被引用。
+
+该轮仍使用 HTTP 应用入口和 HTTPS COS 媒体，未验证备案后的 HTTPS 应用入口、CDN 或跨地域媒体。
+
 ## 跨浏览器边界
 
 Playwright 的 Chromium 140 构建不包含 H.264 解码器（`canPlayType(video/mp4; codecs="avc1...")` 为空），因此：

@@ -87,6 +87,6 @@ mvn -s maven-settings.xml '-Dmaven.repo.local=../.local/m2' test
 
 测试 broker 必须为专用实例，账号 creator_test / integration-only-password；除投递模块的 vhost 外还需 creator_worker_it，授权 creator.processing 前缀配置/读/写权限。完整 Worker 用例在非 Web 上下文中实际消费 RabbitMQ，执行真实 FFprobe/FFmpeg，绑定结果并验证毒消息死信；对象存储使用故障可控适配器，真实 MinIO 测试镜像另行运行。SDK 合约端点不是真实 MinIO 部署。使用真库测试时通过 SPRING_DATASOURCE_* 环境变量指定独立测试库，绝不能使用业务数据库。
 
-2026-11-18 实测：JDK 21 下独立 MySQL 8.4.3、RabbitMQ 4.0.5、FFmpeg 6.1.1 和 MinIO 测试镜像全量 200 项通过，0 失败/错误/跳过；Worker 在非 Web 上下文实际消费队列并完成 FFmpeg 处理。Docker 容器沙箱（非 root、只读根文件系统、cap-drop、PID/内存/CPU 限制）已启动验证；宿主机网络/磁盘配额、生产容量和真实故障演练仍未验收。
+2026-11-18 实测：JDK 21 下独立 MySQL 8.4.3、RabbitMQ 4.0.5、FFmpeg 6.1.1 和 MinIO 测试镜像全量 201 项通过，0 失败/错误/跳过；Worker 在非 Web 上下文实际消费队列并完成 FFmpeg 处理。Docker 容器沙箱（非 root、只读根文件系统、cap-drop、PID/内存/CPU 限制）已启动验证；宿主机网络/磁盘配额、生产容量和真实故障演练仍未验收。
 
 本次工具来自 FFmpeg 官网列出的 Gyan Windows 构建，实测版本 9.0.2，下载压缩包 SHA-256 为 `60F467265B1E312373DBCD92200C2618A74850F98D3D078E94296BB3FA2047BA`；二进制留在忽略的本地缓存，不入 Git。此记录用于复现，不表示未来下载的同名 release URL 内容不变；部署应固定经验证版本并复核许可证及安全更新。

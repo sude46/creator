@@ -24,6 +24,8 @@
 
 授权查询先于签名；无权限时不调用签名器。签名在数据库事务外执行，没有对象存储 HTTP 请求持有数据库锁。列表和详情只读；签发没有业务状态变更或补偿记录，重复请求可得到新的短期链接。存储关闭时，合法目标返回 503，越权或不可见目标仍返回 404。
 
+腾讯 COS provider 使用原生 COS SDK 生成 virtual-hosted 签名 URL；`MEDIA_PUBLIC_ENDPOINT` 必须等于 `https://{bucket}.cos.{region}.myqcloud.com`。媒体直连 COS 时由桶 CORS 允许应用来源的 GET/HEAD；不能用 MinIO SDK 的 path-style endpoint 代替。2026-11-19 已实测签名 URL 的 Range 206、匿名访问 403 和 Firefox 播放。
+
 授权只保证查询时刻的状态。查询与签名之间可能发生编辑或下架；已签发链接是持有者可使用的临时凭证，后续账号禁用、编辑撤下、退出或审核完成不能立即撤销。过期约束新请求，不能中断已经开始的下载，也不能撤回已保存的内容。需要即时撤销时必须另做媒体网关。[上下架/封禁管理接口](publication-moderation-api.md) 已在后续模块接入，包含真实用例操作后公开查询和新签发拒绝的回归；真实浏览器与存储验证仍待完成。
 
 ## 存储配置
@@ -63,6 +65,6 @@ mvn -s maven-settings.xml '-Dmaven.repo.local=../.local/m2' '-Dtest=MinioMediaIn
 
 最终 MySQL 8.4.3 + RabbitMQ 4.0.5 + FFmpeg 9.0.2 全量回归 147 项：146 通过、1 项真实 MinIO 测试跳过、零失败/错误。新增数据库/授权集成测试 12 项与 SDK 签名 2 项通过；V8 实际迁移通过。运行使用 JDK 23 编译到 Java 21。
 
-2026-11-18 实测：JDK 21 下 MySQL 8.4.3、RabbitMQ 4.0.5、FFmpeg 6.1.1 和 MinIO 测试镜像全量 200 项通过，0 跳过；真实 MinIO 私有桶、上传、签名和 Range 测试通过。Firefox 完整播放和 Chromium 冒烟完成，Range/CORS 通过；正式存储环境、目标浏览器和容量仍未验收。
+2026-11-18 实测：JDK 21 下 MySQL 8.4.3、RabbitMQ 4.0.5、FFmpeg 6.1.1 和 MinIO 测试镜像全量 201 项通过，0 跳过；真实 MinIO 私有桶、上传、签名和 Range 测试通过。Firefox 完整播放和 Chromium 冒烟完成，Range/CORS 通过；正式存储环境、目标浏览器和容量仍未验收。
 
 正式存储环境、最终反向代理/CORS、目标浏览器播放与拖动和生产容量仍待验证；JDK 21 测试环境和 Firefox/Chromium 测试浏览器已通过，前端页面已接入。[收藏后端](favorite-api.md) 已在后续模块接入，列表批量复用同一公开条件，不以收藏关系替代播放授权。

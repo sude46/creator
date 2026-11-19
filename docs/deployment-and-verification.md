@@ -19,6 +19,29 @@
 
 `deploy/seed-demo.py` 使用标准库、HTTP API 和 FFmpeg 生成合成演示作品，随后真实上传、等待转码、提交审核并由管理员批准；只保留指定数量的作品待审。`--reset` 仅删除标题以 `[演示]` 开头的作品，不会删除真实作者内容。脚本从环境变量读取账号密码，不把凭据写入仓库。2026-11-19 在本机 8080 演示环境实际生成 12 部作品、4 个分类，11 部通过、1 部保留待审；首页分类筛选、相关推荐和审核预览已浏览器验证。
 
+## 腾讯 COS 验收
+
+2026-11-19 将演示存储从 MinIO 测试镜像切换到腾讯云 COS：
+
+- 桶：私有桶，地域 `ap-guangzhou`
+- provider：`STORAGE_PROVIDER=cos`，原生 `cos_api:5.6.247`
+- 媒体：COS 直接签名 URL，`MEDIA_PUBLIC_ENDPOINT` 等于桶域名
+- 生命周期：`sources/` 前缀一天期未完成分片中止规则
+- CORS：允许应用来源的 GET/HEAD
+- 迁移：MinIO 中 29 个已有对象复制到 COS，保留原对象键
+
+实测：
+
+- `HeadBucket`、版本控制读取、生命周期读取、对象 PUT/GET/DELETE 通过
+- 预签名 GET 返回，Range `206`，匿名访问 `403`
+- API 启动时 COS 私有桶探测通过
+- Web 封面从 COS 加载；播放器从 COS 播放，Firefox `readyState=4`
+- 新建作品上传到 COS，Worker 从 COS 下载、生成封面并上传回 COS；作品达到待审核状态后可作者预览
+- 删除作品后 `video_deletion.state=DONE`，对象清理使用 COS provider
+- 全量真实依赖回归 201 项、0 失败/错误/跳过（包含真实 COS 集成测试）
+
+边界：未做跨地域复制、COS 正式容量/配额压测、CDN、生命周期规则变更自动化和密钥轮换演练。
+
 ## 2026-11-18 验证结果
 
 ### 镜像构建
@@ -84,7 +107,7 @@ OK: stale_uploads_expiry=24h, stale_uploads_cleanup_interval=6h
 
 ### Flyway
 
-Flyway 从 11.7.2 升级到 13.12.2。MySQL 8.4.3 迁移实际通过，启动日志不再出现“MySQL 8.4 超出已测试版本范围”的警告。升级后全量 200 项真实依赖测试通过。
+Flyway 从 11.7.2 升级到 13.12.2。MySQL 8.4.3 迁移实际通过，启动日志不再出现“MySQL 8.4 超出已测试版本范围”的警告。升级后全量 201 项真实依赖测试通过。
 
 ## 仍需生产环境确认
 
