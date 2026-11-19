@@ -24,6 +24,10 @@ public class MyBatisVideoQueryRepository implements VideoQueryRepository {
         if (videoIds.isEmpty()) return List.of();
         return mapper.findPublicByIds(videoIds);
     }
+    public List<PublicVideo> findPageByAuthor(long authorId, PageRequest page) {
+        return mapper.findPageByAuthor(authorId, page.size(), page.offset());
+    }
+    public long countByAuthor(long authorId) { return mapper.countByAuthor(authorId); }
     public Optional<MediaTarget> media(long videoId, long actorId, MediaPurpose purpose, MediaKind kind, Long version, Long round) {
         return Optional.ofNullable(mapper.media(videoId, actorId, purpose, kind, version, round));
     }

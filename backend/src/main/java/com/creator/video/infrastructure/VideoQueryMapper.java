@@ -60,6 +60,13 @@ public interface VideoQueryMapper {
             + " AND v.id IN <foreach collection='videoIds' item='videoId' open='(' separator=',' close=')'>#{videoId}</foreach></script>")
     List<PublicVideo> findPublicByIds(@Param("videoIds") List<Long> videoIds);
 
+    @Select("SELECT " + COLUMNS + FROM + " WHERE " + PUBLIC
+            + " AND v.owner_id = #{authorId} ORDER BY v.published_at DESC, v.id DESC LIMIT #{limit} OFFSET #{offset}")
+    List<PublicVideo> findPageByAuthor(@Param("authorId") long authorId, @Param("limit") int limit, @Param("offset") int offset);
+
+    @Select("SELECT COUNT(*)" + FROM + " WHERE " + PUBLIC + " AND v.owner_id = #{authorId}")
+    long countByAuthor(@Param("authorId") long authorId);
+
     @Select("<script>SELECT asset.object_key, asset.size_bytes" + FROM
             + " JOIN media_asset asset ON asset.video_id = v.id AND asset.kind = #{kind}"
             + " WHERE v.id = #{videoId} AND " + READY

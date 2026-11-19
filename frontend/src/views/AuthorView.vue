@@ -1,0 +1,54 @@
+<script setup lang="ts">
+import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
+import WorkspaceShell from '../components/WorkspaceShell.vue'
+import PublicVideoCard from '../components/PublicVideoCard.vue'
+import { publicApi } from '../api/public'
+import type { PublicVideo } from '../api/public'
+import { useStudioError } from '../composables/useStudioError'
+
+const route = useRoute()
+const explain = useStudioError()
+const id = String(route.params.id)
+const items = ref<PublicVideo[]>([])
+const page = ref(1)
+const total = ref(0)
+const loading = ref(false)
+const error = ref('')
+const authorName = ref('')
+let activeRequest: AbortController | undefined
+let stopped = false
+
+async function load(next = page.value) {
+  activeRequest?.abort(); const controller = new AbortController(); activeRequest = controller
+  loading.value = true; error.value = ''; items.value = []
+  try {
+    const result = await publicApi.authorVideos(id, next, controller.signal)
+    if (stopped || controller.signal.aborted) return
+    items.value = result.items; total.value = result.total; page.value = result.page
+    authorName.value = result.items[0]?.authorName ?? ''
+  } catch (failure) { if (!stopped && !controller.signal.aborted) error.value = explain(failure) }
+  finally { if (!stopped && !controller.signal.aborted) loading.value = false }
+}
+onMounted(() => {
+  if (/^[1-9]\d{0,18}$/.test(id)) void load()
+  else error.value = '作者编号无效'
+})
+onBeforeUnmount(() => { stopped = true; activeRequest?.abort() })
+</script>
+
+<template>
+  <WorkspaceShell>
+    <div class="studio-heading">
+      <div><p class="eyebrow">FRAME ROOM / AUTHOR</p><h1>{{ authorName || '作者作品' }}</h1><p class="muted">公开作品 · {{ total }} 部</p></div>
+      <RouterLink class="create-link" to="/">返回发现</RouterLink>
+    </div>
+    <el-alert v-if="error" :title="error" type="error" :closable="false" role="alert" />
+    <div v-if="loading" class="public-video-grid" aria-busy="true"><div v-for="index in 6" :key="index" class="public-card-skeleton" aria-hidden="true"></div></div>
+    <div v-else-if="items.length" class="public-video-grid"><PublicVideoCard v-for="item in items" :key="item.id" :video="item" /></div>
+    <p v-else-if="!error" class="empty-state">这位作者暂时没有公开作品。</p>
+    <div class="page-controls">
+      <el-button :disabled="loading || page <= 1" @click="load(page - 1)">上一页</el-button><span>第 {{ page }} 页</span><el-button :disabled="loading || !!error || page * 12 >= total || page >= 1000" @click="load(page + 1)">下一页</el-button>
+    </div>
+  </WorkspaceShell>
+</template>

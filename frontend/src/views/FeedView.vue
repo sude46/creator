@@ -216,7 +216,7 @@ onBeforeUnmount(() => {
           <p class="feed-category">{{ item.categoryName }}</p>
           <h1>{{ item.title }}</h1>
           <p class="feed-description">{{ item.description || '作者没有留下简介。' }}</p>
-          <p class="feed-author">@{{ item.authorName }} · {{ item.viewCount }} 次播放 · <RouterLink class="feed-detail" :to="`/videos/${item.id}`">查看详情</RouterLink></p>
+          <p class="feed-author"><RouterLink :to="`/authors/${item.authorId}`">@{{ item.authorName }}</RouterLink> · {{ item.viewCount }} 次播放 · <RouterLink class="feed-detail" :to="`/videos/${item.id}`">查看详情</RouterLink></p>
         </div>
         <button class="feed-mute" :aria-label="muted ? '取消静音' : '静音'" @click="toggleMute">{{ muted ? '静音' : '声音' }}</button>
         <div class="feed-progress"><span :style="{ width: `${progress}%` }"></span></div>

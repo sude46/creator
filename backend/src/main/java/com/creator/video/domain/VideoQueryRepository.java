@@ -12,5 +12,7 @@ public interface VideoQueryRepository {
     Optional<PublicVideo> findPublicInSearch(VideoSearch search, long videoId);
     AnchoredVideos anchor(VideoSearch search, PublicVideo anchor, int before, int after);
     List<PublicVideo> findPublicByIds(List<Long> videoIds);
+    List<PublicVideo> findPageByAuthor(long authorId, PageRequest page);
+    long countByAuthor(long authorId);
     Optional<MediaTarget> media(long videoId, long actorId, MediaPurpose purpose, MediaKind kind, Long version, Long round);
 }

@@ -22,3 +22,4 @@
 @media(max-width:1279px){.public-video-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:1023px){.public-video-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:599px){.public-video-grid{grid-template-columns:1fr}.public-hero h1{font-size:26px}.public-toolbar{align-items:stretch;flex-direction:column;gap:12px}.public-toolbar .category-chips{justify-content:flex-start}.public-toolbar .public-search{min-width:0}}
+.public-author a{color:inherit}.public-author a:hover{color:var(--color-accent)}

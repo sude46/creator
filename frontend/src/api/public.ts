@@ -23,5 +23,6 @@ export const publicApi = {
   favoriteState: (id: string, signal: AbortSignal) => read<{ favorited: boolean }>(`/favorites/${id}`, signal),
   favorite: (id: string, add: boolean) => request<void>(`/favorites/${id}`, { method: add ? 'PUT' : 'DELETE' }),
   view: (id: string) => request<{ viewCount: number }>(`/videos/${id}/view`, { method: 'POST' }),
+  authorVideos: (authorId: string, page: number, signal: AbortSignal) => read<Page<PublicVideo>>(`/authors/${authorId}/videos?page=${page}&size=12`, signal),
 }
 export function durationLabel(milliseconds: number) { const seconds = Math.floor(milliseconds / 1000); return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}` }

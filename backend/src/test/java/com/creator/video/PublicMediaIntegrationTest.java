@@ -117,6 +117,14 @@ class PublicMediaIntegrationTest {
     }
 
     @Test
+    void authorFeedReturnsOnlyThatAuthorsPublicWorks() {
+        published("author one");
+        published("author two");
+        assertEquals(2, publicVideos.listByAuthor(author.id(), new PageRequest(1, 20)).total());
+        assertEquals(0, publicVideos.listByAuthor(other.id(), new PageRequest(1, 20)).total());
+    }
+
+    @Test
     void publicViewsIncrementOnlyForVisibleWorks() {
         long id = published("view count");
         assertEquals(0, publicVideos.get(id).viewCount());

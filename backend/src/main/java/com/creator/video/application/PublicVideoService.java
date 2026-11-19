@@ -14,6 +14,12 @@ public class PublicVideoService {
         return new PageResult<>(videos.findPage(search, page), videos.count(search), page.page(), page.size());
     }
     @Transactional(readOnly = true)
+    public PageResult<PublicVideo> listByAuthor(long authorId, PageRequest page) {
+        if (authorId <= 0) throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        return new PageResult<>(videos.findPageByAuthor(authorId, page), videos.countByAuthor(authorId), page.page(), page.size());
+    }
+
+    @Transactional(readOnly = true)
     public PublicVideo get(long id) { return videos.findPublic(id).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND)); }
 
     @Transactional(timeout = 5)
