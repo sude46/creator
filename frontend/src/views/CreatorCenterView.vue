@@ -9,6 +9,7 @@ import { useStudioError } from '../composables/useStudioError'
 
 const router = useRouter()
 const videos = ref<CreatorVideo[]>([])
+const covers = ref<Record<string, string>>({})
 const page = ref(1)
 const total = ref(0)
 const loading = ref(false)
@@ -34,6 +35,19 @@ function coverTone(id: string) {
   return `cover-tone-${(Number(id) % 4) + 1}`
 }
 
+async function loadCovers(items: CreatorVideo[]) {
+  await Promise.allSettled(items.filter(video => video.sourceUploaded && video.processingStatus === 'READY').map(async video => {
+    try {
+      const signed = await creatorApi.cover(video.id)
+      covers.value = { ...covers.value, [video.id]: signed.url }
+    } catch { /* processed videos without a readable cover keep the placeholder */ }
+  }))
+}
+function coverFailed(id: string) {
+  const next = { ...covers.value }
+  delete next[id]
+  covers.value = next
+}
 async function load(next = page.value) {
   activeRequest?.abort()
   const controller = new AbortController()
@@ -46,6 +60,7 @@ async function load(next = page.value) {
     videos.value = result.items
     page.value = next
     total.value = result.total
+    void loadCovers(result.items)
   } catch (failure) { if (!controller.signal.aborted) { videos.value = []; error.value = explain(failure) } }
   finally { if (!controller.signal.aborted) loading.value = false }
 }
@@ -66,7 +81,7 @@ onBeforeUnmount(() => { activeRequest?.abort(); window.removeEventListener('befo
       <p v-if="loading" class="empty-state" role="status">正在加载作品…</p>
       <div v-else-if="videos.length" class="video-grid">
         <article v-for="video in videos" :key="video.id" class="creator-card">
-          <RouterLink class="creator-cover" :class="coverTone(video.id)" :to="`/studio/${video.id}`" :aria-label="`打开作品：${video.title}`"><span class="cover-index">{{ String(video.id).padStart(2, '0') }}</span><span class="cover-caption">封面暂未接入 · 打开作品</span></RouterLink>
+          <RouterLink class="creator-cover" :class="coverTone(video.id)" :to="`/studio/${video.id}`" :aria-label="`打开作品：${video.title}`"><img v-if="covers[video.id]" :src="covers[video.id]" alt="" loading="lazy" referrerpolicy="no-referrer" @error="coverFailed(video.id)" /><span class="cover-index">{{ String(video.id).padStart(2, '0') }}</span><span class="cover-caption">{{ covers[video.id] ? '打开作品' : '封面暂未接入 · 打开作品' }}</span></RouterLink>
           <div class="creator-card-body"><div class="card-number">作品 #{{ video.id }}</div><h3><RouterLink :to="`/studio/${video.id}`">{{ video.title }}</RouterLink></h3>
           <p class="card-description">{{ video.description || '还没有简介，补充一句作品想表达什么。' }}</p>
           <div class="status-group"><el-tag :type="video.processingStatus === 'FAILED' ? 'danger' : 'info'">{{ video.sourceUploaded ? processingLabels[video.processingStatus] : '等待上传' }}</el-tag><el-tag>{{ reviewLabels[video.reviewStatus] }}</el-tag><el-tag :type="video.moderationBlocked ? 'danger' : 'info'">{{ video.moderationBlocked ? '已封禁' : publicationLabels[video.publicationStatus] }}</el-tag></div>
