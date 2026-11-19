@@ -79,7 +79,7 @@ onBeforeUnmount(() => { stopped = true; activeRequest?.abort(); categoryRequest?
   <WorkspaceShell>
     <div class="studio-heading public-hero">
       <div><p class="eyebrow">FRAME ROOM / WATCH</p><h1>{{ route.query.title ? '搜索作品' : '发现' }}</h1></div>
-      <RouterLink class="create-link" to="/studio">发布作品 ↗</RouterLink>
+      <div class="inline-actions"><RouterLink class="create-link" to="/feed">竖屏浏览 ↗</RouterLink><RouterLink class="create-link" to="/studio">发布作品 ↗</RouterLink></div>
     </div>
 
     <div class="public-toolbar">

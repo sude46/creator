@@ -18,6 +18,7 @@ export const router = createRouter({
     { path: '/admin/categories', component: () => import('../views/AdminCategoriesView.vue') },
     { path: '/admin/users', component: () => import('../views/AdminUsersView.vue') },
     { path: '/admin/audit', component: () => import('../views/AdminAuditView.vue') },
+    { path: '/feed/:id?', component: () => import('../views/FeedView.vue') },
     { path: '/videos/:id', component: () => import('../views/PublicVideoView.vue') },
     { path: '/favorites', component: () => import('../views/FavoritesView.vue') },
     { path: '/:pathMatch(.*)*', component: () => import('../views/NotFoundView.vue') },

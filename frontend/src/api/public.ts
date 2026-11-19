@@ -2,6 +2,7 @@ import { request } from './http'
 import type { Page, SignedMedia } from './creator'
 
 export type PublicVideo = { id: string; authorId: string; authorName: string; categoryId: string; categoryName: string; title: string; description: string; durationMillis: number; width: number; height: number; publishedAt: string; hasCover: boolean; coverKey: string | null }
+export type AnchorPage = { items: PublicVideo[]; anchorIndex: number | null; hasBefore: boolean; hasAfter: boolean }
 export type Favorite = { videoId: string; createdAt: string; available: boolean; video: PublicVideo | null }
 function read<Result>(path: string, signal: AbortSignal) { return request<Result>(path, { signal: AbortSignal.any([signal, AbortSignal.timeout(30000)]) }) }
 export const publicApi = {
@@ -11,6 +12,11 @@ export const publicApi = {
     return read<Page<PublicVideo>>(`/videos?${query}`, signal)
   },
   categories: (signal: AbortSignal) => read<Page<{ id: string; name: string; enabled: boolean }>>('/categories?page=1&size=50', signal),
+  anchor: (anchorId: string, categoryId: string, before: number, after: number, signal: AbortSignal) => {
+    const query = new URLSearchParams({ anchorId, before: String(before), after: String(after) })
+    if (categoryId) query.set('categoryId', categoryId)
+    return read<AnchorPage>(`/videos?${query}`, signal)
+  },
   get: (id: string, signal: AbortSignal) => read<PublicVideo>(`/videos/${id}`, signal),
   media: async (id: string, kind: 'SOURCE' | 'COVER', signal: AbortSignal) => { const signed = await request<SignedMedia>(`/videos/${id}/media?kind=${kind}`, { method: 'POST', signal: AbortSignal.any([signal, AbortSignal.timeout(30000)]) }); const address = new URL(signed.url); if (!['https:', 'http:'].includes(address.protocol) || address.username || address.password) throw new Error('媒体地址无效'); return signed },
   favorites: (page: number, signal: AbortSignal) => read<Page<Favorite>>(`/favorites?page=${page}&size=12`, signal),
