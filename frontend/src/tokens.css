@@ -1,9 +1,10 @@
 :root {
   --green: #245e52;
-  --green-dark: #19352f;
+  --green-dark: color-mix(in srgb, var(--green) 78%, #000);
+  --green-soft: color-mix(in srgb, var(--green) 8%, #fff);
   --color-primary: var(--green);
   --color-primary-dark: var(--green-dark);
-  --color-primary-soft: #edf4f0;
+  --color-primary-soft: var(--green-soft);
   --color-accent: #c65b3d;
   --color-bg: #f4f3ed;
   --color-surface: #fff;
