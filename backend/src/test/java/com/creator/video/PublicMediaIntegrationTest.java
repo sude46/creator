@@ -237,6 +237,25 @@ class PublicMediaIntegrationTest {
                 .andExpect(status().isServiceUnavailable());
     }
 
+    @Test
+    void ownerAndReviewerCanDownloadWithoutOpeningPublicAccess() throws Exception {
+        long readyId = ready(author, "download ready");
+        mvc.perform(post("/api/creator/videos/{id}/download", readyId).session(login(author)).with(csrf())
+                        .param("kind", "SOURCE"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.expiresAt").exists());
+        mvc.perform(post("/api/creator/videos/{id}/download", readyId).session(login(other)).with(csrf())
+                        .param("kind", "SOURCE"))
+                .andExpect(status().isNotFound());
+
+        long pendingId = ready(author, "download review");
+        reviews.submit(author, pendingId, 0);
+        var pending = reviews.pending(admin, pendingId);
+        mvc.perform(post("/api/admin/reviews/{id}/download", pendingId).session(login(admin)).with(csrf())
+                        .param("kind", "SOURCE").param("version", Long.toString(pending.version()))
+                        .param("reviewRound", Long.toString(pending.reviewRound())))
+                .andExpect(status().isOk());
+    }
+
     private MediaSigner.SignedMedia grant(Actor actor, long id, MediaPurpose purpose, MediaKind kind) {
         return media.authorize(actor, id, purpose, kind, null, null);
     }

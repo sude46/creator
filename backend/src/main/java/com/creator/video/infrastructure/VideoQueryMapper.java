@@ -38,8 +38,8 @@ public interface VideoQueryMapper {
             + " JOIN media_asset asset ON asset.video_id = v.id AND asset.kind = #{kind}"
             + " WHERE v.id = #{videoId} AND " + READY
             + "<choose><when test=\"purpose.name() == 'PUBLIC_PLAY'\"> AND " + PUBLIC + "</when>"
-            + "<when test=\"purpose.name() == 'OWNER_PREVIEW'\"> AND v.owner_id = #{actorId}</when>"
-            + "<when test=\"purpose.name() == 'REVIEW_PREVIEW'\"> AND v.owner_id != #{actorId} AND v.review_status = 'PENDING'"
+            + "<when test=\"purpose.name() == 'OWNER_PREVIEW' || purpose.name() == 'OWNER_DOWNLOAD'\"> AND v.owner_id = #{actorId}</when>"
+            + "<when test=\"purpose.name() == 'REVIEW_PREVIEW' || purpose.name() == 'REVIEW_DOWNLOAD'\"> AND v.owner_id != #{actorId} AND v.review_status = 'PENDING'"
             + " AND v.version = #{version} AND v.review_round = #{round}</when><otherwise> AND 1 = 0</otherwise></choose>"
             + "<if test=\"kind.name() == 'SOURCE'\"> AND asset.id = v.source_asset_id</if></script>")
     MediaTarget media(@Param("videoId") long videoId, @Param("actorId") long actorId, @Param("purpose") MediaPurpose purpose,

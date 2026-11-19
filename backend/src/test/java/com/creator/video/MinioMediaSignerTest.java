@@ -36,6 +36,8 @@ class MinioMediaSignerTest {
         assertFalse(grant.toString().contains("X-Amz"));
         assertFalse(new MediaTarget("private-key", 100).toString().contains("private-key"));
         assertEquals("image/jpeg", query(URI.create(signer.sign(new MediaTarget("covers/cover.jpg", 10), MediaKind.COVER).url())).get("response-content-type"));
+        var download = signer.sign(new MediaTarget("sources/private file.mp4", 100), MediaKind.SOURCE, true);
+        assertEquals("attachment; filename=\"video.mp4\"", query(URI.create(download.url())).get("response-content-disposition"));
     }
 
     @Test

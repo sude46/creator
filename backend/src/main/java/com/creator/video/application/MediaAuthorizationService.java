@@ -19,11 +19,16 @@ public class MediaAuthorizationService {
     }
 
     public MediaSigner.SignedMedia authorize(Actor actor, long videoId, MediaPurpose purpose, MediaKind kind, Long version, Long round) {
+        return authorize(actor, videoId, purpose, kind, version, round, false);
+    }
+
+    public MediaSigner.SignedMedia authorize(Actor actor, long videoId, MediaPurpose purpose, MediaKind kind, Long version,
+            Long round, boolean attachment) {
         if (actor == null) throw new BusinessException(ErrorCode.UNAUTHENTICATED);
         if (purpose == null || kind == null) throw new BusinessException(ErrorCode.INVALID_REQUEST);
         var active = accounts.current(actor.username());
         if (!active.equals(actor)) throw new BusinessException(ErrorCode.SESSION_INVALID);
-        if (purpose == MediaPurpose.REVIEW_PREVIEW) {
+        if (purpose == MediaPurpose.REVIEW_PREVIEW || purpose == MediaPurpose.REVIEW_DOWNLOAD) {
             if (actor.role() != Role.ADMIN) throw new BusinessException(ErrorCode.FORBIDDEN);
             if (version == null || version < 0 || round == null || round < 1) throw new BusinessException(ErrorCode.INVALID_REQUEST);
         }
@@ -31,6 +36,6 @@ public class MediaAuthorizationService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         var signer = signers.getIfAvailable();
         if (signer == null) throw new BusinessException(ErrorCode.SERVICE_UNAVAILABLE);
-        return signer.sign(target, kind);
+        return signer.sign(target, kind, attachment);
     }
 }

@@ -13,20 +13,31 @@ public class MediaController {
     @PostMapping("/api/videos/{id}/media")
     public ResponseEntity<MediaSigner.SignedMedia> publicMedia(@RequestAttribute("currentActor") Actor actor, @PathVariable long id,
             @RequestParam MediaKind kind) {
-        return grant(actor, id, MediaPurpose.PUBLIC_PLAY, kind, null, null);
+        return grant(actor, id, MediaPurpose.PUBLIC_PLAY, kind, null, null, false);
     }
     @PostMapping("/api/creator/videos/{id}/preview")
     public ResponseEntity<MediaSigner.SignedMedia> ownerPreview(@RequestAttribute("currentActor") Actor actor, @PathVariable long id,
             @RequestParam MediaKind kind) {
-        return grant(actor, id, MediaPurpose.OWNER_PREVIEW, kind, null, null);
+        return grant(actor, id, MediaPurpose.OWNER_PREVIEW, kind, null, null, false);
     }
     @PostMapping("/api/admin/reviews/{id}/preview")
     public ResponseEntity<MediaSigner.SignedMedia> reviewPreview(@RequestAttribute("currentActor") Actor actor, @PathVariable long id,
             @RequestParam MediaKind kind, @RequestParam long version, @RequestParam long reviewRound) {
-        return grant(actor, id, MediaPurpose.REVIEW_PREVIEW, kind, version, reviewRound);
+        return grant(actor, id, MediaPurpose.REVIEW_PREVIEW, kind, version, reviewRound, false);
     }
-    private ResponseEntity<MediaSigner.SignedMedia> grant(Actor actor, long id, MediaPurpose purpose, MediaKind kind, Long version, Long round) {
+    @PostMapping("/api/creator/videos/{id}/download")
+    public ResponseEntity<MediaSigner.SignedMedia> ownerDownload(@RequestAttribute("currentActor") Actor actor, @PathVariable long id,
+            @RequestParam MediaKind kind) {
+        return grant(actor, id, MediaPurpose.OWNER_DOWNLOAD, kind, null, null, true);
+    }
+    @PostMapping("/api/admin/reviews/{id}/download")
+    public ResponseEntity<MediaSigner.SignedMedia> reviewDownload(@RequestAttribute("currentActor") Actor actor, @PathVariable long id,
+            @RequestParam MediaKind kind, @RequestParam long version, @RequestParam long reviewRound) {
+        return grant(actor, id, MediaPurpose.REVIEW_DOWNLOAD, kind, version, reviewRound, true);
+    }
+    private ResponseEntity<MediaSigner.SignedMedia> grant(Actor actor, long id, MediaPurpose purpose, MediaKind kind,
+            Long version, Long round, boolean attachment) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).header("Pragma", "no-cache")
-                .body(media.authorize(actor, id, purpose, kind, version, round));
+                .body(media.authorize(actor, id, purpose, kind, version, round, attachment));
     }
 }

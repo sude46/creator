@@ -23,6 +23,7 @@ export const adminApi = {
   unblock: (video: CreatorVideo, reason: string) => request<CreatorVideo>(`/admin/videos/${video.id}/unblock`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ version: video.version, reason }),
   }),
+  download: (video: CreatorVideo) => request<SignedMedia>(`/admin/reviews/${video.id}/download?kind=SOURCE&version=${video.version}&reviewRound=${video.reviewRound}`, { method: 'POST' }),
   preview: async (video: CreatorVideo, signal: AbortSignal) => {
     const result = await request<SignedMedia>(`/admin/reviews/${video.id}/preview?kind=SOURCE&version=${video.version}&reviewRound=${video.reviewRound}`, {
       method: 'POST', signal: AbortSignal.any([signal, AbortSignal.timeout(30000)]),

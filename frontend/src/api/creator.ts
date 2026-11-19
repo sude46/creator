@@ -40,6 +40,7 @@ export const creatorApi = {
   reviews: (id: string, page: number, signal?: AbortSignal) => read<Page<ReviewRecord>>(`/creator/videos/${id}/reviews?page=${page}&size=10`, signal),
   moderation: (id: string, page: number, signal?: AbortSignal) => read<Page<ModerationRecord>>(`/creator/videos/${id}/moderation-history?page=${page}&size=10`, signal),
   preview: (id: string) => request<SignedMedia>(`/creator/videos/${id}/preview?kind=SOURCE`, { method: 'POST' }),
+  download: (id: string) => request<SignedMedia>(`/creator/videos/${id}/download?kind=SOURCE`, { method: 'POST' }),
 }
 
 export const processingLabels: Record<CreatorVideo['processingStatus'], string> = { PENDING: '等待处理', PROCESSING: '正在处理', READY: '处理完成', FAILED: '处理失败' }

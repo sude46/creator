@@ -10,4 +10,8 @@ public interface MediaSigner {
         public String toString() { return "SignedMedia[url=REDACTED, expiresAt=" + expiresAt + "]"; }
     }
     SignedMedia sign(MediaTarget target, MediaKind kind);
+
+    default SignedMedia sign(MediaTarget target, MediaKind kind, boolean attachment) {
+        return sign(target, kind);
+    }
 }

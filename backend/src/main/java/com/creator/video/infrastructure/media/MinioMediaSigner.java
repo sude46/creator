@@ -33,11 +33,20 @@ public class MinioMediaSigner implements MediaSigner {
 
     @Override
     public SignedMedia sign(MediaTarget target, MediaKind kind) {
+        return sign(target, kind, false);
+    }
+
+    @Override
+    public SignedMedia sign(MediaTarget target, MediaKind kind, boolean attachment) {
         Instant expires = clock.instant().plusSeconds(properties.linkSeconds());
+        String disposition = attachment
+                ? "attachment; filename=\"" + (kind == MediaKind.SOURCE ? "video.mp4" : "cover.jpg") + "\""
+                : "inline";
         try {
             String url = client.getPresignedObjectUrl(GetPresignedObjectUrlArgs.builder().method(Method.GET)
                     .bucket(storage.bucket()).object(target.objectKey()).expiry(properties.linkSeconds())
-                    .extraQueryParams(Map.of("response-content-type", kind.contentType(), "response-content-disposition", "inline",
+                    .extraQueryParams(Map.of("response-content-type", kind.contentType(),
+                            "response-content-disposition", disposition,
                             "response-cache-control", "private, no-store")).build());
             return new SignedMedia(url, expires);
         } catch (Exception exception) { throw new BusinessException(ErrorCode.SERVICE_UNAVAILABLE); }
