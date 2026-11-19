@@ -163,7 +163,7 @@ onBeforeUnmount(() => { stopped = true; queueRequest?.abort(); clearSelectionReq
 
 <template>
   <WorkspaceShell>
-    <div class="studio-heading"><div><p class="eyebrow">FRAME ROOM / MODERATION</p><h1>审核工作台</h1><p class="muted">先看作品内容，再决定是否让它进入公开空间。{{ queueLabel }}</p></div></div>
+    <div class="studio-heading"><div><p class="eyebrow">FRAME ROOM / MODERATION</p><h1>审核</h1><p class="muted">先看作品内容，再决定是否让它进入公开空间。{{ queueLabel }}</p></div></div>
     <el-alert v-if="error" :title="error" type="error" :closable="false" role="alert"/><el-alert v-if="notice" :title="notice" type="success" :closable="false" role="status"/>
     <div class="admin-layout">
       <section class="studio-panel review-queue" :aria-busy="loading"><div class="section-heading"><h2>待审核 <span class="count">{{ total }}</span></h2><el-button :loading="loading" :disabled="busy" @click="load()">刷新</el-button></div>

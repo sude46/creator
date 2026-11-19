@@ -29,7 +29,7 @@ async function logout() {
     </header>
     <nav v-if="adminArea" class="admin-nav" aria-label="管理导航">
       <span class="admin-nav-group">概览</span><RouterLink to="/admin">总览</RouterLink>
-      <span class="admin-nav-group">内容</span><RouterLink to="/admin/videos">作品管理</RouterLink><RouterLink to="/admin/reviews">审核工作台</RouterLink><RouterLink to="/admin/processing">异常处理</RouterLink>
+      <span class="admin-nav-group">内容</span><RouterLink to="/admin/videos">作品管理</RouterLink><RouterLink to="/admin/reviews">审核</RouterLink><RouterLink to="/admin/processing">异常处理</RouterLink>
       <span class="admin-nav-group">配置</span><RouterLink to="/admin/categories">分类管理</RouterLink>
       <span class="admin-nav-group">系统</span><RouterLink to="/admin/users">用户管理</RouterLink><RouterLink to="/admin/audit">审计记录</RouterLink>
     </nav>
@@ -37,6 +37,7 @@ async function logout() {
       <el-alert v-if="error" :title="error" type="error" :closable="false" role="alert" />
       <slot />
     </main>
+    <footer class="workspace-footer">帧间 · 每一帧，都值得被看见</footer>
   </div>
 </template>
 
@@ -47,5 +48,6 @@ async function logout() {
 .admin-nav a.router-link-exact-active { color: #c65b3d; font-weight: 700; }
 .admin-nav-group { color: #87918a; font-size: 11px; letter-spacing: .14em; margin-left: 8px; }
 .admin-nav-group:first-child { margin-left: 0; }
+.workspace-footer { border-top: 1px solid var(--color-border); padding: 22px 28px 30px; text-align: center; color: var(--color-muted-soft); font-size: 12px; letter-spacing: .08em; }
 @media (max-width: 760px) { .admin-nav { padding: 10px 16px; } }
 </style>

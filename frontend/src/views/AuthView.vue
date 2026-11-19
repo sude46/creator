@@ -53,13 +53,13 @@ async function submit() {
         <p class="intro-description">从创作到分享，在这里收藏灵感，也让更多人遇见你的作品。</p>
         <div class="film-art" aria-hidden="true"><div class="film-frame"><span>▶</span></div><div class="film-line"></div></div>
       </div>
-      <p class="intro-footer">帧间 · 视频创作者工作台</p>
+      <p class="intro-footer">帧间 · 每一帧，都值得被看见</p>
     </section>
     <section class="form-panel">
       <div class="auth-card">
         <p class="eyebrow">{{ registering ? '开始你的创作旅程' : '欢迎回来' }}</p>
         <h2>{{ registering ? '创建账号' : '登录帧间' }}</h2>
-        <p class="muted">{{ registering ? '注册后即可使用平台，管理自己的作品。' : '登录后，继续探索和管理你的作品。' }}</p>
+        <p class="muted">{{ registering ? '注册后即可使用平台，管理自己的作品。' : '登录后继续创作与发现。' }}</p>
         <el-alert v-if="error" :title="error" type="error" show-icon :closable="false" role="alert" />
         <el-alert v-if="success" :title="success" type="success" show-icon :closable="false" role="status" />
         <form @submit.prevent="submit">

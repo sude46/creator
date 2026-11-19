@@ -1,6 +1,8 @@
 :root {
-  --color-primary: #245e52;
-  --color-primary-dark: #19352f;
+  --green: #245e52;
+  --green-dark: #19352f;
+  --color-primary: var(--green);
+  --color-primary-dark: var(--green-dark);
   --color-primary-soft: #edf4f0;
   --color-accent: #c65b3d;
   --color-bg: #f4f3ed;

@@ -78,7 +78,7 @@ onBeforeUnmount(() => { stopped = true; activeRequest?.abort(); categoryRequest?
 <template>
   <WorkspaceShell>
     <div class="studio-heading">
-      <div><p class="eyebrow">FRAME ROOM / WATCH</p><h1>{{ route.query.title ? '搜索作品' : '发现' }}</h1><p class="muted">浏览创作者发布的视频，找到值得看完的故事。</p></div>
+      <div><p class="eyebrow">FRAME ROOM / WATCH</p><h1>{{ route.query.title ? '搜索作品' : '发现' }}</h1><p class="muted">浏览大家发布的作品，找到值得看完的故事。</p></div>
       <RouterLink class="create-link" to="/studio">发布作品 ↗</RouterLink>
     </div>
 
