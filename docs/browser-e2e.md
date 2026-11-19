@@ -67,6 +67,10 @@ E2E PASS smoke chromium
 
 该轮仍使用 HTTP 应用入口和 HTTPS COS 媒体，未验证备案后的 HTTPS 应用入口、CDN 或跨地域媒体。
 
+## 2026-11-19 B3/F4 复测
+
+Firefox 实测作者详情：已发布作品只显示“已发布”和“播放我的作品”主按钮，不显示数据库编号、版本、审核轮次或画面尺寸；待审核作品主按钮为“撤回审核”；处理失败显示“处理失败：处理空间暂时不足”，不出现 `TEMP_UNAVAILABLE` 等内部枚举。其余编辑、下载、下架、删除操作收进“更多操作”。
+
 ## 跨浏览器边界
 
 Playwright 的 Chromium 140 构建不包含 H.264 解码器（`canPlayType(video/mp4; codecs="avc1...")` 为空），因此：
