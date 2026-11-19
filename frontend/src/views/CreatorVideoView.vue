@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute } from 'vue-router'
+import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { creatorApi, failureLabels, formatTime, processingLabels, publicationLabels, reviewLabels } from '../api/creator'
 import type { CreatorCommand, CreatorVideo, ModerationRecord, ReviewRecord, SignedMedia } from '../api/creator'
 import { ApiFailure } from '../api/http'
@@ -9,6 +9,7 @@ import VideoEditor from '../components/VideoEditor.vue'
 import { useStudioError } from '../composables/useStudioError'
 
 const route = useRoute()
+const router = useRouter()
 const id = String(route.params.id)
 const video = ref<CreatorVideo>()
 const loading = ref(false)
@@ -24,6 +25,7 @@ const error = ref('')
 const notice = ref('')
 const preview = ref<SignedMedia>()
 const downloadBusy = ref(false)
+const deleteBusy = ref(false)
 const previewError = ref('')
 const reviews = ref<ReviewRecord[]>([])
 const moderation = ref<ModerationRecord[]>([])
@@ -166,6 +168,17 @@ async function upload() {
     if (!stopped) { busy.value = false; uploading.value = false; schedule() }
   }
 }
+async function remove() {
+  if (!video.value || busy.value || downloadBusy.value || deleteBusy.value) return
+  if (!window.confirm('删除后作品和源文件将进入回收流程，且不可恢复。确认删除？')) return
+  deleteBusy.value = true
+  error.value = ''
+  try {
+    await creatorApi.remove(video.value)
+    await router.push('/studio')
+  } catch (failure) { if (!stopped) error.value = explain(failure) }
+  finally { if (!stopped) deleteBusy.value = false }
+}
 async function download() {
   if (!video.value || blocked.value || downloadBusy.value) return
   downloadBusy.value = true
@@ -235,6 +248,7 @@ onBeforeUnmount(() => {
           <el-button v-if="editable" :disabled="blocked" @click="editing = true">编辑信息</el-button>
           <el-button v-if="ready" :disabled="blocked" @click="openPreview">{{ preview ? '重新获取预览' : '预览视频' }}</el-button>
           <el-button v-if="ready" :loading="downloadBusy" :disabled="blocked" @click="download">下载源文件</el-button>
+          <el-button type="danger" :loading="deleteBusy" :disabled="blocked" @click="remove">删除作品</el-button>
           <el-button v-if="submitAllowed" type="primary" :disabled="blocked" @click="command('review-submissions')">提交审核</el-button>
           <el-button v-if="ready && video.reviewStatus === 'PENDING'" :disabled="blocked" @click="command('review-withdrawal')">撤回审核</el-button>
           <el-button v-if="video.retryAllowed" type="primary" :disabled="blocked" @click="command('processing-retry')">重试处理</el-button>

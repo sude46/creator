@@ -4,10 +4,18 @@ import type { CreatorVideo, Page, ReviewRecord, SignedMedia } from './creator'
 export type ManagedVideo = { ownerId: string; video: CreatorVideo }
 export type Decision = 'APPROVED' | 'REJECTED'
 export type AdminModerationRecord = { id: string; actorId: string; action: string; reason: string; createdAt: string }
+export type AdminUser = { id: string; username: string; role: 'USER' | 'ADMIN'; status: 'ACTIVE' | 'DISABLED' }
 
 const boundedRead = <Result>(path: string, signal: AbortSignal) => request<Result>(path, { signal: AbortSignal.any([signal, AbortSignal.timeout(30000)]) })
 
 export const adminApi = {
+  users: (page: number, signal: AbortSignal) => boundedRead<Page<AdminUser>>(`/admin/users?page=${page}&size=20`, signal),
+  createUser: (username: string, password: string) => request<AdminUser>('/admin/users', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }),
+  }),
+  setUserStatus: (user: AdminUser, enabled: boolean) => request<AdminUser>(`/admin/users/${user.id}`, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled }),
+  }),
   queue: (page: number, signal: AbortSignal) => boundedRead<Page<ManagedVideo>>(`/admin/reviews?page=${page}&size=20`, signal),
   pending: (id: string, signal: AbortSignal) => boundedRead<CreatorVideo>(`/admin/reviews/${id}`, signal),
   decide: (video: CreatorVideo, outcome: Decision, reason: string) => request<CreatorVideo>(`/admin/reviews/${video.id}/decision`, {
@@ -21,6 +29,9 @@ export const adminApi = {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ version: video.version, reason }),
   }),
   unblock: (video: CreatorVideo, reason: string) => request<CreatorVideo>(`/admin/videos/${video.id}/unblock`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ version: video.version, reason }),
+  }),
+  remove: (video: CreatorVideo, reason: string) => request<void>(`/admin/videos/${video.id}/delete`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ version: video.version, reason }),
   }),
   download: (video: CreatorVideo) => request<SignedMedia>(`/admin/reviews/${video.id}/download?kind=SOURCE&version=${video.version}&reviewRound=${video.reviewRound}`, { method: 'POST' }),

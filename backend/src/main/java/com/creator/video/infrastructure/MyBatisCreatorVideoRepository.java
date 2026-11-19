@@ -13,6 +13,15 @@ public class MyBatisCreatorVideoRepository implements CreatorVideoRepository {
     public Optional<CreatorVideo> findOwned(long ownerId, long videoId, boolean lock) {
         return Optional.ofNullable(lock ? mapper.lockOwned(ownerId, videoId) : mapper.findOwned(ownerId, videoId));
     }
+    public Optional<CreatorVideo> findAny(long videoId, boolean lock) {
+        return Optional.ofNullable(lock ? mapper.lockAny(videoId) : mapper.findAny(videoId));
+    }
+    public boolean softDelete(long videoId, Long ownerId, long version) {
+        return mapper.softDelete(videoId, ownerId, version) == 1;
+    }
+    public void cancelActiveTasks(long videoId) {
+        mapper.cancelActiveTasks(videoId);
+    }
     public List<CreatorVideo> findPage(long ownerId, PageRequest page) { return mapper.findPage(ownerId, page.size(), page.offset()); }
     public long count(long ownerId) { return mapper.count(ownerId); }
     public boolean retry(long ownerId, long videoId, long version, long generation) { return mapper.retry(ownerId, videoId, version, generation) == 1; }

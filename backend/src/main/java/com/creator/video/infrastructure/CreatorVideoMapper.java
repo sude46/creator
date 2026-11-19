@@ -20,6 +20,30 @@ public interface CreatorVideoMapper {
     @Select("SELECT " + COLUMNS + FROM + OWNED + " AND v.id = #{videoId} FOR UPDATE")
     CreatorVideo lockOwned(@Param("ownerId") long ownerId, @Param("videoId") long videoId);
 
+    @Select("SELECT " + COLUMNS + FROM + " WHERE v.id = #{videoId}")
+    CreatorVideo findAny(@Param("videoId") long videoId);
+
+    @Select("SELECT " + COLUMNS + FROM + " WHERE v.id = #{videoId} FOR UPDATE")
+    CreatorVideo lockAny(@Param("videoId") long videoId);
+
+    @Update("""
+            <script>
+            UPDATE video SET deleted_at = CURRENT_TIMESTAMP(6), publication_status = 'UNPUBLISHED',
+                published_at = NULL, version = version + 1, updated_at = CURRENT_TIMESTAMP(6)
+            WHERE id = #{videoId} AND version = #{version} AND deleted_at IS NULL
+            <if test="ownerId != null">AND owner_id = #{ownerId}</if>
+            </script>
+            """)
+    int softDelete(@Param("videoId") long videoId, @Param("ownerId") Long ownerId, @Param("version") long version);
+
+    @Update("""
+            UPDATE processing_task SET state = 'CANCELLED', next_attempt_at = CURRENT_TIMESTAMP(6),
+                next_dispatch_at = CURRENT_TIMESTAMP(6), execution_token = NULL, execution_lease_until = NULL,
+                dispatch_token = NULL, dispatch_lease_until = NULL
+            WHERE video_id = #{videoId} AND state IN ('PENDING', 'RUNNING', 'RETRY_WAIT')
+            """)
+    void cancelActiveTasks(long videoId);
+
     @Select("SELECT " + COLUMNS + FROM + OWNED + " ORDER BY v.id DESC LIMIT #{limit} OFFSET #{offset}")
     List<CreatorVideo> findPage(@Param("ownerId") long ownerId, @Param("limit") int limit, @Param("offset") int offset);
 

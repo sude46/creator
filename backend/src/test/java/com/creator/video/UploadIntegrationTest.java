@@ -12,6 +12,7 @@ import com.creator.identity.domain.Actor;
 import com.creator.video.application.*;
 import com.creator.video.application.processing.DispatchService;
 import com.creator.video.application.processing.TaskPublisher;
+import com.creator.video.application.deletion.VideoDeletionMaintenance;
 import com.creator.video.domain.*;
 import com.creator.video.infrastructure.upload.UploadMaintenance;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -90,6 +91,8 @@ class UploadIntegrationTest {
     @Autowired UploadProperties properties;
     @Autowired UploadStaging staging;
     @Autowired UploadMaintenance maintenance;
+    @Autowired com.creator.video.application.VideoDeletionService deletionService;
+    @Autowired VideoDeletionMaintenance deletionMaintenance;
     @Autowired MemoryStorage storage;
     @Autowired AuditLog audit;
     @Autowired FailingAudit failingAudit;
@@ -112,6 +115,7 @@ class UploadIntegrationTest {
         database.update("DELETE FROM operation_log");
         database.update("DELETE FROM review_record");
         database.update("DELETE FROM processing_task");
+        database.update("DELETE FROM video_deletion");
         database.update("DELETE FROM upload_attempt");
         database.update("UPDATE video SET source_asset_id = NULL");
         database.update("DELETE FROM media_asset");
@@ -141,6 +145,51 @@ class UploadIntegrationTest {
         assertEquals(1, taskPublisher.sent.size());
         assertEquals(id, taskPublisher.sent.getFirst().videoId());
         assertNotNull(database.queryForObject("SELECT published_at FROM processing_task WHERE video_id = ?", java.time.LocalDateTime.class, id));
+    }
+
+    @Test
+    void adminDeletionRequiresAdminAndStoresReason() {
+        long id = draft(author);
+        var admin = actor("upload_admin");
+        assertThrows(com.creator.common.BusinessException.class,
+                () -> deletionService.deleteByAdmin(author, id, 0, new ModerationReason("not admin")));
+        deletionService.deleteByAdmin(admin, id, 0, new ModerationReason("policy removal"));
+        assertEquals("policy removal", database.queryForObject(
+                "SELECT reason FROM video_deletion WHERE video_id=?", String.class, id));
+        assertEquals(1, database.queryForObject(
+                "SELECT version FROM video WHERE id=?", Long.class, id));
+    }
+
+    @Test
+    void ownerDeletionCancelsTasksAndReclaimsObjectsAndAssets() {
+        long id = draft(author);
+        uploads.upload(author, id, 0, new ByteArrayInputStream(mp4(1024)), 1024);
+        assertFalse(storage.objects.isEmpty());
+        deletionService.deleteByOwner(author, id, 1);
+        assertNotNull(database.queryForObject("SELECT deleted_at FROM video WHERE id=?", java.time.LocalDateTime.class, id));
+        assertEquals("CANCELLED", database.queryForObject("SELECT state FROM processing_task WHERE video_id=?", String.class, id));
+        assertEquals(1, database.queryForObject(
+                "SELECT COUNT(*) FROM operation_log WHERE action='VIDEO_DELETED' AND target_type='VIDEO' AND target_id=?", Integer.class, id));
+        assertEquals("PENDING", database.queryForObject("SELECT state FROM video_deletion WHERE video_id=?", String.class, id));
+
+        deletionMaintenance.clean();
+
+        assertTrue(storage.objects.isEmpty());
+        assertEquals("DONE", database.queryForObject("SELECT state FROM video_deletion WHERE video_id=?", String.class, id));
+        assertNull(database.queryForObject("SELECT source_asset_id FROM video WHERE id=?", Long.class, id));
+        assertEquals(0, database.queryForObject("SELECT COUNT(*) FROM media_asset WHERE video_id=?", Integer.class, id));
+    }
+
+    @Test
+    void otherUserCannotDeleteOwnedVideoAndStorageFailureRetries() {
+        long id = draft(author);
+        uploads.upload(author, id, 0, new ByteArrayInputStream(mp4(1024)), 1024);
+        assertThrows(com.creator.common.BusinessException.class, () -> deletionService.deleteByOwner(other, id, 1));
+        deletionService.deleteByOwner(author, id, 1);
+        storage.failDelete = true;
+        deletionMaintenance.clean();
+        assertEquals("PENDING", database.queryForObject("SELECT state FROM video_deletion WHERE video_id=?", String.class, id));
+        storage.failDelete = false;
     }
 
     @Test

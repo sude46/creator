@@ -42,6 +42,7 @@ export const creatorApi = {
   preview: (id: string) => request<SignedMedia>(`/creator/videos/${id}/preview?kind=SOURCE`, { method: 'POST' }),
   cover: (id: string) => request<SignedMedia>(`/creator/videos/${id}/preview?kind=COVER`, { method: 'POST' }),
   download: (id: string) => request<SignedMedia>(`/creator/videos/${id}/download?kind=SOURCE`, { method: 'POST' }),
+  remove: (video: CreatorVideo) => request<void>(`/creator/videos/${video.id}?version=${video.version}`, { method: 'DELETE' }),
 }
 
 export const processingLabels: Record<CreatorVideo['processingStatus'], string> = { PENDING: '等待处理', PROCESSING: '正在处理', READY: '处理完成', FAILED: '处理失败' }

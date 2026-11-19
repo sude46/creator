@@ -117,6 +117,29 @@ async function moderate() {
   } finally { if (!stopped) busy.value = false }
 }
 
+async function remove() {
+  if (!selected.value || busy.value || loading.value || detailLoading.value || needsRefresh.value) return
+  const explanation = reason.value.trim()
+  if (!explanation || explanation.length > 500) { detailError.value = '请填写 1～500 字的删除原因。'; return }
+  const snapshot = selected.value.video
+  if (!window.confirm('删除后作品和源文件将进入回收流程，且不可恢复。确认删除？')) return
+  busy.value = true
+  detailError.value = ''
+  notice.value = ''
+  let succeeded = false
+  try {
+    await adminApi.remove(snapshot, explanation)
+    notice.value = '作品已删除，资源进入回收流程。'
+    selected.value = undefined
+    selectedId.value = ''
+    reason.value = ''
+    succeeded = true
+  } catch (failure) {
+    if (!stopped) { needsRefresh.value = true; detailError.value = `${explain(failure)}。请刷新状态核对结果。` }
+  } finally { if (!stopped) busy.value = false }
+  if (succeeded && !stopped) await load(1)
+}
+
 function beforeUnload(event: BeforeUnloadEvent) { if (busy.value) event.preventDefault() }
 onBeforeRouteLeave(() => !busy.value || window.confirm('处理请求尚未结束，离开后需重新查询结果。确认离开？'))
 onMounted(() => { void load(); window.addEventListener('beforeunload', beforeUnload) })
@@ -158,7 +181,7 @@ onBeforeUnmount(() => {
             <label for="moderation-reason">{{ selected.video.moderationBlocked ? '解禁原因' : '封禁原因' }}（必填）</label>
             <textarea id="moderation-reason" v-model="reason" required maxlength="500" rows="4" :disabled="busy" />
             <p class="muted">解禁不会自动发布，作者需要重新送审。</p>
-            <el-button native-type="submit" :type="selected.video.moderationBlocked ? 'primary' : 'danger'" :loading="busy" :disabled="loading || detailLoading || needsRefresh">{{ selected.video.moderationBlocked ? '确认解禁' : '确认封禁' }}</el-button>
+            <el-button native-type="submit" :type="selected.video.moderationBlocked ? 'primary' : 'danger'" :loading="busy" :disabled="loading || detailLoading || needsRefresh">{{ selected.video.moderationBlocked ? '确认解禁' : '确认封禁' }}</el-button><el-button type="danger" :loading="busy" :disabled="loading || detailLoading || needsRefresh" @click="remove">删除作品</el-button>
           </form>
           <div class="section-heading history-subheading"><h2>处理记录</h2><el-button :disabled="historyLoading || busy" @click="history(historyPage)">刷新记录</el-button></div>
           <el-alert v-if="historyError" :title="historyError" type="error" :closable="false" role="alert" />

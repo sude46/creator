@@ -5,7 +5,9 @@ import com.creator.common.PageResult;
 import com.creator.identity.domain.Actor;
 import com.creator.video.application.CreatorVideoService;
 import com.creator.video.application.ReviewService;
+import com.creator.video.application.VideoDeletionService;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -13,7 +15,12 @@ import org.springframework.web.bind.annotation.*;
 public class CreatorVideoController {
     private final CreatorVideoService videos;
     private final ReviewService reviews;
-    public CreatorVideoController(CreatorVideoService videos, ReviewService reviews) { this.videos = videos; this.reviews = reviews; }
+    private final VideoDeletionService deletions;
+    public CreatorVideoController(CreatorVideoService videos, ReviewService reviews, VideoDeletionService deletions) {
+        this.videos = videos;
+        this.reviews = reviews;
+        this.deletions = deletions;
+    }
     @GetMapping("/{id}")
     public CreatorVideoView get(@RequestAttribute("currentActor") Actor actor, @PathVariable long id) {
         return CreatorVideoView.from(videos.get(actor, id));
@@ -23,6 +30,12 @@ public class CreatorVideoController {
             @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int size) {
         var result = videos.list(actor, new PageRequest(page, size));
         return new PageResult<>(result.items().stream().map(CreatorVideoView::from).toList(), result.total(), result.page(), result.size());
+    }
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@RequestAttribute("currentActor") Actor actor, @PathVariable long id,
+            @RequestParam long version) {
+        deletions.deleteByOwner(actor, id, version);
     }
     @PostMapping("/{id}/processing-retry")
     public CreatorVideoView retry(@RequestAttribute("currentActor") Actor actor, @PathVariable long id,

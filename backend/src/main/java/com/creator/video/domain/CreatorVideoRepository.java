@@ -6,6 +6,9 @@ import java.util.Optional;
 
 public interface CreatorVideoRepository {
     Optional<CreatorVideo> findOwned(long ownerId, long videoId, boolean lock);
+    Optional<CreatorVideo> findAny(long videoId, boolean lock);
+    boolean softDelete(long videoId, Long ownerId, long version);
+    void cancelActiveTasks(long videoId);
     List<CreatorVideo> findPage(long ownerId, PageRequest page);
     long count(long ownerId);
     boolean retry(long ownerId, long videoId, long version, long generation);
