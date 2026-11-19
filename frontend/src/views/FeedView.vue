@@ -196,7 +196,7 @@ onBeforeUnmount(() => {
     <header class="feed-top">
       <RouterLink class="feed-brand" to="/">帧间</RouterLink>
       <nav class="feed-tabs" aria-label="分类"><button :class="{ active: !category }" @click="loadFeed('')">全部</button><button v-for="item in categories" :key="item.id" :class="{ active: category === item.id }" @click="loadFeed(item.id)">{{ item.name }}</button></nav>
-      <div class="feed-actions"><RouterLink to="/favorites" aria-label="我的收藏">♡</RouterLink><RouterLink to="/studio" aria-label="发布作品">＋</RouterLink><RouterLink class="feed-grid-link" to="/" aria-label="切换到网格">▦</RouterLink></div>
+      <div class="feed-actions"><RouterLink class="feed-action" to="/favorites" aria-label="我的收藏">♡</RouterLink><RouterLink class="feed-action feed-publish" to="/studio" aria-label="发布作品">＋</RouterLink><RouterLink class="feed-action feed-grid-link" to="/" aria-label="切换到网格">▦</RouterLink></div>
     </header>
     <p v-if="notice" class="feed-notice" role="status">{{ notice }}</p>
     <div v-if="loading" class="feed-state">正在加载…</div>
@@ -229,8 +229,8 @@ onBeforeUnmount(() => {
 .feed-shell{position:relative;height:100dvh;overflow:hidden;background:var(--color-cover);color:var(--color-surface)}
 .feed-top{position:absolute;z-index:4;top:0;left:0;right:0;display:flex;align-items:center;gap:18px;padding:16px 20px;background:linear-gradient(to bottom,rgba(10,18,15,.8),transparent)}
 .feed-brand{color:var(--color-surface);font-size:20px;font-weight:700;letter-spacing:.08em}
-.feed-tabs{display:flex;gap:16px;overflow-x:auto;flex:1;scrollbar-width:none}.feed-tabs::-webkit-scrollbar{display:none}.feed-tabs button{border:0;background:none;color:rgba(247,244,236,.72);font:inherit;font-size:13px;white-space:nowrap;cursor:pointer;padding:4px 0}.feed-tabs button.active{color:var(--color-surface);font-weight:700;border-bottom:2px solid var(--color-accent)}
-.feed-actions{display:flex;align-items:center;gap:14px;color:var(--color-surface);font-size:18px}.feed-actions a{color:var(--color-surface)}.feed-grid-link{font-size:22px}
+.feed-tabs{display:flex;gap:16px;overflow-x:auto;flex:1;scrollbar-width:none}.feed-tabs::-webkit-scrollbar{display:none}.feed-tabs button{border:1px solid transparent;background:none;color:rgba(247,244,236,.72);font:inherit;font-size:13px;white-space:nowrap;cursor:pointer;padding:6px 11px;border-radius:999px}.feed-tabs button.active{color:var(--color-surface);font-weight:700;background:rgba(247,244,236,.16);border-color:rgba(247,244,236,.22)}
+.feed-actions{display:flex;align-items:center;gap:8px;color:var(--color-surface);font-size:17px}.feed-action{display:grid;place-items:center;width:38px;height:38px;border:1px solid rgba(247,244,236,.25);border-radius:12px;background:rgba(10,18,15,.35);color:var(--color-surface);text-decoration:none}.feed-action:hover{background:rgba(247,244,236,.16)}.feed-publish{background:var(--color-accent);border-color:var(--color-accent);font-size:20px}.feed-grid-link{font-size:20px}
 .feed-scroller{height:100%;overflow-y:auto;scroll-snap-type:y mandatory;scrollbar-width:none}.feed-scroller::-webkit-scrollbar{display:none}
 .feed-slide{position:relative;height:100dvh;scroll-snap-align:start;display:grid;place-items:center;overflow:hidden;background:#0f1a17}
 .feed-backdrop{pointer-events:none;position:absolute;inset:-30px;background-size:cover;background-position:center;filter:blur(28px);opacity:.38;transform:scale(1.08)}
