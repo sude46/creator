@@ -11,9 +11,11 @@ public record CreatorVideo(long id, long ownerId, long categoryId, String title,
         Long durationMillis, Integer mediaWidth, Integer mediaHeight, long reviewRound,
         LocalDateTime reviewSubmittedAt, LocalDateTime publishedAt) {
     public boolean retryAllowed() {
-        return sourceUploaded && !moderationBlocked && processingStatus.equals("FAILED") && "FAILED".equals(taskState)
-                && failureCode != null && failureCode.retryable() && reviewStatus.equals("NOT_SUBMITTED")
-                && publicationStatus.equals("UNPUBLISHED") && processingGeneration < Long.MAX_VALUE;
+        boolean failed = "FAILED".equals(taskState) && failureCode != null && failureCode.retryable();
+        boolean cancelled = "CANCELLED".equals(taskState);
+        return sourceUploaded && !moderationBlocked && processingStatus.equals("FAILED") && (failed || cancelled)
+                && reviewStatus.equals("NOT_SUBMITTED") && publicationStatus.equals("UNPUBLISHED")
+                && processingGeneration < Long.MAX_VALUE;
     }
 
     public void requireVersion(long expected) {

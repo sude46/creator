@@ -22,6 +22,9 @@ public class MyBatisCreatorVideoRepository implements CreatorVideoRepository {
     public void cancelActiveTasks(long videoId) {
         mapper.cancelActiveTasks(videoId);
     }
+    public boolean markProcessingCancelled(long videoId, Long ownerId, long version) {
+        return mapper.markProcessingCancelled(videoId, ownerId, version) == 1;
+    }
     public List<CreatorVideo> findPage(long ownerId, PageRequest page) { return mapper.findPage(ownerId, page.size(), page.offset()); }
     public long count(long ownerId) { return mapper.count(ownerId); }
     public boolean retry(long ownerId, long videoId, long version, long generation) { return mapper.retry(ownerId, videoId, version, generation) == 1; }

@@ -4,6 +4,7 @@ import com.creator.common.*;
 import com.creator.identity.domain.Actor;
 import com.creator.video.application.PublicationService;
 import com.creator.video.application.VideoDeletionService;
+import com.creator.video.application.VideoProcessingService;
 import com.creator.video.domain.*;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
@@ -14,9 +15,12 @@ import org.springframework.web.bind.annotation.*;
 public class PublicationController {
     private final PublicationService publications;
     private final VideoDeletionService deletions;
-    public PublicationController(PublicationService publications, VideoDeletionService deletions) {
+    private final VideoProcessingService processing;
+    public PublicationController(PublicationService publications, VideoDeletionService deletions,
+            VideoProcessingService processing) {
         this.publications = publications;
         this.deletions = deletions;
+        this.processing = processing;
     }
 
     @PostMapping("/api/creator/videos/{id}/offline")
@@ -38,6 +42,12 @@ public class PublicationController {
     public CreatorVideoView unblock(@RequestAttribute("currentActor") Actor actor, @PathVariable long id,
             @Valid @RequestBody ModerationRequest request) {
         return CreatorVideoView.from(publications.unblock(actor, id, request.version(), new ModerationReason(request.reason())));
+    }
+    @PostMapping("/api/admin/videos/{id}/cancel-processing")
+    public CreatorVideoView cancelProcessing(@RequestAttribute("currentActor") Actor actor, @PathVariable long id,
+            @Valid @RequestBody ModerationRequest request) {
+        return CreatorVideoView.from(processing.cancelByAdmin(actor, id, request.version(),
+                new ModerationReason(request.reason())));
     }
     @PostMapping("/api/admin/videos/{id}/delete")
     @ResponseStatus(org.springframework.http.HttpStatus.NO_CONTENT)

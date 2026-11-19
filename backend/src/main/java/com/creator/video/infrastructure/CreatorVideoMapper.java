@@ -44,6 +44,16 @@ public interface CreatorVideoMapper {
             """)
     void cancelActiveTasks(long videoId);
 
+    @Update("""
+            <script>
+            UPDATE video SET processing_status = 'FAILED', version = version + 1, updated_at = CURRENT_TIMESTAMP(6)
+            WHERE id = #{videoId} AND version = #{version} AND deleted_at IS NULL
+            AND processing_status IN ('PENDING', 'PROCESSING')
+            <if test="ownerId != null">AND owner_id = #{ownerId}</if>
+            </script>
+            """)
+    int markProcessingCancelled(@Param("videoId") long videoId, @Param("ownerId") Long ownerId, @Param("version") long version);
+
     @Select("SELECT " + COLUMNS + FROM + OWNED + " ORDER BY v.id DESC LIMIT #{limit} OFFSET #{offset}")
     List<CreatorVideo> findPage(@Param("ownerId") long ownerId, @Param("limit") int limit, @Param("offset") int offset);
 

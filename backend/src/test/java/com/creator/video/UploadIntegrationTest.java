@@ -92,6 +92,8 @@ class UploadIntegrationTest {
     @Autowired UploadStaging staging;
     @Autowired UploadMaintenance maintenance;
     @Autowired com.creator.video.application.VideoDeletionService deletionService;
+    @Autowired com.creator.video.application.VideoProcessingService processingService;
+    @Autowired com.creator.video.application.CreatorVideoService creatorVideos;
     @Autowired VideoDeletionMaintenance deletionMaintenance;
     @Autowired MemoryStorage storage;
     @Autowired AuditLog audit;
@@ -145,6 +147,26 @@ class UploadIntegrationTest {
         assertEquals(1, taskPublisher.sent.size());
         assertEquals(id, taskPublisher.sent.getFirst().videoId());
         assertNotNull(database.queryForObject("SELECT published_at FROM processing_task WHERE video_id = ?", java.time.LocalDateTime.class, id));
+    }
+
+    @Test
+    void ownerCanCancelProcessingAndRetryCancelledGeneration() {
+        long id = draft(author);
+        uploads.upload(author, id, 0, new ByteArrayInputStream(mp4(1024)), 1024);
+        var cancelled = processingService.cancelByOwner(author, id, 1);
+        assertEquals("FAILED", cancelled.processingStatus());
+        assertEquals("CANCELLED", database.queryForObject(
+                "SELECT state FROM processing_task WHERE video_id=? AND generation=1", String.class, id));
+        assertTrue(cancelled.retryAllowed());
+        var retried = creatorVideos.retry(author, id, cancelled.version());
+        assertEquals("PENDING", retried.processingStatus());
+        assertEquals(2, database.queryForObject(
+                "SELECT generation FROM processing_task WHERE video_id=? ORDER BY generation DESC LIMIT 1", Long.class, id));
+        var admin = actor("upload_admin");
+        long second = draft(author);
+        assertThrows(com.creator.common.BusinessException.class,
+                () -> processingService.cancelByAdmin(author, second, 0, new ModerationReason("no")));
+        assertNotNull(processingService.cancelByAdmin(admin, second, 0, new ModerationReason("ops")));
     }
 
     @Test

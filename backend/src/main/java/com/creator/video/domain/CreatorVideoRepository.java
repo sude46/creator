@@ -9,6 +9,7 @@ public interface CreatorVideoRepository {
     Optional<CreatorVideo> findAny(long videoId, boolean lock);
     boolean softDelete(long videoId, Long ownerId, long version);
     void cancelActiveTasks(long videoId);
+    boolean markProcessingCancelled(long videoId, Long ownerId, long version);
     List<CreatorVideo> findPage(long ownerId, PageRequest page);
     long count(long ownerId);
     boolean retry(long ownerId, long videoId, long version, long generation);

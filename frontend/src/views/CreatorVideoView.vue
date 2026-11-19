@@ -168,6 +168,18 @@ async function upload() {
     if (!stopped) { busy.value = false; uploading.value = false; schedule() }
   }
 }
+async function cancelProcessing() {
+  if (!video.value || blocked.value || deleteBusy.value) return
+  if (!window.confirm('取消后当前处理任务会停止，可在失败状态下手动重试。确认取消处理？')) return
+  busy.value = true
+  error.value = ''
+  notice.value = ''
+  try {
+    video.value = await creatorApi.cancelProcessing(video.value)
+    notice.value = '处理已取消，可在失败状态下手动重试。'
+  } catch (failure) { if (!stopped) error.value = explain(failure) }
+  finally { if (!stopped) { busy.value = false; schedule() } }
+}
 async function remove() {
   if (!video.value || busy.value || downloadBusy.value || deleteBusy.value) return
   if (!window.confirm('删除后作品和源文件将进入回收流程，且不可恢复。确认删除？')) return
@@ -251,6 +263,7 @@ onBeforeUnmount(() => {
           <el-button type="danger" :loading="deleteBusy" :disabled="blocked" @click="remove">删除作品</el-button>
           <el-button v-if="submitAllowed" type="primary" :disabled="blocked" @click="command('review-submissions')">提交审核</el-button>
           <el-button v-if="ready && video.reviewStatus === 'PENDING'" :disabled="blocked" @click="command('review-withdrawal')">撤回审核</el-button>
+          <el-button v-if="video.processingStatus === 'PENDING' || video.processingStatus === 'PROCESSING'" :loading="busy" :disabled="blocked" @click="cancelProcessing">取消处理</el-button>
           <el-button v-if="video.retryAllowed" type="primary" :disabled="blocked" @click="command('processing-retry')">重试处理</el-button>
           <el-button v-if="ready && video.publicationStatus === 'PUBLISHED'" :disabled="blocked" @click="command('offline')">下架作品</el-button>
           <el-button v-if="ready && video.publicationStatus === 'OFFLINE' && video.reviewStatus === 'APPROVED'" type="primary" :disabled="blocked" @click="command('publication')">再次发布</el-button>
