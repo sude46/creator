@@ -70,7 +70,8 @@ class WorkerRuntimeIntegrationTest {
             database.update("UPDATE video SET source_asset_id=NULL");
             database.update("DELETE FROM media_asset");
             database.update("DELETE FROM video_favorite");
-            database.update("DELETE FROM video");
+            database.update("DELETE FROM video_comment");
+        database.update("DELETE FROM video");
             database.update("DELETE FROM video_category");
             database.update("DELETE FROM user_account");
             database.update("INSERT INTO user_account (username,password_hash) VALUES ('runtime_author','not-a-password')");

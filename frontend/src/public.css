@@ -33,3 +33,5 @@
 .public-search input:focus{border-color:transparent}
 .category-chips{margin:0 0 26px}
 @media(max-width:599px){.public-search{padding:7px 9px 7px 15px}.public-search input{font-size:15px}}
+.comment-form{display:grid;gap:10px;margin-bottom:18px}
+.comment-form textarea{display:block;width:100%;resize:vertical;border:1px solid var(--color-control-border);border-radius:3px;padding:11px 12px;color:var(--color-text-strong);font:inherit;background:var(--color-surface)}

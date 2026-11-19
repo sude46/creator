@@ -2,6 +2,7 @@ import { request } from './http'
 import type { Page, SignedMedia } from './creator'
 
 export type PublicVideo = { id: string; authorId: string; authorName: string; categoryId: string; categoryName: string; title: string; description: string; durationMillis: number; width: number; height: number; publishedAt: string; hasCover: boolean; coverKey: string | null; viewCount: number; favoriteCount: number; likeCount: number }
+export type Comment = { id: string; videoId: string; userId: string; username: string; content: string; createdAt: string }
 export type PublicCollection = { id: string; ownerId: string; ownerName: string; title: string; description: string; visibility: string; version: number; itemCount: number; createdAt: string }
 export type AnchorPage = { items: PublicVideo[]; anchorIndex: number | null; hasBefore: boolean; hasAfter: boolean }
 export type Favorite = { videoId: string; createdAt: string; available: boolean; video: PublicVideo | null }
@@ -24,6 +25,9 @@ export const publicApi = {
   favoriteState: (id: string, signal: AbortSignal) => read<{ favorited: boolean }>(`/favorites/${id}`, signal),
   favorite: (id: string, add: boolean) => request<void>(`/favorites/${id}`, { method: add ? 'PUT' : 'DELETE' }),
   like: (id: string, add: boolean) => request<void>(`/videos/${id}/like`, { method: add ? 'PUT' : 'DELETE' }),
+  comments: (videoId: string, page: number, signal: AbortSignal) => read<Page<Comment>>(`/videos/${videoId}/comments?page=${page}&size=10`, signal),
+  addComment: (videoId: string, content: string) => request<Comment>(`/videos/${videoId}/comments`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content }) }),
+  deleteComment: (id: string) => request<void>(`/comments/${id}`, { method: 'DELETE' }),
   likeState: (id: string, signal: AbortSignal) => read<{ liked: boolean }>(`/videos/${id}/like`, signal),
   view: (id: string) => request<{ viewCount: number }>(`/videos/${id}/view`, { method: 'POST' }),
   authorCollections: (authorId: string, signal: AbortSignal) => read<Page<PublicCollection>>(`/authors/${authorId}/collections?page=1&size=20`, signal),

@@ -35,6 +35,7 @@ class PublicMediaIntegrationTest {
     @Autowired PublicVideoService publicVideos;
     @Autowired com.creator.video.application.PublicVideoAnchorService anchorVideos;
     @Autowired com.creator.video.application.LikeService likes;
+    @Autowired com.creator.video.application.CommentService commentService;
     @Autowired CreatorVideoService creatorVideos;
     @Autowired DraftService drafts;
     @Autowired ReviewService reviews;
@@ -64,6 +65,7 @@ class PublicMediaIntegrationTest {
         database.update("UPDATE video SET source_asset_id=NULL");
         database.update("DELETE FROM media_asset");
         database.update("DELETE FROM video_favorite");
+        database.update("DELETE FROM video_comment");
         database.update("DELETE FROM video");
         database.update("DELETE FROM video_category");
         database.update("DELETE FROM user_account");
@@ -115,6 +117,17 @@ class PublicMediaIntegrationTest {
         assertInvisible(id);
         assertEquals(ErrorCode.NOT_FOUND, failure(() -> grant(author, id, MediaPurpose.OWNER_PREVIEW, MediaKind.SOURCE)));
         assertTrue(signer.calls.isEmpty());
+    }
+
+    @Test
+    void commentsListDeleteAndEnforceOwnership() {
+        long id = published("comment target");
+        var comment = commentService.add(author, id, "  第一条评论  ");
+        assertEquals("第一条评论", comment.content());
+        assertEquals(1, commentService.list(author, id, new PageRequest(1, 10)).total());
+        assertEquals(ErrorCode.FORBIDDEN, failure(() -> { commentService.delete(other, comment.id()); return null; }));
+        commentService.delete(admin, comment.id());
+        assertEquals(0, commentService.list(author, id, new PageRequest(1, 10)).total());
     }
 
     @Test
