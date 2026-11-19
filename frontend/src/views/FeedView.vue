@@ -114,6 +114,7 @@ async function toggleFavorite() {
     await publicApi.favorite(item.id, !favorited.value)
     if (stopped) return
     favorited.value = !favorited.value
+    items.value[current.value] = { ...item, favoriteCount: Math.max(0, item.favoriteCount + (favorited.value ? 1 : -1)) }
     notice.value = favorited.value ? '已收藏。' : '已取消收藏。'
   } catch (failure) { if (!stopped) notice.value = explain(failure) }
   finally { if (!stopped) favoriteBusy.value = false }
@@ -216,7 +217,7 @@ onBeforeUnmount(() => {
           <p class="feed-category">{{ item.categoryName }}</p>
           <h1>{{ item.title }}</h1>
           <p class="feed-description">{{ item.description || '作者没有留下简介。' }}</p>
-          <p class="feed-author"><RouterLink :to="`/authors/${item.authorId}`">@{{ item.authorName }}</RouterLink> · {{ item.viewCount }} 次播放 · <RouterLink class="feed-detail" :to="`/videos/${item.id}`">查看详情</RouterLink></p>
+          <p class="feed-author"><RouterLink :to="`/authors/${item.authorId}`">@{{ item.authorName }}</RouterLink> · {{ item.viewCount }} 次播放 · {{ item.favoriteCount }} 收藏 · <RouterLink class="feed-detail" :to="`/videos/${item.id}`">查看详情</RouterLink></p>
         </div>
         <button class="feed-mute" :aria-label="muted ? '取消静音' : '静音'" @click="toggleMute">{{ muted ? '静音' : '声音' }}</button>
         <div class="feed-progress"><span :style="{ width: `${progress}%` }"></span></div>

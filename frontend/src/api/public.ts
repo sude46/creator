@@ -1,7 +1,7 @@
 import { request } from './http'
 import type { Page, SignedMedia } from './creator'
 
-export type PublicVideo = { id: string; authorId: string; authorName: string; categoryId: string; categoryName: string; title: string; description: string; durationMillis: number; width: number; height: number; publishedAt: string; hasCover: boolean; coverKey: string | null; viewCount: number }
+export type PublicVideo = { id: string; authorId: string; authorName: string; categoryId: string; categoryName: string; title: string; description: string; durationMillis: number; width: number; height: number; publishedAt: string; hasCover: boolean; coverKey: string | null; viewCount: number; favoriteCount: number }
 export type AnchorPage = { items: PublicVideo[]; anchorIndex: number | null; hasBefore: boolean; hasAfter: boolean }
 export type Favorite = { videoId: string; createdAt: string; available: boolean; video: PublicVideo | null }
 function read<Result>(path: string, signal: AbortSignal) { return request<Result>(path, { signal: AbortSignal.any([signal, AbortSignal.timeout(30000)]) }) }

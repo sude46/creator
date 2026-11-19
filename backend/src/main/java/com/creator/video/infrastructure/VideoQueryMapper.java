@@ -17,7 +17,8 @@ public interface VideoQueryMapper {
     String COLUMNS = "v.id, v.owner_id, owner.username AS author_name, v.category_id, category.name AS category_name,"
             + " v.title, v.description, v.duration_millis, v.media_width, v.media_height, v.published_at,"
             + " (SELECT cover.object_key FROM media_asset cover WHERE cover.video_id = v.id AND cover.kind = 'COVER'"
-            + " ORDER BY cover.id DESC LIMIT 1) AS cover_key, v.view_count";
+            + " ORDER BY cover.id DESC LIMIT 1) AS cover_key, v.view_count,"
+            + " (SELECT COUNT(*) FROM video_favorite favorite WHERE favorite.video_id = v.id) AS favorite_count";
     String FILTER = "<if test='title != null'> AND v.title LIKE #{pattern} ESCAPE '!'</if>"
             + "<if test='categoryId != null'> AND v.category_id = #{categoryId}</if>";
 
