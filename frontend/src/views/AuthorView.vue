@@ -4,7 +4,7 @@ import { useRoute } from 'vue-router'
 import WorkspaceShell from '../components/WorkspaceShell.vue'
 import PublicVideoCard from '../components/PublicVideoCard.vue'
 import { publicApi } from '../api/public'
-import type { PublicCollection, PublicVideo } from '../api/public'
+import type { AuthorProfile, PublicCollection, PublicVideo } from '../api/public'
 import { useStudioError } from '../composables/useStudioError'
 
 const route = useRoute()
@@ -16,10 +16,12 @@ const total = ref(0)
 const loading = ref(false)
 const error = ref('')
 const authorName = ref('')
-const collections = ref<PublicCollection[]>([])
+const collections = ref<PublicCollection[]>([]); const profile = ref<AuthorProfile>(); const followBusy = ref(false)
 let activeRequest: AbortController | undefined
 let stopped = false
 
+async function loadProfile() { try { const result = await publicApi.authorProfile(id, new AbortController().signal); if (!stopped) profile.value = result } catch { /* optional */ } }
+async function toggleFollow() { if (!profile.value || followBusy.value) return; followBusy.value = true; const add = !profile.value.following; try { await publicApi.follow(id, add); if (!stopped) profile.value = { ...profile.value, following: add, followerCount: Math.max(0, profile.value.followerCount + (add ? 1 : -1)) } } catch { /* best effort */ } finally { if (!stopped) followBusy.value = false } }
 async function loadCollections() { try { const result = await publicApi.authorCollections(id, new AbortController().signal); if (!stopped) collections.value = result.items } catch { /* optional */ } }
 async function load(next = page.value) {
   activeRequest?.abort(); const controller = new AbortController(); activeRequest = controller
@@ -33,7 +35,7 @@ async function load(next = page.value) {
   finally { if (!stopped && !controller.signal.aborted) loading.value = false }
 }
 onMounted(() => {
-  if (/^[1-9]\d{0,18}$/.test(id)) { void load(); void loadCollections() }
+  if (/^[1-9]\d{0,18}$/.test(id)) { void load(); void loadCollections(); void loadProfile() }
   else error.value = '作者编号无效'
 })
 onBeforeUnmount(() => { stopped = true; activeRequest?.abort() })
@@ -42,8 +44,8 @@ onBeforeUnmount(() => { stopped = true; activeRequest?.abort() })
 <template>
   <WorkspaceShell>
     <div class="studio-heading">
-      <div><p class="eyebrow">FRAME ROOM / AUTHOR</p><h1>{{ authorName || '作者作品' }}</h1><p class="muted">公开作品 · {{ total }} 部</p></div>
-      <RouterLink class="create-link" to="/">返回发现</RouterLink>
+      <div><p class="eyebrow">FRAME ROOM / AUTHOR</p><h1>{{ authorName || '作者作品' }}</h1><p class="muted">公开作品 · {{ total }} 部<span v-if="profile"> · {{ profile.followerCount }} 关注者 · {{ profile.followingCount }} 关注中</span></p></div>
+      <div class="inline-actions"><el-button v-if="profile && !profile.self" :loading="followBusy" @click="toggleFollow">{{ profile.following ? '已关注' : '关注' }}</el-button><RouterLink class="create-link" to="/">返回发现</RouterLink></div>
     </div>
     <el-alert v-if="error" :title="error" type="error" :closable="false" role="alert" />
     <section v-if="collections.length" class="studio-panel"><div class="section-heading"><h2>合集</h2></div><div class="inline-actions"><RouterLink v-for="collection in collections" :key="collection.id" class="create-link" :to="`/collections/${collection.id}`">{{ collection.title }} · {{ collection.itemCount }}</RouterLink></div></section>
