@@ -60,6 +60,7 @@ class FavoriteIntegrationTest {
         database.update("DELETE FROM video_comment");
         database.update("DELETE FROM video");
         database.update("DELETE FROM video_category");
+        database.update("DELETE FROM notification");
         database.update("DELETE FROM user_account");
         registration.execute("favorite_author", "SafePassword123");
         registration.execute("favorite_viewer", "SafePassword123");

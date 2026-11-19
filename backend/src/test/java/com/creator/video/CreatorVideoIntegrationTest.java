@@ -64,6 +64,7 @@ class CreatorVideoIntegrationTest {
         database.update("DELETE FROM video_comment");
         database.update("DELETE FROM video");
         database.update("DELETE FROM video_category");
+        database.update("DELETE FROM notification");
         database.update("DELETE FROM user_account");
         registration.execute("creator_author", "SafePassword123");
         registration.execute("creator_other", "SafePassword123");

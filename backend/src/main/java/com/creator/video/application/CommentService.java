@@ -9,6 +9,7 @@ import com.creator.video.domain.Comment;
 import com.creator.video.domain.CommentRepository;
 import com.creator.video.domain.VideoQueryRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -17,8 +18,10 @@ public class CommentService {
     private final VideoQueryRepository videos;
     private final AccountQueryService accounts;
     private final AuditLog audit;
-    public CommentService(CommentRepository comments, VideoQueryRepository videos, AccountQueryService accounts, AuditLog audit) {
-        this.comments = comments; this.videos = videos; this.accounts = accounts; this.audit = audit;
+    private final ObjectProvider<NotificationService> notifications;
+    public CommentService(CommentRepository comments, VideoQueryRepository videos, AccountQueryService accounts, AuditLog audit,
+            ObjectProvider<NotificationService> notifications) {
+        this.comments = comments; this.videos = videos; this.accounts = accounts; this.audit = audit; this.notifications = notifications;
     }
     @Transactional(readOnly = true)
     public PageResult<Comment> list(Actor actor, long videoId, PageRequest page) {
@@ -27,10 +30,11 @@ public class CommentService {
     }
     @Transactional(timeout = 5)
     public Comment add(Actor actor, long videoId, String content) {
-        active(actor); videos.findPublic(videoId).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        active(actor); var video = videos.findPublic(videoId).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         String clean = content == null ? "" : content.trim();
         if (clean.isEmpty() || clean.length() > 500) throw new BusinessException(ErrorCode.INVALID_REQUEST);
         long id = comments.insert(videoId, actor.id(), clean);
+        if (video.ownerId() != actor.id()) notifications.ifAvailable(service -> service.comment(video.ownerId(), actor.username(), videoId));
         return comments.find(id).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
     }
     @Transactional(timeout = 5)

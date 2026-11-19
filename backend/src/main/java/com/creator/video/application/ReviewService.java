@@ -9,6 +9,7 @@ import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -19,15 +20,17 @@ public class ReviewService {
     private final CategorySelection categories;
     private final AuditLog audit;
     private final Clock clock;
+    private final ObjectProvider<NotificationService> notifications;
 
     public ReviewService(CreatorVideoRepository videos, ReviewRepository reviews, UploadRepository accounts,
-            CategorySelection categories, AuditLog audit, Clock clock) {
+            CategorySelection categories, AuditLog audit, Clock clock, ObjectProvider<NotificationService> notifications) {
         this.videos = videos;
         this.reviews = reviews;
         this.accounts = accounts;
         this.categories = categories;
         this.audit = audit;
         this.clock = clock;
+        this.notifications = notifications;
     }
 
     @Transactional(timeout = 5)
@@ -93,6 +96,8 @@ public class ReviewService {
         if (!reviews.decide(id, actor.id(), version, round, decision, now())) stale();
         reviews.record(video, actor.id(), decision);
         audit.record(actor, "REVIEW_" + decision.outcome().name(), "VIDEO", id);
+        notifications.ifAvailable(service -> service.review(video.ownerId(),
+                decision.outcome() == ReviewDecision.Outcome.APPROVED, decision.reason(), id));
         return videos.findOwned(video.ownerId(), id, false).orElseThrow();
     }
 

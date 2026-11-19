@@ -23,6 +23,7 @@ export const router = createRouter({
     { path: '/videos/:id', component: () => import('../views/PublicVideoView.vue') },
     { path: '/authors/:id', component: () => import('../views/AuthorView.vue') },
     { path: '/collections/:id', component: () => import('../views/CollectionView.vue') },
+    { path: '/notifications', component: () => import('../views/NotificationsView.vue') },
     { path: '/favorites', component: () => import('../views/FavoritesView.vue') },
     { path: '/:pathMatch(.*)*', component: () => import('../views/NotFoundView.vue') },
   ],

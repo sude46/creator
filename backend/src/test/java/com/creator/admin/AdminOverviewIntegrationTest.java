@@ -47,6 +47,7 @@ class AdminOverviewIntegrationTest {
         database.update("DELETE FROM video_comment");
         database.update("DELETE FROM video");
         database.update("DELETE FROM video_category");
+        database.update("DELETE FROM notification");
         database.update("DELETE FROM user_account");
         registerUser.execute("overview_author", "SafePassword123");
         bootstrapAdmin.execute("overview_admin", "SafePassword123");

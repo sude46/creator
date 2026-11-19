@@ -6,13 +6,17 @@ import com.creator.identity.application.AccountQueryService;
 import com.creator.identity.domain.Actor;
 import com.creator.video.domain.FollowRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class FollowService {
     private final FollowRepository follows;
     private final AccountQueryService accounts;
-    public FollowService(FollowRepository follows, AccountQueryService accounts) { this.follows = follows; this.accounts = accounts; }
+    private final ObjectProvider<NotificationService> notifications;
+    public FollowService(FollowRepository follows, AccountQueryService accounts, ObjectProvider<NotificationService> notifications) {
+        this.follows = follows; this.accounts = accounts; this.notifications = notifications;
+    }
 
     @Transactional(readOnly = true)
     public Profile profile(Actor actor, long authorId) {
@@ -28,7 +32,9 @@ public class FollowService {
         active(actor);
         if (authorId == actor.id()) throw new BusinessException(ErrorCode.INVALID_REQUEST);
         if (follows.activeUsername(authorId) == null) throw new BusinessException(ErrorCode.NOT_FOUND);
+        boolean already = follows.exists(actor.id(), authorId);
         follows.add(actor.id(), authorId);
+        if (!already) notifications.ifAvailable(service -> service.follow(authorId, actor.username()));
     }
 
     @Transactional(timeout = 5)
