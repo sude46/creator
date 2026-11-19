@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import WorkspaceShell from '../components/WorkspaceShell.vue'
 import { adminApi } from '../api/admin'
 import type { ManagedVideo } from '../api/admin'
-import { processingLabels } from '../api/creator'
+import { formatTime, processingLabels } from '../api/creator'
 import { useStudioError } from '../composables/useStudioError'
 
 const explain = useStudioError()
@@ -89,7 +89,7 @@ onBeforeUnmount(() => { stopped = true; activeRequest?.abort() })
         <div class="section-heading"><h2>处理中 <span class="count">{{ total }}</span></h2><el-button :loading="loading" :disabled="busy" @click="load()">刷新列表</el-button></div>
         <p v-if="loading" role="status">正在读取处理任务…</p>
         <button v-for="item in items" v-else :key="item.video.id" class="managed-row" :class="{ active: selectedId === item.video.id }" :disabled="busy" :aria-pressed="selectedId === item.video.id" @click="select(item)">
-          <strong>{{ item.video.title }}</strong><span>作品 #{{ item.video.id }} · 作者 #{{ item.ownerId }} · {{ processingLabels[item.video.processingStatus] }}</span>
+          <strong>{{ item.video.title }}</strong><span>作品 #{{ item.video.id }} · 作者 #{{ item.ownerId }} · {{ processingLabels[item.video.processingStatus] }} · 任务 {{ item.video.taskState || '—' }}</span>
         </button>
         <p v-if="!loading && !error && !items.length" class="empty-state">当前没有等待或处理中的作品。</p>
         <div class="page-controls"><el-button :disabled="loading || busy || page <= 1" @click="load(page - 1)">上一页</el-button><span>{{ page }}</span><el-button :disabled="loading || busy || page * 20 >= total || page >= 1000" @click="load(page + 1)">下一页</el-button></div>
@@ -99,6 +99,7 @@ onBeforeUnmount(() => { stopped = true; activeRequest?.abort() })
         <template v-if="selected">
           <h3>{{ selected.video.title }}</h3>
           <p class="muted">作品 #{{ selected.video.id }} · 当前状态 {{ processingLabels[selected.video.processingStatus] }} · 版本 {{ selected.video.version }}</p>
+          <dl class="video-facts"><div><dt>任务状态</dt><dd>{{ selected.video.taskState || '—' }}</dd></div><div><dt>执行代次</dt><dd>{{ selected.video.processingGeneration }}</dd></div><div><dt>已尝试</dt><dd>{{ selected.video.executionAttempts }} 次</dd></div><div><dt>下次重试</dt><dd>{{ selected.video.nextAttemptAt ? formatTime(selected.video.nextAttemptAt) : '—' }}</dd></div><div><dt>失败码</dt><dd>{{ selected.video.failureCode || '—' }}</dd></div></dl>
           <p class="video-description">{{ selected.video.description || '作者未填写简介。' }}</p>
           <form class="studio-form" @submit.prevent="cancel">
             <label for="cancel-reason">取消原因（必填）</label>
