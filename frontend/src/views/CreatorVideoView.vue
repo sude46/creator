@@ -50,7 +50,6 @@ const blocked = computed(() => busy.value || editorBusy.value || loading.value |
 const ready = computed(() => video.value?.processingStatus === 'READY' && video.value.taskState === 'SUCCEEDED' && !video.value.moderationBlocked)
 const draft = computed(() => !!video.value && !video.value.sourceUploaded && !video.value.moderationBlocked)
 const editable = computed(() => draft.value || (ready.value && video.value?.reviewStatus !== 'PENDING'))
-const submitAllowed = computed(() => ready.value && ['NOT_SUBMITTED', 'REJECTED'].includes(video.value?.reviewStatus ?? ''))
 const polling = computed(() => !!video.value && !video.value.moderationBlocked &&
   ((video.value.sourceUploaded && ['PENDING', 'PROCESSING'].includes(video.value.processingStatus)) || video.value.reviewStatus === 'PENDING'))
 
@@ -257,27 +256,31 @@ onBeforeUnmount(() => {
     <p v-if="!video && loading" class="empty-state" role="status">正在读取作品…</p>
     <template v-if="video">
       <section class="studio-panel">
-        <div class="status-group"><el-tag :type="display?.tone">{{ display?.label }}</el-tag><el-tag type="info">{{ display?.visibilityLabel }}</el-tag></div>
+        <div class="status-group"><el-tag :type="display?.tone">{{ display?.label }}</el-tag><span class="visibility-note">{{ display?.visibilityLabel }}</span></div>
         <p class="video-description">{{ video.description || '暂未填写简介' }}</p>
-        <dl class="video-facts"><div><dt>视频时长</dt><dd>{{ video.durationMillis === null ? '—' : `${(video.durationMillis / 1000).toFixed(1)} 秒` }}</dd></div><div><dt>发布时间</dt><dd>{{ formatTime(video.publishedAt) }}</dd></div><div><dt>可见范围</dt><dd>{{ display?.visibilityLabel }}</dd></div></dl>
         <p class="status-detail">{{ display?.detail }}</p>
-        <p v-if="video.failureCode" class="field-error">已尝试 {{ video.executionAttempts }} 次{{ video.retryAllowed ? '，可以重试处理' : '，请联系管理员或删除作品' }}</p>
         <p v-if="video.nextAttemptAt && video.taskState === 'RETRY_WAIT'" class="muted">预计下次处理：{{ formatTime(video.nextAttemptAt) }}</p>
         <p v-if="polling" class="muted" role="status">页面可见时每 10 秒查询一次状态；连续失败三次后暂停，可手动刷新。</p>
-        <p v-if="video.moderationBlocked" class="field-error">作品已被封禁，请查看下方处理原因。解禁后仍需重新送审。</p>
-        <div class="inline-actions" v-if="!editing">
+        <div class="inline-actions primary-actions" v-if="!editing">
           <el-button v-if="display?.key === 'NEEDS_UPLOAD'" type="primary" :disabled="blocked" @click="focusUpload">上传视频</el-button>
-          <el-button v-if="submitAllowed" type="primary" :disabled="blocked" @click="command('review-submissions')">提交审核</el-button>
-          <el-button v-if="ready" type="primary" :disabled="blocked" @click="openPreview">{{ preview ? '重新播放' : '播放我的作品' }}</el-button>
-          <el-button v-if="display?.key === 'PENDING_REVIEW'" :disabled="blocked" @click="command('review-withdrawal')">撤回审核</el-button>
-          <el-button v-if="display?.key === 'PUBLISHED'" :disabled="blocked" @click="command('offline')">下架作品</el-button>
-          <el-button v-if="display?.key === 'OFFLINE' || display?.key === 'READY_TO_PUBLISH'" type="primary" :disabled="blocked" @click="command('publication')">再次发布</el-button>
-          <el-button v-if="video.retryAllowed" type="primary" :disabled="blocked" @click="command('processing-retry')">重试处理</el-button>
-          <el-button v-if="video.processingStatus === 'PENDING' || video.processingStatus === 'PROCESSING'" :loading="busy" :disabled="blocked" @click="cancelProcessing">取消处理</el-button>
-          <el-button v-if="editable" :disabled="blocked" @click="editing = true">编辑信息</el-button>
-          <el-button v-if="ready" :loading="downloadBusy" :disabled="blocked" @click="download">下载源文件</el-button>
-          <el-button type="danger" :loading="deleteBusy" :disabled="blocked" @click="remove">删除作品</el-button>
+          <el-button v-else-if="display?.key === 'READY_TO_SUBMIT'" type="primary" :disabled="blocked" @click="command('review-submissions')">提交审核</el-button>
+          <el-button v-else-if="display?.key === 'FAILED' && video.retryAllowed" type="primary" :disabled="blocked" @click="command('processing-retry')">重新处理</el-button>
+          <el-button v-else-if="display?.key === 'PENDING_REVIEW'" type="primary" :disabled="blocked" @click="command('review-withdrawal')">撤回审核</el-button>
+          <el-button v-else-if="display?.key === 'REJECTED'" type="primary" :disabled="blocked" @click="editing = true">修改后重新提交</el-button>
+          <el-button v-else-if="display?.key === 'PUBLISHED'" type="primary" :disabled="blocked" @click="openPreview">{{ preview ? '重新播放' : '播放我的作品' }}</el-button>
         </div>
+        <details v-if="!editing" class="more-actions">
+          <summary>更多操作</summary>
+          <div class="inline-actions">
+            <el-button v-if="editable && display?.key !== 'REJECTED'" :disabled="blocked" @click="editing = true">编辑信息</el-button>
+            <el-button v-if="ready && display?.key !== 'PUBLISHED'" :disabled="blocked" @click="openPreview">{{ preview ? '重新播放' : '播放我的作品' }}</el-button>
+            <el-button v-if="display?.key === 'PROCESSING'" :loading="busy" :disabled="blocked" @click="cancelProcessing">取消处理</el-button>
+            <el-button v-if="display?.key === 'PUBLISHED'" :disabled="blocked" @click="command('offline')">下架作品</el-button>
+            <el-button v-if="display?.key === 'TAKEN_DOWN'" :disabled="blocked" @click="command('publication')">再次发布</el-button>
+            <el-button v-if="ready" :loading="downloadBusy" :disabled="blocked" @click="download">下载源文件</el-button>
+            <el-button type="danger" :loading="deleteBusy" :disabled="blocked" @click="remove">删除作品</el-button>
+          </div>
+        </details>
       </section>
       <VideoEditor v-if="editing" :key="video.id" :video="video" @saved="saved" @cancel="editing = false; load()" @busy="editorBusy = $event" />
       <section v-if="draft && !editing" ref="uploadPanel" class="studio-panel">

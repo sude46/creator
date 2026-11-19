@@ -12,7 +12,9 @@ public interface CreatorVideoMapper {
             + " COALESCE(task.execution_attempts, 0) AS execution_attempts, task.next_attempt_at,"
             + " v.duration_millis, v.media_width, v.media_height, v.review_round, v.review_submitted_at, v.published_at,"
             + " (SELECT cover.object_key FROM media_asset cover WHERE cover.video_id = v.id AND cover.kind = 'COVER'"
-            + " ORDER BY cover.id DESC LIMIT 1) AS cover_key";
+            + " ORDER BY cover.id DESC LIMIT 1) AS cover_key,"
+            + " (SELECT reject.reason FROM review_record reject WHERE reject.video_id = v.id AND reject.outcome = 'REJECTED'"
+            + " ORDER BY reject.id DESC LIMIT 1) AS rejection_reason";
     String FROM = " FROM video v LEFT JOIN processing_task task ON task.video_id = v.id AND task.generation = v.processing_generation";
     String OWNED = " WHERE v.owner_id = #{ownerId} AND v.deleted_at IS NULL";
 

@@ -179,11 +179,14 @@ class UploadIntegrationTest {
         uploads.upload(author, id, 0, new ByteArrayInputStream(mp4(1024)), 1024);
         var cancelled = processingService.cancelByOwner(author, id, 1);
         assertEquals("FAILED", cancelled.processingStatus());
+        assertEquals(com.creator.video.domain.WorkStatus.FAILED, cancelled.workStatus());
+        assertEquals("视频处理失败", cancelled.statusReason());
         assertEquals("CANCELLED", database.queryForObject(
                 "SELECT state FROM processing_task WHERE video_id=? AND generation=1", String.class, id));
         assertTrue(cancelled.retryAllowed());
         var retried = creatorVideos.retry(author, id, cancelled.version());
         assertEquals("PENDING", retried.processingStatus());
+        assertEquals(com.creator.video.domain.WorkStatus.PROCESSING, retried.workStatus());
         assertEquals(2, database.queryForObject(
                 "SELECT generation FROM processing_task WHERE video_id=? ORDER BY generation DESC LIMIT 1", Long.class, id));
         var admin = actor("upload_admin");
