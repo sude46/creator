@@ -69,7 +69,7 @@ onBeforeUnmount(() => { activeRequest?.abort(); window.removeEventListener('befo
     <el-alert v-if="error" :title="error" type="error" :closable="false" role="alert" />
     <section class="studio-panel" aria-label="我的作品" :aria-busy="loading">
       <div class="section-heading"><h2>我的作品 <span class="count">{{ total }}</span></h2><el-button :loading="loading" @click="load()">刷新列表</el-button></div>
-      <p v-if="loading" class="empty-state" role="status">正在加载作品…</p>
+      <div v-if="loading" class="video-grid" aria-busy="true" aria-label="正在加载作品"><div v-for="index in 6" :key="index" class="creator-card-skeleton" aria-hidden="true"></div></div>
       <div v-else-if="videos.length" class="video-grid">
         <article v-for="(video, index) in videos" :key="video.id" class="creator-card">
           <RouterLink class="creator-cover" :class="coverTone(video.id)" :to="`/studio/${video.id}`" :aria-label="`打开作品：${video.title}`"><img v-if="covers[video.id]" :src="covers[video.id]" alt="" loading="lazy" referrerpolicy="no-referrer" @error="coverFailed(video.id)" /><span class="cover-index">{{ itemNumber(index) }}</span><span class="cover-caption">打开作品</span></RouterLink>

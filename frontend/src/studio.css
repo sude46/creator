@@ -9,3 +9,4 @@
 .empty-retry{justify-content:center}
 .reason-presets{display:flex;flex-wrap:wrap;gap:6px;margin:9px 0 0}
 .reason-presets .el-button+.el-button{margin-left:0}
+.creator-card-skeleton{min-height:320px;border:1px solid #e5e8e2;border-radius:4px;background:linear-gradient(90deg,#f1f0ea,#faf9f4,#f1f0ea);background-size:200% 100%;animation:pulse 1.4s infinite}

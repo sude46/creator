@@ -160,6 +160,22 @@ WEB_PORT=8081 docker compose -p creator-prod --env-file .env -f deploy/compose.p
 
 按 `deploy/nginx/http-8080.conf.example` 配置宿主机 Nginx，把其中的 `example.com` 替换为实际域名，并将 `MEDIA_PUBLIC_ENDPOINT` 设为同一公网源（例如 `http://creator.example.com:8080`）。所有 `server_name` 的 A 记录必须指向主机公网 IP；DNS 未生效时域名无法打开。8080 演示仍是明文 HTTP，只用于功能查看，不能替代备案后的 HTTPS 验收。
 
+## 演示数据
+
+`deploy/seed-demo.py` 通过真实 HTTP API 生成合成演示作品，不直接写数据库，也不包含账号密码：
+
+```bash
+export DEMO_ADMIN_PASSWORD='管理员密码'
+export DEMO_AUTHOR_PASSWORD='作者密码'
+# 只删除标题以“[演示]”开头的旧演示作品
+python3 deploy/seed-demo.py --base-url http://127.0.0.1:8081 --reset-only
+# 生成 12 部作品、4 个分类，保留 1 部待审核作品
+python3 deploy/seed-demo.py --base-url http://127.0.0.1:8081 --count 12
+```
+
+脚本使用 FFmpeg 生成短测试视频，经真实上传、转码、审核链路后再批准发布。`--reset` 只清理脚本创建的作品，不会删除作者手工上传的内容。演示前运行一次，避免残留旧数据；不要把演示密码写入仓库或提交脚本。
+
+
 ## 初始化管理员
 
 注册接口只生成普通用户。首次启动前，在后端终端临时设置：
