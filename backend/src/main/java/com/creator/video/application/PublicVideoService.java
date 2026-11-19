@@ -15,4 +15,10 @@ public class PublicVideoService {
     }
     @Transactional(readOnly = true)
     public PublicVideo get(long id) { return videos.findPublic(id).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND)); }
+
+    @Transactional(timeout = 5)
+    public long recordView(long id) {
+        if (!videos.incrementView(id)) throw new BusinessException(ErrorCode.NOT_FOUND);
+        return videos.findPublic(id).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND)).viewCount();
+    }
 }

@@ -16,6 +16,7 @@ public class MyBatisVideoQueryRepository implements VideoQueryRepository {
     }
     public long count(VideoSearch search) { return mapper.count(search.title(), search.pattern(), search.categoryId()); }
     public Optional<PublicVideo> findPublic(long videoId) { return Optional.ofNullable(mapper.findPublic(videoId)); }
+    public boolean incrementView(long videoId) { return mapper.incrementView(videoId) == 1; }
     public Optional<PublicVideo> findPublicInSearch(VideoSearch search, long videoId) {
         return Optional.ofNullable(mapper.findPublicInSearch(videoId, search.title(), search.pattern(), search.categoryId()));
     }

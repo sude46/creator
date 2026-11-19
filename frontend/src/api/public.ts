@@ -1,7 +1,7 @@
 import { request } from './http'
 import type { Page, SignedMedia } from './creator'
 
-export type PublicVideo = { id: string; authorId: string; authorName: string; categoryId: string; categoryName: string; title: string; description: string; durationMillis: number; width: number; height: number; publishedAt: string; hasCover: boolean; coverKey: string | null }
+export type PublicVideo = { id: string; authorId: string; authorName: string; categoryId: string; categoryName: string; title: string; description: string; durationMillis: number; width: number; height: number; publishedAt: string; hasCover: boolean; coverKey: string | null; viewCount: number }
 export type AnchorPage = { items: PublicVideo[]; anchorIndex: number | null; hasBefore: boolean; hasAfter: boolean }
 export type Favorite = { videoId: string; createdAt: string; available: boolean; video: PublicVideo | null }
 function read<Result>(path: string, signal: AbortSignal) { return request<Result>(path, { signal: AbortSignal.any([signal, AbortSignal.timeout(30000)]) }) }
@@ -22,5 +22,6 @@ export const publicApi = {
   favorites: (page: number, signal: AbortSignal) => read<Page<Favorite>>(`/favorites?page=${page}&size=12`, signal),
   favoriteState: (id: string, signal: AbortSignal) => read<{ favorited: boolean }>(`/favorites/${id}`, signal),
   favorite: (id: string, add: boolean) => request<void>(`/favorites/${id}`, { method: add ? 'PUT' : 'DELETE' }),
+  view: (id: string) => request<{ viewCount: number }>(`/videos/${id}/view`, { method: 'POST' }),
 }
 export function durationLabel(milliseconds: number) { const seconds = Math.floor(milliseconds / 1000); return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}` }

@@ -117,6 +117,17 @@ class PublicMediaIntegrationTest {
     }
 
     @Test
+    void publicViewsIncrementOnlyForVisibleWorks() {
+        long id = published("view count");
+        assertEquals(0, publicVideos.get(id).viewCount());
+        assertEquals(1, publicVideos.recordView(id));
+        assertEquals(1, publicVideos.get(id).viewCount());
+        assertEquals(2, publicVideos.recordView(id));
+        database.update("UPDATE video SET publication_status='OFFLINE' WHERE id=?", id);
+        assertEquals(ErrorCode.NOT_FOUND, failure(() -> publicVideos.recordView(id)));
+    }
+
+    @Test
     void anchoredWindowReturnsAnchorIndexAndFallsBackForUnknownIds() {
         long first = published("anchor one");
         long second = published("anchor two");

@@ -35,4 +35,9 @@ public class PublicVideoController {
             boolean hasBefore, boolean hasAfter) { }
     @GetMapping("/{id}")
     public PublicVideoView get(@PathVariable long id) { return PublicVideoView.from(videos.get(id)); }
+
+    @PostMapping("/{id}/view")
+    public ViewCountView view(@PathVariable long id) { return new ViewCountView(videos.recordView(id)); }
+
+    public record ViewCountView(long viewCount) { }
 }

@@ -56,7 +56,16 @@ async function loadCover(item: PublicVideo) {
   } catch { /* keep the dark backdrop */ }
 }
 
+async function recordView(item: PublicVideo, index: number) {
+  if (sessionStorage.getItem(`frame-viewed-${item.id}`)) return
+  sessionStorage.setItem(`frame-viewed-${item.id}`, '1')
+  try {
+    const result = await publicApi.view(item.id)
+    if (!stopped && items.value[index]) items.value[index] = { ...items.value[index], viewCount: result.viewCount }
+  } catch { /* best effort */ }
+}
 async function loadMedia(index = current.value) {
+  if (items.value[index]) void recordView(items.value[index], index)
   const range = [index - 1, index, index + 1].filter(i => i >= 0 && i < items.value.length)
   await Promise.all(range.flatMap(i => { const item = items.value[i]; return [loadSource(item), loadCover(item)] }))
   await nextTick()
@@ -205,7 +214,7 @@ onBeforeUnmount(() => {
           <p class="feed-category">{{ item.categoryName }}</p>
           <h1>{{ item.title }}</h1>
           <p class="feed-description">{{ item.description || '作者没有留下简介。' }}</p>
-          <p class="feed-author">@{{ item.authorName }}</p>
+          <p class="feed-author">@{{ item.authorName }} · {{ item.viewCount }} 次播放</p>
         </div>
         <button class="feed-mute" :aria-label="muted ? '取消静音' : '静音'" @click="toggleMute">{{ muted ? '静音' : '声音' }}</button>
         <div class="feed-progress"><span :style="{ width: `${progress}%` }"></span></div>
