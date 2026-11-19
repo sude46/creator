@@ -2,6 +2,7 @@ package com.creator.video.web;
 
 import com.creator.common.*;
 import com.creator.video.application.PublicVideoAnchorService;
+import com.creator.video.application.LikeService;
 import com.creator.video.application.PublicVideoService;
 import com.creator.video.domain.VideoSearch;
 import org.springframework.web.bind.annotation.*;
@@ -11,9 +12,11 @@ import org.springframework.web.bind.annotation.*;
 public class PublicVideoController {
     private final PublicVideoService videos;
     private final PublicVideoAnchorService anchors;
-    public PublicVideoController(PublicVideoService videos, PublicVideoAnchorService anchors) {
+    private final LikeService likes;
+    public PublicVideoController(PublicVideoService videos, PublicVideoAnchorService anchors, LikeService likes) {
         this.videos = videos;
         this.anchors = anchors;
+        this.likes = likes;
     }
     @GetMapping(params = "!anchorId")
     public PageResult<PublicVideoView> list(@RequestParam(defaultValue = "") String title, @RequestParam(required = false) Long categoryId,
@@ -35,6 +38,25 @@ public class PublicVideoController {
             boolean hasBefore, boolean hasAfter) { }
     @GetMapping("/{id}")
     public PublicVideoView get(@PathVariable long id) { return PublicVideoView.from(videos.get(id)); }
+
+    @PutMapping("/{id}/like")
+    @org.springframework.web.bind.annotation.ResponseStatus(org.springframework.http.HttpStatus.NO_CONTENT)
+    public void like(@RequestAttribute("currentActor") com.creator.identity.domain.Actor actor, @PathVariable long id) {
+        likes.add(actor, id);
+    }
+
+    @DeleteMapping("/{id}/like")
+    @org.springframework.web.bind.annotation.ResponseStatus(org.springframework.http.HttpStatus.NO_CONTENT)
+    public void unlike(@RequestAttribute("currentActor") com.creator.identity.domain.Actor actor, @PathVariable long id) {
+        likes.remove(actor, id);
+    }
+
+    @GetMapping("/{id}/like")
+    public LikeState likeState(@RequestAttribute("currentActor") com.creator.identity.domain.Actor actor, @PathVariable long id) {
+        return new LikeState(likes.state(actor, id));
+    }
+
+    public record LikeState(boolean liked) { }
 
     @PostMapping("/{id}/view")
     public ViewCountView view(@PathVariable long id) { return new ViewCountView(videos.recordView(id)); }

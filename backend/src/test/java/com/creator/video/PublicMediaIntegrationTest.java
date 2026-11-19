@@ -34,6 +34,7 @@ class PublicMediaIntegrationTest {
     @Autowired JdbcTemplate database;
     @Autowired PublicVideoService publicVideos;
     @Autowired com.creator.video.application.PublicVideoAnchorService anchorVideos;
+    @Autowired com.creator.video.application.LikeService likes;
     @Autowired CreatorVideoService creatorVideos;
     @Autowired DraftService drafts;
     @Autowired ReviewService reviews;
@@ -114,6 +115,18 @@ class PublicMediaIntegrationTest {
         assertInvisible(id);
         assertEquals(ErrorCode.NOT_FOUND, failure(() -> grant(author, id, MediaPurpose.OWNER_PREVIEW, MediaKind.SOURCE)));
         assertTrue(signer.calls.isEmpty());
+    }
+
+    @Test
+    void likesAreIdempotentAndOnlyTargetPublicWorks() {
+        long id = published("like target");
+        likes.add(author, id); likes.add(author, id);
+        assertTrue(likes.state(author, id));
+        assertEquals(1, listing("like target").items().getFirst().likeCount());
+        likes.remove(author, id); likes.remove(author, id);
+        assertFalse(likes.state(author, id));
+        database.update("UPDATE video SET publication_status='OFFLINE' WHERE id=?", id);
+        assertEquals(ErrorCode.NOT_FOUND, failure(() -> { likes.add(author, id); return null; }));
     }
 
     @Test

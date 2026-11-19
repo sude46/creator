@@ -22,7 +22,7 @@ const loading = ref(true)
 const error = ref('')
 const notice = ref('')
 const muted = ref(localStorage.getItem('frame-feed-muted') !== 'false')
-const favorited = ref<boolean>()
+const favorited = ref<boolean>(); const liked = ref<boolean>(); const likeBusy = ref(false)
 const favoriteBusy = ref(false)
 const progress = ref(0)
 const signing = new Set<string>()
@@ -90,7 +90,7 @@ function setCurrent(index: number) {
   progress.value = 0
   savePosition()
   void loadMedia(index)
-  void loadFavorite()
+  void loadFavorite(); void loadLike()
 }
 
 async function loadFavorite() {
@@ -106,6 +106,8 @@ async function loadFavorite() {
   } catch { if (!stopped && !controller.signal.aborted) favorited.value = undefined }
 }
 
+async function loadLike() { const item = items.value[current.value]; if (!item) return; liked.value = undefined; try { const r = await publicApi.likeState(item.id, new AbortController().signal); if (!stopped) liked.value = r.liked } catch { if (!stopped) liked.value = undefined } }
+async function toggleLike() { const item = items.value[current.value]; if (!item || liked.value === undefined || likeBusy.value) return; const add = !liked.value; likeBusy.value = true; try { await publicApi.like(item.id, add); if (!stopped) { liked.value = add; items.value[current.value] = { ...item, likeCount: Math.max(0, item.likeCount + (add ? 1 : -1)) } } } catch { /* best effort */ } finally { if (!stopped) likeBusy.value = false } }
 async function toggleFavorite() {
   const item = items.value[current.value]
   if (!item || favorited.value === undefined || favoriteBusy.value) return
@@ -178,7 +180,7 @@ async function loadFeed(nextCategory = category.value) {
     slides.value.forEach(slide => slide && observer?.observe(slide))
     savePosition()
     await loadMedia(current.value)
-    void loadFavorite()
+    void loadFavorite(); void loadLike()
   } catch (failure) { if (!stopped && !controller.signal.aborted) error.value = explain(failure) }
   finally { if (!stopped && !controller.signal.aborted) loading.value = false }
 }
@@ -210,6 +212,7 @@ onBeforeUnmount(() => {
         <img v-else-if="covers[item.id]" class="feed-poster" :src="covers[item.id]" alt="" referrerpolicy="no-referrer" @click="openDetail" />
         <div class="feed-shade"></div>
         <aside class="feed-rail">
+          <button :disabled="likeBusy || liked === undefined" :aria-pressed="liked" @click="toggleLike">{{ liked ? '♥' : '♡' }}<span>{{ liked ? '已赞' : '点赞' }}</span></button>
           <button :disabled="favoriteBusy || favorited === undefined" :aria-pressed="favorited" @click="toggleFavorite">{{ favorited ? '♥' : '♡' }}<span>{{ favorited ? '已收藏' : '收藏' }}</span></button>
           <button @click="share">↗<span>分享</span></button>
         </aside>
@@ -217,7 +220,7 @@ onBeforeUnmount(() => {
           <p class="feed-category">{{ item.categoryName }}</p>
           <h1>{{ item.title }}</h1>
           <p class="feed-description">{{ item.description || '作者没有留下简介。' }}</p>
-          <p class="feed-author"><RouterLink :to="`/authors/${item.authorId}`">@{{ item.authorName }}</RouterLink> · {{ item.viewCount }} 次播放 · {{ item.favoriteCount }} 收藏 · <RouterLink class="feed-detail" :to="`/videos/${item.id}`">查看详情</RouterLink></p>
+          <p class="feed-author"><RouterLink :to="`/authors/${item.authorId}`">@{{ item.authorName }}</RouterLink> · {{ item.viewCount }} 次播放 · {{ item.favoriteCount }} 收藏 · {{ item.likeCount }} 赞 · <RouterLink class="feed-detail" :to="`/videos/${item.id}`">查看详情</RouterLink></p>
         </div>
         <button class="feed-mute" :aria-label="muted ? '取消静音' : '静音'" @click="toggleMute">{{ muted ? '静音' : '声音' }}</button>
         <div class="feed-progress"><span :style="{ width: `${progress}%` }"></span></div>

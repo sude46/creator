@@ -18,7 +18,8 @@ public interface VideoQueryMapper {
             + " v.title, v.description, v.duration_millis, v.media_width, v.media_height, v.published_at,"
             + " (SELECT cover.object_key FROM media_asset cover WHERE cover.video_id = v.id AND cover.kind = 'COVER'"
             + " ORDER BY cover.id DESC LIMIT 1) AS cover_key, v.view_count,"
-            + " (SELECT COUNT(*) FROM video_favorite favorite WHERE favorite.video_id = v.id) AS favorite_count";
+            + " (SELECT COUNT(*) FROM video_favorite favorite WHERE favorite.video_id = v.id) AS favorite_count,"
+            + " (SELECT COUNT(*) FROM video_like liked WHERE liked.video_id = v.id) AS like_count";
     String FILTER = "<if test='title != null'> AND v.title LIKE #{pattern} ESCAPE '!'</if>"
             + "<if test='categoryId != null'> AND v.category_id = #{categoryId}</if>";
 
