@@ -63,6 +63,6 @@ mvn -s maven-settings.xml '-Dmaven.repo.local=../.local/m2' '-Dtest=MinioMediaIn
 
 最终 MySQL 8.4.3 + RabbitMQ 4.0.5 + FFmpeg 9.0.2 全量回归 147 项：146 通过、1 项真实 MinIO 测试跳过、零失败/错误。新增数据库/授权集成测试 12 项与 SDK 签名 2 项通过；V8 实际迁移通过。运行使用 JDK 23 编译到 Java 21。
 
-2026-11-18 实测：JDK 21 下 MySQL 8.4.3、RabbitMQ 4.0.5、FFmpeg 6.1.1 和 MinIO 测试镜像全量 198 项通过，0 跳过；真实 MinIO 私有桶、上传、签名和 Range 测试通过。Firefox 完整播放和 Chromium 冒烟完成，Range/CORS 通过；正式存储环境、目标浏览器和容量仍未验收。
+2026-11-18 实测：JDK 21 下 MySQL 8.4.3、RabbitMQ 4.0.5、FFmpeg 6.1.1 和 MinIO 测试镜像全量 199 项通过，0 跳过；真实 MinIO 私有桶、上传、签名和 Range 测试通过。Firefox 完整播放和 Chromium 冒烟完成，Range/CORS 通过；正式存储环境、目标浏览器和容量仍未验收。
 
 正式存储环境、最终反向代理/CORS、目标浏览器播放与拖动和生产容量仍待验证；JDK 21 测试环境和 Firefox/Chromium 测试浏览器已通过，前端页面已接入。[收藏后端](favorite-api.md) 已在后续模块接入，列表批量复用同一公开条件，不以收藏关系替代播放授权。

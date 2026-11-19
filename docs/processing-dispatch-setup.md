@@ -87,7 +87,7 @@ mvn -s maven-settings.xml '-Dmaven.repo.local=../.local/m2' test
 
 2026-11-17 实测：独立 MySQL 8.4.3 + RabbitMQ 4.0.5 环境下，完整 81 项测试通过，0 失败、0 错误、0 跳过；V1～V5 迁移在真库执行通过。真库测试发现并修复草稿 SQL 的保留字别名兼容问题。此前 H2 + 真实 RabbitMQ 的 81 项也全部通过。运行环境为 JDK 23、编译目标 Java 21；Flyway 提示 MySQL 8.4 超出该版本已测试范围，需在部署前复核支持版本。
 
-2026-11-18 实测：JDK 21 下独立 MySQL 8.4.3、RabbitMQ 4.0.5、FFmpeg 6.1.1 和 MinIO 测试镜像全量 198 项通过，0 失败、0 错误、0 跳过；V1～V11 迁移在真库执行通过。Flyway 13.12.2 在 MySQL 8.4.3 上迁移通过且不再提示版本超出支持范围；真实重启/磁盘故障、生产容量和浏览器链路仍未验收。
+2026-11-18 实测：JDK 21 下独立 MySQL 8.4.3、RabbitMQ 4.0.5、FFmpeg 6.1.1 和 MinIO 测试镜像全量 199 项通过，0 失败、0 错误、0 跳过；V1～V11 迁移在真库执行通过。Flyway 13.12.2 在 MySQL 8.4.3 上迁移通过且不再提示版本超出支持范围；真实重启/磁盘故障、生产容量和浏览器链路仍未验收。
 
 真库回归可在 PowerShell 中用 `SPRING_DATASOURCE_URL`、`SPRING_DATASOURCE_DRIVER_CLASS_NAME`、`SPRING_DATASOURCE_USERNAME`、`SPRING_DATASOURCE_PASSWORD` 覆盖测试数据源，再执行上述测试命令。URL 使用 UTC 会话时区；Windows 的 Maven 批处理可能二次解析命令行 URL 中的 `&`，因此优先通过环境变量传入。测试会清理业务表，只能指向独立测试库，不能指向开发或生产数据。
 
