@@ -7,6 +7,7 @@ import com.creator.identity.application.RegisterUser;
 import com.creator.identity.application.AuthenticationWorkBudget;
 import com.creator.identity.domain.AccountRepository;
 import com.creator.identity.domain.Role;
+import com.creator.identity.domain.AccountStatus;
 import com.creator.identity.web.RegisterRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.concurrent.Callable;
@@ -34,6 +35,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -238,6 +240,35 @@ class IdentityIntegrationTest {
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors.username").exists())
                 .andExpect(jsonPath("$.fieldErrors.password").exists());
         assertFalse(new RegisterRequest("someone", "SensitivePassword123").toString().contains("SensitivePassword123"));
+    }
+
+    @Test
+    void adminManagesOnlyNormalUsersAndDisablingInvalidatesSession() throws Exception {
+        bootstrapAdmin.execute("managed_admin", "SafePassword123");
+        var admin = accounts.findSummary("managed_admin").orElseThrow();
+        var session = login(admin.username());
+        var created = mvc.perform(post("/api/admin/users").session(session).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"managed_user\",\"password\":\"SafePassword123\"}"))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.role").value("USER"))
+                .andReturn();
+        long userId = json.readTree(created.getResponse().getContentAsString()).get("id").asLong();
+        mvc.perform(get("/api/admin/users").session(session).with(csrf()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.items[0].username").value("managed_user"));
+        mvc.perform(patch("/api/admin/users/{id}", userId).session(session).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"enabled\":false}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("DISABLED"));
+        assertEquals(AccountStatus.DISABLED, accounts.findSummary("managed_user").orElseThrow().status());
+        mvc.perform(post("/api/auth/login").with(csrf()).param("username", "managed_user")
+                .param("password", "SafePassword123")).andExpect(status().isUnauthorized());
+        mvc.perform(patch("/api/admin/users/{id}", userId).session(session).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"enabled\":true}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("ACTIVE"));
+        mvc.perform(patch("/api/admin/users/{id}", admin.id()).session(session).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"enabled\":false}"))
+                .andExpect(status().isForbidden());
+        var userSession = login("managed_user");
+        mvc.perform(get("/api/admin/users").session(userSession)).andExpect(status().isForbidden());
     }
 
     @Test

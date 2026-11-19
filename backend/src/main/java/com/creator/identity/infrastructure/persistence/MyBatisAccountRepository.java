@@ -7,6 +7,8 @@ import com.creator.identity.domain.AccountRepository;
 import com.creator.identity.domain.AccountStatus;
 import com.creator.identity.domain.AccountSummary;
 import com.creator.identity.domain.Role;
+import com.creator.common.PageRequest;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Repository;
@@ -30,6 +32,30 @@ public class MyBatisAccountRepository implements AccountRepository {
     public Optional<AccountSummary> findSummary(String username) {
         return Optional.ofNullable(mapper.findSummary(username)).map(row -> new AccountSummary(
                 row.id(), row.username(), Role.valueOf(row.role()), AccountStatus.valueOf(row.status())));
+    }
+
+    @Override
+    public List<AccountSummary> findPage(PageRequest page) {
+        return mapper.findPage(page.size(), page.offset()).stream().map(this::toSummary).toList();
+    }
+
+    @Override
+    public long count() {
+        return mapper.count();
+    }
+
+    @Override
+    public Optional<AccountSummary> findById(long id) {
+        return Optional.ofNullable(mapper.findById(id)).map(this::toSummary);
+    }
+
+    @Override
+    public boolean updateUserStatus(long id, AccountStatus status) {
+        return mapper.updateUserStatus(id, status.name()) == 1;
+    }
+
+    private AccountSummary toSummary(AccountSummaryRow row) {
+        return new AccountSummary(row.id(), row.username(), Role.valueOf(row.role()), AccountStatus.valueOf(row.status()));
     }
 
     @Override
