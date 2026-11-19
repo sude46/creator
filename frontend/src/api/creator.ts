@@ -20,6 +20,7 @@ export type ReviewRecord = { id: string; reviewRound: number; outcome: string; r
 export type ModerationRecord = { id: string; action: string; reason: string; createdAt: string }
 export type UploadState = { videoId: string; version: number; sourceUploaded: boolean; processingStatus: string }
 export type SignedMedia = { url: string; expiresAt: string }
+export type Collection = { id: string; ownerId: string; ownerName: string; title: string; description: string; visibility: 'PUBLIC' | 'PRIVATE'; version: number; itemCount: number; createdAt: string }
 export type UploadTarget = { id: string; version: number }
 export type CreatorCommand = 'processing-retry' | 'review-submissions' | 'review-withdrawal' | 'offline' | 'publication'
 
@@ -47,6 +48,12 @@ export const creatorApi = {
   download: (id: string) => request<SignedMedia>(`/creator/videos/${id}/download?kind=SOURCE`, { method: 'POST' }),
   remove: (video: CreatorVideo) => request<void>(`/creator/videos/${video.id}?version=${video.version}`, { method: 'DELETE' }),
   exportVideos: () => window.location.assign('/api/creator/videos/export'),
+  collections: (signal?: AbortSignal) => read<Page<Collection>>('/creator/collections?page=1&size=50', signal),
+  createCollection: (title: string, description: string, visibility: 'PUBLIC' | 'PRIVATE') => request<Collection>('/creator/collections', json('POST', { title, description, visibility })),
+  updateCollection: (collection: Collection, title: string, description: string, visibility: 'PUBLIC' | 'PRIVATE') => request<Collection>(`/creator/collections/${collection.id}`, json('PUT', { version: collection.version, title, description, visibility })),
+  removeCollection: (collection: Collection) => request<void>(`/creator/collections/${collection.id}?version=${collection.version}`, { method: 'DELETE' }),
+  addToCollection: (collectionId: string, videoId: string) => request<void>(`/creator/collections/${collectionId}/items`, json('POST', { videoId })),
+  removeFromCollection: (collectionId: string, videoId: string) => request<void>(`/creator/collections/${collectionId}/items/${videoId}`, { method: 'DELETE' }),
   cancelProcessing: (video: CreatorVideo) => request<CreatorVideo>(`/creator/videos/${video.id}/cancel-processing`, json('POST', { version: video.version })),
 }
 

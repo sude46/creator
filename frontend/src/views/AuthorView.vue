@@ -4,7 +4,7 @@ import { useRoute } from 'vue-router'
 import WorkspaceShell from '../components/WorkspaceShell.vue'
 import PublicVideoCard from '../components/PublicVideoCard.vue'
 import { publicApi } from '../api/public'
-import type { PublicVideo } from '../api/public'
+import type { PublicCollection, PublicVideo } from '../api/public'
 import { useStudioError } from '../composables/useStudioError'
 
 const route = useRoute()
@@ -16,9 +16,11 @@ const total = ref(0)
 const loading = ref(false)
 const error = ref('')
 const authorName = ref('')
+const collections = ref<PublicCollection[]>([])
 let activeRequest: AbortController | undefined
 let stopped = false
 
+async function loadCollections() { try { const result = await publicApi.authorCollections(id, new AbortController().signal); if (!stopped) collections.value = result.items } catch { /* optional */ } }
 async function load(next = page.value) {
   activeRequest?.abort(); const controller = new AbortController(); activeRequest = controller
   loading.value = true; error.value = ''; items.value = []
@@ -31,7 +33,7 @@ async function load(next = page.value) {
   finally { if (!stopped && !controller.signal.aborted) loading.value = false }
 }
 onMounted(() => {
-  if (/^[1-9]\d{0,18}$/.test(id)) void load()
+  if (/^[1-9]\d{0,18}$/.test(id)) { void load(); void loadCollections() }
   else error.value = '作者编号无效'
 })
 onBeforeUnmount(() => { stopped = true; activeRequest?.abort() })
@@ -44,6 +46,7 @@ onBeforeUnmount(() => { stopped = true; activeRequest?.abort() })
       <RouterLink class="create-link" to="/">返回发现</RouterLink>
     </div>
     <el-alert v-if="error" :title="error" type="error" :closable="false" role="alert" />
+    <section v-if="collections.length" class="studio-panel"><div class="section-heading"><h2>合集</h2></div><div class="inline-actions"><RouterLink v-for="collection in collections" :key="collection.id" class="create-link" :to="`/collections/${collection.id}`">{{ collection.title }} · {{ collection.itemCount }}</RouterLink></div></section>
     <div v-if="loading" class="public-video-grid" aria-busy="true"><div v-for="index in 6" :key="index" class="public-card-skeleton" aria-hidden="true"></div></div>
     <div v-else-if="items.length" class="public-video-grid"><PublicVideoCard v-for="item in items" :key="item.id" :video="item" /></div>
     <p v-else-if="!error" class="empty-state">这位作者暂时没有公开作品。</p>

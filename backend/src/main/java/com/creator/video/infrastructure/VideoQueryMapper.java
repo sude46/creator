@@ -68,6 +68,16 @@ public interface VideoQueryMapper {
     @Select("SELECT COUNT(*)" + FROM + " WHERE " + PUBLIC + " AND v.owner_id = #{authorId}")
     long countByAuthor(@Param("authorId") long authorId);
 
+    @Select("SELECT " + COLUMNS + FROM + " JOIN video_collection_item item ON item.video_id = v.id"
+            + " WHERE item.collection_id = #{collectionId} AND " + PUBLIC
+            + " ORDER BY item.sort_order, item.id LIMIT #{limit} OFFSET #{offset}")
+    List<PublicVideo> findPublicByCollection(@Param("collectionId") long collectionId,
+            @Param("limit") int limit, @Param("offset") int offset);
+
+    @Select("SELECT COUNT(*)" + FROM + " JOIN video_collection_item item ON item.video_id = v.id"
+            + " WHERE item.collection_id = #{collectionId} AND " + PUBLIC)
+    long countPublicByCollection(long collectionId);
+
     @Select("<script>SELECT asset.object_key, asset.size_bytes" + FROM
             + " JOIN media_asset asset ON asset.video_id = v.id AND asset.kind = #{kind}"
             + " WHERE v.id = #{videoId} AND " + READY

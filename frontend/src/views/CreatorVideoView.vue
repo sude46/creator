@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { creatorApi, formatTime } from '../api/creator'
-import type { CreatorCommand, CreatorVideo, ModerationRecord, ReviewRecord, SignedMedia } from '../api/creator'
+import type { Collection, CreatorCommand, CreatorVideo, ModerationRecord, ReviewRecord, SignedMedia } from '../api/creator'
 import { ApiFailure } from '../api/http'
 import { validateVideoFile } from '../api/uploadFile'
 import { creatorStatus } from '../api/videoStatus'
@@ -25,6 +25,9 @@ const file = ref<File>()
 const fileInput = ref<HTMLInputElement>()
 const error = ref('')
 const notice = ref('')
+const collections = ref<Collection[]>([])
+const collectionId = ref('')
+const collectionBusy = ref(false)
 const preview = ref<SignedMedia>()
 const downloadBusy = ref(false)
 const deleteBusy = ref(false)
@@ -198,6 +201,17 @@ async function remove() {
   } catch (failure) { if (!stopped) error.value = explain(failure) }
   finally { if (!stopped) deleteBusy.value = false }
 }
+async function loadCollections() {
+  try { const page = await creatorApi.collections(); if (!stopped) collections.value = page.items }
+  catch { /* the panel stays hidden if collections cannot load */ }
+}
+async function addToCollection() {
+  if (!video.value || !collectionId.value || collectionBusy.value) return
+  collectionBusy.value = true; error.value = ''
+  try { await creatorApi.addToCollection(collectionId.value, video.value.id); notice.value = '已加入合集。' }
+  catch (failure) { if (!stopped) error.value = explain(failure) }
+  finally { if (!stopped) collectionBusy.value = false }
+}
 async function download() {
   if (!video.value || blocked.value || downloadBusy.value) return
   downloadBusy.value = true
@@ -236,6 +250,7 @@ onMounted(() => {
   if (/^[1-9]\d{0,18}$/.test(id)) void load()
   else error.value = '作品编号无效'
   window.addEventListener('beforeunload', leave)
+  void loadCollections()
   document.addEventListener('visibilitychange', visibility)
 })
 onBeforeUnmount(() => {
@@ -294,6 +309,10 @@ onBeforeUnmount(() => {
         <h2>本人预览</h2><el-alert v-if="previewError" :title="previewError" type="error" :closable="false" role="alert" />
         <video v-if="preview" :key="preview.url" :src="preview.url" controls preload="metadata" class="studio-player" @error="previewError = '视频加载失败，链接可能已过期或存储不可达。请重新获取预览，仍失败时联系管理员。'"></video>
         <p v-if="preview" class="muted">链接到期：{{ formatTime(preview.expiresAt) }}。过期或拖动失败时请重新获取预览。</p>
+      </section>
+      <section v-if="!editing && collections.length" class="studio-panel">
+        <h2>加入合集</h2><p class="muted">把作品整理到自己的系列中；公开合集会在作者主页展示。</p>
+        <div class="inline-actions"><select id="collection-select" v-model="collectionId"><option value="" disabled>选择合集</option><option v-for="item in collections" :key="item.id" :value="item.id">{{ item.title }}</option></select><el-button :loading="collectionBusy" :disabled="!collectionId" @click="addToCollection">加入合集</el-button><RouterLink to="/studio/collections">管理合集 →</RouterLink></div>
       </section>
       <section class="studio-panel" :aria-busy="historyLoading">
         <div class="section-heading"><h2>审核记录</h2><el-button :disabled="historyLoading" @click="loadHistory()">刷新记录</el-button></div>
