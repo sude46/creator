@@ -90,7 +90,7 @@ cos:DeleteObject
 暴露：ETag, Content-Length, Content-Range, Accept-Ranges
 ```
 
-2026-11-19 实测：29 个 MinIO 对象迁移到 COS；原生 provider 上传/下载/删除、预签名 GET、Range `206`、匿名访问 `403`、Worker 上传/封面/审核/播放/删除回收和 Firefox 浏览器均通过。全量真实依赖回归 204 项、0 跳过。
+2026-11-19 实测：29 个 MinIO 对象迁移到 COS；原生 provider 上传/下载/删除、预签名 GET、Range `206`、匿名访问 `403`、Worker 上传/封面/审核/播放/删除回收和 Firefox 浏览器均通过。全量真实依赖回归 205 项、0 跳过。
 
 ## 接口
 
@@ -143,4 +143,4 @@ SDK 使用 5 MiB 分片，HTTP 连接/读写超时、跨请求整体预算均有
 
 集成测试使用 H2、真实 Spring Security 及嵌入式 Tomcat；业务存储故障注入使用内存适配器，SDK 测试使用本机 HTTP 契约服务。覆盖并发竞争、配额、清理与绑定互斥、审计回滚、提交成功后响应异常，以及缺身份/CSRF/越权时 body 尚未读取。微型 MP4 测试体仅用于文件头和传输测试，不作为可解码视频样本。
 
-历史回归已在 MySQL 8.4.3、RabbitMQ 4.0.5 和 FFmpeg 9.0.2 完成，包含 FFprobe 规格验证、投递与处理。2026-11-18 在 JDK 21 下以测试镜像运行真实 MinIO 上传、下载、签名 Range 和私有桶校验，`MinioMediaIntegrationTest` 通过；同日 MySQL 8.4.3、RabbitMQ 4.0.5、FFmpeg 6.1.1 和 MinIO 测试镜像全量 204 项通过、0 跳过。正式服务端版本与许可证、生产桶策略、生产代理和容量压测仍待完成；Firefox 真实上传/播放和 Chromium 冒烟已完成。前端上传页面已接入。真实 MinIO 测试启用条件见 [媒体接口说明](public-media-api.md)，SDK 合约测试不能替代真实服务端验证。
+历史回归已在 MySQL 8.4.3、RabbitMQ 4.0.5 和 FFmpeg 9.0.2 完成，包含 FFprobe 规格验证、投递与处理。2026-11-18 在 JDK 21 下以测试镜像运行真实 MinIO 上传、下载、签名 Range 和私有桶校验，`MinioMediaIntegrationTest` 通过；同日 MySQL 8.4.3、RabbitMQ 4.0.5、FFmpeg 6.1.1 和 MinIO 测试镜像全量 205 项通过、0 跳过。正式服务端版本与许可证、生产桶策略、生产代理和容量压测仍待完成；Firefox 真实上传/播放和 Chromium 冒烟已完成。前端上传页面已接入。真实 MinIO 测试启用条件见 [媒体接口说明](public-media-api.md)，SDK 合约测试不能替代真实服务端验证。
