@@ -21,6 +21,9 @@ public interface AdminOverviewMapper {
     @Select("SELECT COUNT(*) FROM user_account WHERE created_at >= #{start} AND status <> 'DELETED'")
     long usersCreatedSince(@Param("start") LocalDateTime start);
 
+    @Select("SELECT COUNT(*) FROM review_record WHERE created_at >= #{start}")
+    long decisionsSince(@Param("start") LocalDateTime start);
+
     @Select("""
             SELECT id, video_id, reviewer_id, outcome, reason, title, created_at
             FROM review_record ORDER BY id DESC LIMIT #{limit}

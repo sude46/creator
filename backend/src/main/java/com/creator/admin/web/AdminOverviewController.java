@@ -23,11 +23,12 @@ public class AdminOverviewController {
     public OverviewView get(@RequestAttribute("currentActor") Actor actor) {
         var result = overview.get(actor);
         return new OverviewView(Long.toString(result.pendingReviews()), Long.toString(result.failedProcessing()),
-                Long.toString(result.todayUsers()), result.recentDecisions().stream().map(DecisionView::from).toList());
+                Long.toString(result.todayUsers()), Long.toString(result.todayDecisions()),
+                result.recentDecisions().stream().map(DecisionView::from).toList());
     }
 
     public record OverviewView(String pendingReviews, String failedProcessing, String todayUsers,
-            List<DecisionView> recentDecisions) {
+            String todayDecisions, List<DecisionView> recentDecisions) {
     }
 
     public record DecisionView(String id, String videoId, String reviewerId, String outcome, String reason,

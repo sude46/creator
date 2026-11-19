@@ -30,7 +30,8 @@ public class AdminOverviewService {
         if (actor.role() != Role.ADMIN) throw new BusinessException(ErrorCode.FORBIDDEN);
         var current = accounts.current(actor.username());
         if (!current.equals(actor)) throw new BusinessException(ErrorCode.SESSION_INVALID);
+        var today = LocalDate.now(clock).atStartOfDay();
         return new AdminOverview(overview.pendingReviews(actor.id()), overview.failedProcessing(),
-                overview.usersCreatedSince(LocalDate.now(clock).atStartOfDay()), overview.recentDecisions(5));
+                overview.usersCreatedSince(today), overview.decisionsSince(today), overview.recentDecisions(5));
     }
 }

@@ -71,6 +71,7 @@ class AdminOverviewIntegrationTest {
         assertEquals(1, result.pendingReviews());
         assertEquals(1, result.failedProcessing());
         assertEquals(2, result.todayUsers());
+        assertEquals(1, result.todayDecisions());
         assertEquals(1, result.recentDecisions().size());
         assertEquals(pending, result.recentDecisions().getFirst().videoId());
         assertEquals("APPROVED", result.recentDecisions().getFirst().outcome());

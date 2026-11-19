@@ -30,6 +30,11 @@ public class MyBatisAdminOverviewRepository implements AdminOverviewRepository {
     }
 
     @Override
+    public long decisionsSince(LocalDateTime start) {
+        return mapper.decisionsSince(start);
+    }
+
+    @Override
     public List<AdminOverview.RecentDecision> recentDecisions(int limit) {
         return mapper.recentDecisions(limit);
     }

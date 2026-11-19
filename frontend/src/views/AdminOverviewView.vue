@@ -38,7 +38,7 @@ onBeforeUnmount(() => { stopped = true; activeRequest?.abort() })
     </div>
     <el-alert v-if="error" :title="error" type="error" :closable="false" role="alert" />
     <div v-if="loading && !overview" class="admin-metrics" aria-busy="true">
-      <div v-for="index in 3" :key="index" class="metric-card metric-skeleton" aria-hidden="true"></div>
+      <div v-for="index in 4" :key="index" class="metric-card metric-skeleton" aria-hidden="true"></div>
     </div>
     <div v-else-if="overview" class="admin-metrics">
       <RouterLink class="metric-card" to="/admin/reviews">
@@ -49,6 +49,9 @@ onBeforeUnmount(() => { stopped = true; activeRequest?.abort() })
       </RouterLink>
       <RouterLink class="metric-card" to="/admin/users">
         <span>今日新增用户</span><strong>{{ overview.todayUsers }}</strong><small>管理用户 →</small>
+      </RouterLink>
+      <RouterLink class="metric-card" to="/admin/audit">
+        <span>今日审核</span><strong>{{ overview.todayDecisions }}</strong><small>查看审计记录 →</small>
       </RouterLink>
     </div>
     <section v-if="overview" class="studio-panel">
@@ -73,7 +76,7 @@ onBeforeUnmount(() => { stopped = true; activeRequest?.abort() })
 </template>
 
 <style scoped>
-.admin-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 22px 0; }
+.admin-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin: 22px 0; }
 .metric-card { display: grid; gap: 8px; padding: 22px; border: 1px solid #d9ddd5; border-radius: 4px; background: #fff; color: #182522; }
 .metric-card:hover { border-color: #245e52; }
 .metric-card span { color: #748277; font-size: 13px; }
@@ -84,5 +87,5 @@ onBeforeUnmount(() => { stopped = true; activeRequest?.abort() })
 .admin-table-wrap table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .admin-table-wrap th, .admin-table-wrap td { text-align: left; padding: 11px 8px; border-bottom: 1px solid #e5e8e2; }
 @keyframes pulse { to { background-position: -200% 0; } }
-@media (max-width: 760px) { .admin-metrics { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { .admin-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }@media (max-width: 560px) { .admin-metrics { grid-template-columns: 1fr; } }
 </style>

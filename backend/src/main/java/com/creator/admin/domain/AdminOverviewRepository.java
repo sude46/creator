@@ -7,5 +7,6 @@ public interface AdminOverviewRepository {
     long pendingReviews(long adminId);
     long failedProcessing();
     long usersCreatedSince(LocalDateTime start);
+    long decisionsSince(LocalDateTime start);
     List<AdminOverview.RecentDecision> recentDecisions(int limit);
 }
