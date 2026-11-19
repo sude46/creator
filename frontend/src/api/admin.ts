@@ -5,10 +5,21 @@ export type ManagedVideo = { ownerId: string; video: CreatorVideo }
 export type Decision = 'APPROVED' | 'REJECTED'
 export type AdminModerationRecord = { id: string; actorId: string; action: string; reason: string; createdAt: string }
 export type AdminUser = { id: string; username: string; role: 'USER' | 'ADMIN'; status: 'ACTIVE' | 'DISABLED' }
+export type AuditRecord = { id: string; actorId: string; action: string; targetType: string; targetId: string; reason: string | null; requestId: string | null; createdAt: string }
 
 const boundedRead = <Result>(path: string, signal: AbortSignal) => request<Result>(path, { signal: AbortSignal.any([signal, AbortSignal.timeout(30000)]) })
 
 export const adminApi = {
+  audit: (page: number, filters: { actorId?: string; action?: string; targetType?: string; from?: string; to?: string }, signal: AbortSignal) => {
+    const query = new URLSearchParams({ page: String(page), size: '20' })
+    for (const [key, value] of Object.entries(filters)) if (value) query.set(key, value)
+    return boundedRead<Page<AuditRecord>>(`/admin/audit?${query}`, signal)
+  },
+  auditExport: (filters: { actorId?: string; action?: string; targetType?: string; from?: string; to?: string }) => {
+    const query = new URLSearchParams()
+    for (const [key, value] of Object.entries(filters)) if (value) query.set(key, value)
+    window.location.assign(`/api/admin/audit/export?${query}`)
+  },
   users: (page: number, signal: AbortSignal) => boundedRead<Page<AdminUser>>(`/admin/users?page=${page}&size=20`, signal),
   createUser: (username: string, password: string) => request<AdminUser>('/admin/users', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }),
