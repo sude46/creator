@@ -28,6 +28,10 @@ public class MyBatisVideoQueryRepository implements VideoQueryRepository {
         return mapper.findPageByAuthor(authorId, page.size(), page.offset());
     }
     public long countByAuthor(long authorId) { return mapper.countByAuthor(authorId); }
+    public List<PublicVideo> findFollowingPage(long followerId, PageRequest page) {
+        return mapper.findFollowingPage(followerId, page.size(), page.offset());
+    }
+    public long countFollowing(long followerId) { return mapper.countFollowing(followerId); }
     public Optional<MediaTarget> media(long videoId, long actorId, MediaPurpose purpose, MediaKind kind, Long version, Long round) {
         return Optional.ofNullable(mapper.media(videoId, actorId, purpose, kind, version, round));
     }

@@ -14,5 +14,7 @@ public interface VideoQueryRepository {
     List<PublicVideo> findPublicByIds(List<Long> videoIds);
     List<PublicVideo> findPageByAuthor(long authorId, PageRequest page);
     long countByAuthor(long authorId);
+    List<PublicVideo> findFollowingPage(long followerId, PageRequest page);
+    long countFollowing(long followerId);
     Optional<MediaTarget> media(long videoId, long actorId, MediaPurpose purpose, MediaKind kind, Long version, Long round);
 }

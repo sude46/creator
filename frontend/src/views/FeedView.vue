@@ -14,7 +14,7 @@ const slides = ref<HTMLElement[]>([])
 const videoRefs = ref<HTMLVideoElement[]>([])
 const items = ref<PublicVideo[]>([])
 const categories = ref<{ id: string; name: string }[]>([])
-const category = ref('')
+const category = ref(''); const following = ref(false)
 const current = ref(0)
 const sources = ref<Record<string, string>>({})
 const covers = ref<Record<string, string>>({})
@@ -152,16 +152,20 @@ async function loadCategories() {
   } catch { /* category tabs are optional */ }
 }
 
-async function loadFeed(nextCategory = category.value) {
+async function loadFeed(nextCategory = category.value, followingMode = false) {
   request?.abort(); const controller = new AbortController(); request = controller
-  loading.value = true; error.value = ''; items.value = []; sources.value = {}; covers.value = {}; current.value = 0; category.value = nextCategory
-  const deepId = typeof route.params.id === 'string' ? route.params.id : (sessionStorage.getItem('frame-feed-anchor') ?? '')
+  loading.value = true; error.value = ''; items.value = []; sources.value = {}; covers.value = {}; current.value = 0; category.value = nextCategory; following.value = followingMode
+  const deepId = !followingMode && (typeof route.params.id === 'string' ? route.params.id : (sessionStorage.getItem('frame-feed-anchor') ?? ''))
   try {
     if (deepId && /^[1-9]\d{0,18}$/.test(deepId)) {
       const page = await publicApi.anchor(deepId, nextCategory, 2, 5, controller.signal)
       if (stopped || controller.signal.aborted) return
       items.value = page.items
       current.value = page.anchorIndex ?? 0
+    } else if (followingMode) {
+      const page = await publicApi.following(1, controller.signal)
+      if (stopped || controller.signal.aborted) return
+      items.value = page.items
     } else {
       const page = await publicApi.list('', nextCategory, 1, controller.signal)
       if (stopped || controller.signal.aborted) return
@@ -198,7 +202,7 @@ onBeforeUnmount(() => {
   <main class="feed-shell">
     <header class="feed-top">
       <RouterLink class="feed-brand" to="/">帧间</RouterLink>
-      <nav class="feed-tabs" aria-label="分类"><button :class="{ active: !category }" @click="loadFeed('')">全部</button><button v-for="item in categories" :key="item.id" :class="{ active: category === item.id }" @click="loadFeed(item.id)">{{ item.name }}</button></nav>
+      <nav class="feed-tabs" aria-label="分类"><button :class="{ active: following }" @click="loadFeed('', true)">关注</button><button :class="{ active: !following && !category }" @click="loadFeed('', false)">全部</button><button v-for="item in categories" :key="item.id" :class="{ active: !following && category === item.id }" @click="loadFeed(item.id)">{{ item.name }}</button></nav>
       <div class="feed-actions"><RouterLink class="feed-action" to="/favorites" aria-label="我的收藏">♡</RouterLink><RouterLink class="feed-action feed-publish" to="/studio" aria-label="发布作品">＋</RouterLink><RouterLink class="feed-action feed-grid-link" to="/" aria-label="切换到网格">▦</RouterLink></div>
     </header>
     <p v-if="notice" class="feed-notice" role="status">{{ notice }}</p>

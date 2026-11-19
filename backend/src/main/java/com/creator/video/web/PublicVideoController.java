@@ -3,6 +3,7 @@ package com.creator.video.web;
 import com.creator.common.*;
 import com.creator.video.application.PublicVideoAnchorService;
 import com.creator.video.application.LikeService;
+import com.creator.video.application.PublicFollowingService;
 import com.creator.video.application.PublicVideoService;
 import com.creator.video.domain.VideoSearch;
 import org.springframework.web.bind.annotation.*;
@@ -13,11 +14,22 @@ public class PublicVideoController {
     private final PublicVideoService videos;
     private final PublicVideoAnchorService anchors;
     private final LikeService likes;
-    public PublicVideoController(PublicVideoService videos, PublicVideoAnchorService anchors, LikeService likes) {
+    private final PublicFollowingService following;
+    public PublicVideoController(PublicVideoService videos, PublicVideoAnchorService anchors, LikeService likes,
+            PublicFollowingService following) {
         this.videos = videos;
         this.anchors = anchors;
         this.likes = likes;
+        this.following = following;
     }
+    @GetMapping("/following")
+    public PageResult<PublicVideoView> following(@RequestAttribute("currentActor") com.creator.identity.domain.Actor actor,
+            @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "12") int size) {
+        var result = following.list(actor, new PageRequest(page, size));
+        return new PageResult<>(result.items().stream().map(PublicVideoView::from).toList(),
+                result.total(), result.page(), result.size());
+    }
+
     @GetMapping(params = "!anchorId")
     public PageResult<PublicVideoView> list(@RequestParam(defaultValue = "") String title, @RequestParam(required = false) Long categoryId,
             @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int size) {

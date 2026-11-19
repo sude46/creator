@@ -69,6 +69,15 @@ public interface VideoQueryMapper {
     @Select("SELECT COUNT(*)" + FROM + " WHERE " + PUBLIC + " AND v.owner_id = #{authorId}")
     long countByAuthor(@Param("authorId") long authorId);
 
+    @Select("SELECT " + COLUMNS + FROM + " WHERE " + PUBLIC
+            + " AND v.owner_id IN (SELECT follow.followee_id FROM user_follow follow WHERE follow.follower_id = #{followerId})"
+            + " ORDER BY v.published_at DESC, v.id DESC LIMIT #{limit} OFFSET #{offset}")
+    List<PublicVideo> findFollowingPage(@Param("followerId") long followerId, @Param("limit") int limit, @Param("offset") int offset);
+
+    @Select("SELECT COUNT(*)" + FROM + " WHERE " + PUBLIC
+            + " AND v.owner_id IN (SELECT follow.followee_id FROM user_follow follow WHERE follow.follower_id = #{followerId})")
+    long countFollowing(long followerId);
+
     @Select("SELECT " + COLUMNS + FROM + " JOIN video_collection_item item ON item.video_id = v.id"
             + " WHERE item.collection_id = #{collectionId} AND " + PUBLIC
             + " ORDER BY item.sort_order, item.id LIMIT #{limit} OFFSET #{offset}")

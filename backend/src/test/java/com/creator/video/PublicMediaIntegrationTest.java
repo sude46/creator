@@ -36,6 +36,8 @@ class PublicMediaIntegrationTest {
     @Autowired com.creator.video.application.PublicVideoAnchorService anchorVideos;
     @Autowired com.creator.video.application.LikeService likes;
     @Autowired com.creator.video.application.CommentService commentService;
+    @Autowired com.creator.video.application.FollowService followService;
+    @Autowired com.creator.video.application.PublicFollowingService followingService;
     @Autowired CreatorVideoService creatorVideos;
     @Autowired DraftService drafts;
     @Autowired ReviewService reviews;
@@ -117,6 +119,17 @@ class PublicMediaIntegrationTest {
         assertInvisible(id);
         assertEquals(ErrorCode.NOT_FOUND, failure(() -> grant(author, id, MediaPurpose.OWNER_PREVIEW, MediaKind.SOURCE)));
         assertTrue(signer.calls.isEmpty());
+    }
+
+    @Test
+    void followingFeedReturnsOnlyFollowedAuthorsPublicWorks() {
+        published("followed work");
+        followService.follow(other, author.id());
+        var page = followingService.list(other, new PageRequest(1, 12));
+        assertEquals(1, page.total());
+        assertEquals(author.id(), page.items().getFirst().ownerId());
+        followService.unfollow(other, author.id());
+        assertEquals(0, followingService.list(other, new PageRequest(1, 12)).total());
     }
 
     @Test
