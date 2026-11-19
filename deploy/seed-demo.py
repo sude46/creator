@@ -88,12 +88,6 @@ class Client:
         self.csrf_token = None
         self.csrf()
 
-    def logout(self):
-        try:
-            self.call("POST", "/api/auth/logout")
-        except ApiError:
-            pass
-
 
 def ensure_categories(admin: Client) -> list[dict]:
     existing = admin.call("GET", "/api/admin/categories?page=1&size=50")["items"]
