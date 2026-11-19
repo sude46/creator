@@ -84,7 +84,7 @@ OK: stale_uploads_expiry=24h, stale_uploads_cleanup_interval=6h
 
 ### Flyway
 
-Flyway 从 11.7.2 升级到 13.12.2。MySQL 8.4.3 迁移实际通过，启动日志不再出现“MySQL 8.4 超出已测试版本范围”的警告。升级后全量 199 项真实依赖测试通过。
+Flyway 从 11.7.2 升级到 13.12.2。MySQL 8.4.3 迁移实际通过，启动日志不再出现“MySQL 8.4 超出已测试版本范围”的警告。升级后全量 200 项真实依赖测试通过。
 
 ## 仍需生产环境确认
 
