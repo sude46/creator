@@ -10,7 +10,7 @@ const route = useRoute()
       <p class="eyebrow">404 / NOT FOUND</p>
       <h1>页面不存在</h1>
       <p class="muted">没有找到 <code>{{ route.fullPath }}</code>。链接可能已失效，或作品已被删除。</p>
-      <div class="inline-actions"><RouterLink to="/">返回发现页</RouterLink><RouterLink to="/studio">回到创作中心</RouterLink></div>
+      <div class="inline-actions"><RouterLink to="/">返回发现页</RouterLink><RouterLink to="/studio">回到我的作品</RouterLink></div>
     </section>
   </WorkspaceShell>
 </template>

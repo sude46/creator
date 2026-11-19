@@ -64,7 +64,7 @@ onBeforeUnmount(() => { activeRequest?.abort(); window.removeEventListener('befo
 
 <template>
   <WorkspaceShell>
-    <div class="studio-heading"><div><p class="eyebrow">FRAME ROOM / WORKSPACE</p><h1>作品工作台</h1><p class="muted">上传视频、跟进处理进度，查看审核结果。</p></div><div class="inline-actions"><el-button :disabled="loading || !total" @click="creatorApi.exportVideos()">导出 CSV</el-button><el-button v-if="!creating" type="primary" @click="creating = true">新建作品</el-button></div></div>
+    <div class="studio-heading"><div><p class="eyebrow">FRAME ROOM / WORKSPACE</p><h1>我的作品</h1><p class="muted">发布作品，跟进处理进度与审核结果。</p></div><div class="inline-actions"><el-button :disabled="loading || !total" @click="creatorApi.exportVideos()">导出 CSV</el-button><el-button v-if="!creating" type="primary" @click="creating = true">发布作品</el-button></div></div>
     <VideoEditor v-if="creating" @saved="saved" @cancel="creating = false; load(1)" @busy="saving = $event" />
     <el-alert v-if="error" :title="error" type="error" :closable="false" role="alert" />
     <section class="studio-panel" aria-label="我的作品" :aria-busy="loading">
@@ -77,10 +77,10 @@ onBeforeUnmount(() => { activeRequest?.abort(); window.removeEventListener('befo
           <p class="card-description">{{ video.description || '还没有简介，补充一句作品想表达什么。' }}</p>
           <div class="status-group"><el-tag :type="statusOf(video).tone">{{ statusOf(video).label }}</el-tag></div>
           <p class="card-status-detail">{{ statusOf(video).detail }}</p>
-          <div class="card-next"><span>下一步</span><strong>{{ statusOf(video).nextAction }}</strong></div><RouterLink class="card-open" :to="`/studio/${video.id}`">打开工作台 <span aria-hidden="true">↗</span></RouterLink></div>
+          <div class="card-next"><span>下一步</span><strong>{{ statusOf(video).nextAction }}</strong></div><RouterLink class="card-open" :to="`/studio/${video.id}`">打开作品 <span aria-hidden="true">↗</span></RouterLink></div>
         </article>
       </div>
-      <p v-else class="empty-state">{{ error ? '作品未能加载，请重试。' : total > 0 ? '本页暂无作品，请返回上一页。' : '还没有作品。点击“新建作品”，填写信息并选择视频，平台会开始处理。' }}</p>
+      <p v-else class="empty-state">{{ error ? '作品未能加载，请重试。' : total > 0 ? '本页暂无作品，请返回上一页。' : '还没有作品。点击“发布作品”，填写信息并选择视频，平台会开始处理。' }}</p>
       <div v-if="error" class="inline-actions empty-retry"><el-button @click="load()">重新加载</el-button></div>
       <div class="page-controls"><el-button :disabled="loading || page <= 1" @click="load(page - 1)">上一页</el-button><span>第 {{ page }} 页</span><el-button :disabled="loading || page * 10 >= total || page >= 1000" @click="load(page + 1)">下一页</el-button></div>
     </section>

@@ -140,7 +140,7 @@ onBeforeUnmount(() => { categoryRequest?.abort(); uploadRequest?.abort() })
 
 <template>
   <section class="studio-panel editor-panel" aria-label="作品信息编辑">
-    <h2>{{ video ? '编辑作品信息' : '创建新作品' }}</h2>
+    <h2>{{ video ? '编辑作品信息' : '发布作品' }}</h2>
     <p class="muted">{{ video ? (video.publicationStatus === 'PUBLISHED' ? '保存修改会撤下已发布内容，并要求重新审核。' : '修改作品信息后，如已送审需要重新提交。') : '填写信息并选择视频，创建后自动上传，随后进入处理流程。' }}</p>
     <el-alert v-if="error" :title="error" type="error" :closable="false" role="alert" />
     <form class="studio-form" @submit.prevent="save">

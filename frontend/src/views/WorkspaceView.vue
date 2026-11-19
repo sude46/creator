@@ -78,8 +78,8 @@ onBeforeUnmount(() => { stopped = true; activeRequest?.abort(); categoryRequest?
 <template>
   <WorkspaceShell>
     <div class="studio-heading">
-      <div><p class="eyebrow">FRAME ROOM / WATCH</p><h1>{{ route.query.title ? '搜索作品' : '发现作品' }}</h1><p class="muted">浏览创作者发布的视频，找到值得看完的故事。</p></div>
-      <RouterLink class="create-link" to="/studio">发布我的作品 ↗</RouterLink>
+      <div><p class="eyebrow">FRAME ROOM / WATCH</p><h1>{{ route.query.title ? '搜索作品' : '发现' }}</h1><p class="muted">浏览创作者发布的视频，找到值得看完的故事。</p></div>
+      <RouterLink class="create-link" to="/studio">发布作品 ↗</RouterLink>
     </div>
 
     <form class="public-search" role="search" @submit.prevent="navigate()">
@@ -106,7 +106,7 @@ onBeforeUnmount(() => { stopped = true; activeRequest?.abort(); categoryRequest?
     <div v-else-if="videos.length" class="public-video-grid">
       <PublicVideoCard v-for="video in videos" :key="video.id" :video="video" />
     </div>
-    <p v-else-if="!error" class="empty-state">{{ route.query.title || category ? '没有找到匹配的作品，换个关键词或分类试试。' : '还没有已发布的作品。你可以进入创作中心上传视频并提交审核。' }}</p>
+    <p v-else-if="!error" class="empty-state">{{ route.query.title || category ? '没有找到匹配的作品，换个关键词或分类试试。' : '还没有已发布的作品。你可以进入“我的作品”上传视频并提交审核。' }}</p>
     <div v-if="error" class="inline-actions empty-retry"><el-button @click="load">重新加载</el-button></div>
     <div class="page-controls">
       <el-button :disabled="loading || page <= 1" @click="navigate(page - 1)">上一页</el-button>
