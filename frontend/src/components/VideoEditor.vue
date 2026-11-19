@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { ApiFailure } from '../api/http'
 import { creatorApi } from '../api/creator'
+import { newRequestKey } from '../api/requestKey'
 import type { Category, CreatorVideo, Draft, Metadata } from '../api/creator'
 import { useStudioError } from '../composables/useStudioError'
 
@@ -18,7 +19,7 @@ const uncertain = ref(false)
 const error = ref('')
 const categoryError = ref('')
 const explain = useStudioError()
-const requestKey = crypto.randomUUID()
+const requestKey = newRequestKey()
 let submitted: Metadata | undefined
 let categoryRequest: AbortController | undefined
 const selectedOutsidePage = computed(() => form.categoryId && !categories.value.some(category => category.id === form.categoryId))
