@@ -43,6 +43,7 @@ export const creatorApi = {
   cover: (id: string) => request<SignedMedia>(`/creator/videos/${id}/preview?kind=COVER`, { method: 'POST' }),
   download: (id: string) => request<SignedMedia>(`/creator/videos/${id}/download?kind=SOURCE`, { method: 'POST' }),
   remove: (video: CreatorVideo) => request<void>(`/creator/videos/${video.id}?version=${video.version}`, { method: 'DELETE' }),
+  exportVideos: () => window.location.assign('/api/creator/videos/export'),
   cancelProcessing: (video: CreatorVideo) => request<CreatorVideo>(`/creator/videos/${video.id}/cancel-processing`, json('POST', { version: video.version })),
 }
 

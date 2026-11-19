@@ -34,6 +34,11 @@ export const adminApi = {
   }),
   history: (id: string, page: number, signal: AbortSignal) => boundedRead<Page<ReviewRecord>>(`/admin/reviews/${id}/history?page=${page}&size=20`, signal),
   managed: (page: number, signal?: AbortSignal) => request<Page<ManagedVideo>>(`/admin/videos?page=${page}&size=20`, { signal }),
+  processing: (page: number, signal: AbortSignal) => boundedRead<Page<ManagedVideo>>(`/admin/videos/processing?page=${page}&size=20`, signal),
+  cancelProcessing: (video: CreatorVideo, reason: string) => request<CreatorVideo>(`/admin/videos/${video.id}/cancel-processing`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ version: video.version, reason }),
+  }),
+  cover: (video: CreatorVideo) => request<SignedMedia>(`/admin/reviews/${video.id}/preview?kind=COVER&version=${video.version}&reviewRound=${video.reviewRound}`, { method: 'POST' }),
   managedDetail: (id: string, signal: AbortSignal) => boundedRead<ManagedVideo>(`/admin/videos/${id}`, signal),
   moderationHistory: (id: string, page: number, signal: AbortSignal) => boundedRead<Page<AdminModerationRecord>>(`/admin/videos/${id}/moderation-history?page=${page}&size=20`, signal),
   block: (video: CreatorVideo, reason: string) => request<CreatorVideo>(`/admin/videos/${video.id}/block`, {

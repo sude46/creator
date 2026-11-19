@@ -55,6 +55,13 @@ public class PublicationController {
             @Valid @RequestBody ModerationRequest request) {
         deletions.deleteByAdmin(actor, id, request.version(), new ModerationReason(request.reason()));
     }
+    @GetMapping("/api/admin/videos/processing")
+    public PageResult<ManagedVideoView> processing(@RequestAttribute("currentActor") Actor actor,
+            @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int size) {
+        var result = publications.processing(actor, new PageRequest(page, size));
+        return new PageResult<>(result.items().stream().map(ManagedVideoView::from).toList(),
+                result.total(), result.page(), result.size());
+    }
     @GetMapping("/api/admin/videos")
     public PageResult<ManagedVideoView> list(@RequestAttribute("currentActor") Actor actor,
             @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int size) {

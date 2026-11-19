@@ -78,6 +78,12 @@ public class PublicationService {
     }
 
     @Transactional(readOnly = true)
+    public PageResult<CreatorVideo> processing(Actor actor, PageRequest page) {
+        currentAdmin(actor);
+        return new PageResult<>(publications.processing(page), publications.processingCount(), page.page(), page.size());
+    }
+
+    @Transactional(readOnly = true)
     public PageResult<CreatorVideo> managed(Actor actor, PageRequest page) {
         currentAdmin(actor);
         return new PageResult<>(publications.managed(page), publications.managedCount(), page.page(), page.size());

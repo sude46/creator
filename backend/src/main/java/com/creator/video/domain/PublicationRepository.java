@@ -8,6 +8,8 @@ public interface PublicationRepository {
     Optional<CreatorVideo> find(long videoId, boolean lock);
     List<CreatorVideo> managed(PageRequest page);
     long managedCount();
+    List<CreatorVideo> processing(PageRequest page);
+    long processingCount();
     boolean offline(long ownerId, long videoId, long version);
     boolean publish(long ownerId, long videoId, long version, LocalDateTime now);
     boolean block(long videoId, long version);

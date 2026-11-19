@@ -13,6 +13,8 @@ public class MyBatisPublicationRepository implements PublicationRepository {
     public Optional<CreatorVideo> find(long id, boolean lock) { return Optional.ofNullable(lock ? mapper.lock(id) : mapper.find(id)); }
     public List<CreatorVideo> managed(PageRequest page) { return mapper.managed(page.size(), page.offset()); }
     public long managedCount() { return mapper.managedCount(); }
+    public List<CreatorVideo> processing(PageRequest page) { return mapper.processing(page.size(), page.offset()); }
+    public long processingCount() { return mapper.processingCount(); }
     public boolean offline(long ownerId, long id, long version) { return mapper.offline(ownerId, id, version) == 1; }
     public boolean publish(long ownerId, long id, long version, LocalDateTime now) { return mapper.publish(ownerId, id, version, now) == 1; }
     public boolean block(long id, long version) { return mapper.block(id, version) == 1; }

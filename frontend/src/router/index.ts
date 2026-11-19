@@ -13,6 +13,7 @@ export const router = createRouter({
     { path: '/studio/:id', component: () => import('../views/CreatorVideoView.vue') },
     { path: '/admin/reviews', component: () => import('../views/AdminReviewView.vue') },
     { path: '/admin/videos', component: () => import('../views/AdminVideosView.vue') },
+    { path: '/admin/processing', component: () => import('../views/AdminProcessingView.vue') },
     { path: '/admin/categories', component: () => import('../views/AdminCategoriesView.vue') },
     { path: '/admin/users', component: () => import('../views/AdminUsersView.vue') },
     { path: '/admin/audit', component: () => import('../views/AdminAuditView.vue') },

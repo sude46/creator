@@ -9,7 +9,7 @@ import { useStudioError } from '../composables/useStudioError'
 
 const explain = useStudioError()
 const items = ref<{ ownerId: string; video: CreatorVideo }[]>([]); const total = ref(0); const page = ref(1)
-const selected = ref<CreatorVideo>(); const history = ref<ReviewRecord[]>([]); const media = ref<SignedMedia>()
+const selected = ref<CreatorVideo>(); const history = ref<ReviewRecord[]>([]); const media = ref<SignedMedia>(); const cover = ref('')
 const historyPage = ref(1); const historyTotal = ref(0); const historyLoading = ref(false)
 const reason = ref(''); const loading = ref(false); const busy = ref(false); const error = ref(''); const notice = ref('')
 const needsRefresh = ref(false)
@@ -28,6 +28,7 @@ function clearSelectionRequests() {
   historyLoading.value = false
   previewBusy.value = false
   media.value = undefined
+  cover.value = ''
   history.value = []
 }
 async function select(video: CreatorVideo, preserveReason = false) {
@@ -44,6 +45,7 @@ async function select(video: CreatorVideo, preserveReason = false) {
     if (stopped || controller.signal.aborted) return
     selected.value = current
     needsRefresh.value = false
+    void loadCover(current, controller)
     const result = await adminApi.history(video.id, 1, controller.signal)
     if (!stopped && !controller.signal.aborted) {
       history.value = result.items
@@ -126,6 +128,13 @@ async function loadHistory(next = historyPage.value) {
   } catch (failure) { if (!stopped && !controller.signal.aborted) error.value = explain(failure) }
   finally { if (!stopped && !controller.signal.aborted) historyLoading.value = false }
 }
+async function loadCover(video: CreatorVideo, controller: AbortController) {
+  try {
+    const signed = await adminApi.cover(video)
+    if (!stopped && !controller.signal.aborted && selected.value?.id === video.id
+        && selected.value.version === video.version) cover.value = signed.url
+  } catch { /* a missing cover does not block review */ }
+}
 async function preview() {
   if (!selected.value || busy.value || loading.value || needsRefresh.value || previewBusy.value) return
   const snapshot = selected.value
@@ -155,7 +164,7 @@ onBeforeUnmount(() => { stopped = true; queueRequest?.abort(); clearSelectionReq
         <p v-if="loading" class="empty-state">正在读取审核队列…</p><button v-for="item in items" v-else :key="item.video.id" class="queue-item" :disabled="busy || loading" :class="{selected:selected?.id === item.video.id}" @click="select(item.video)"><span><strong>{{ item.video.title }}</strong><small>作者 #{{ item.ownerId }} · 第 {{ item.video.reviewRound }} 轮</small></span><time>{{ formatTime(item.video.reviewSubmittedAt) }}</time></button><p v-if="!loading && !items.length" class="empty-state">暂无待审核作品。</p>
         <div class="page-controls"><el-button :disabled="busy || loading || page <= 1" @click="load(page - 1)">上一页</el-button><span>第 {{ page }} 页</span><el-button :disabled="busy || loading || page * 20 >= total || page >= 1000" @click="load(page + 1)">下一页</el-button></div>
       </section>
-      <section class="studio-panel review-detail" v-if="selected"><div class="review-detail-head"><div><p class="card-number">作品 #{{ selected.id }} · 作者作品</p><h2>{{ selected.title }}</h2></div><el-tag>{{ reviewLabels[selected.reviewStatus] }}</el-tag></div><p class="video-description">{{ selected.description || '作者暂未填写简介。' }}</p><dl class="video-facts"><div><dt>处理状态</dt><dd>{{ processingLabels[selected.processingStatus] }}</dd></div><div><dt>视频时长</dt><dd>{{ selected.durationMillis ? `${(selected.durationMillis / 1000).toFixed(1)} 秒` : '—' }}</dd></div><div><dt>发布状态</dt><dd>{{ publicationLabels[selected.publicationStatus] }}</dd></div></dl><div class="inline-actions"><el-button :loading="previewBusy" :disabled="busy || loading || needsRefresh" @click="preview">{{ media ? '重新获取预览' : '预览视频' }}</el-button><el-button :loading="downloadBusy" :disabled="busy || loading || needsRefresh" @click="download">下载源文件</el-button><el-button type="primary" :loading="busy" :disabled="loading || needsRefresh" @click="decide('APPROVED')">通过审核</el-button><el-button type="danger" :loading="busy" :disabled="loading || needsRefresh" @click="decide('REJECTED')">驳回</el-button></div><video v-if="media" class="studio-player admin-player" :src="media.url" controls preload="metadata" @error="error = '视频无法加载或链接已过期，请重新获取预览。'"/><p v-if="media" class="muted">预览链接到期：{{ formatTime(media.expiresAt) }}</p><label class="reason-label" for="review-reason">处理说明 <span>驳回时必填</span></label><textarea id="review-reason" v-model="reason" :disabled="busy" maxlength="500" rows="4" placeholder="告诉作者需要修改什么，或记录本次审核依据。"/><h3 class="history-subheading">历史审核</h3><article v-for="record in history" :key="record.id" class="history-item"><div class="section-heading"><strong>第 {{ record.reviewRound }} 轮 · {{ record.outcome === 'APPROVED' ? '通过' : '驳回' }}</strong><time>{{ formatTime(record.createdAt) }}</time></div><p>{{ record.reason || '未附加说明' }}</p></article><p v-if="historyLoading" class="muted" role="status">正在读取历史记录…</p><p v-if="!history.length && !historyLoading" class="muted">暂无历史记录。</p><div v-if="historyTotal > 20" class="page-controls"><el-button :disabled="historyLoading || busy || historyPage <= 1" @click="loadHistory(historyPage - 1)">上一页历史</el-button><span>第 {{ historyPage }} 页</span><el-button :disabled="historyLoading || busy || historyPage * 20 >= historyTotal || historyPage >= 1000" @click="loadHistory(historyPage + 1)">下一页历史</el-button></div></section>
+      <section class="studio-panel review-detail" v-if="selected"><div class="review-detail-head"><div><p class="card-number">作品 #{{ selected.id }} · 作者作品</p><h2>{{ selected.title }}</h2></div><el-tag>{{ reviewLabels[selected.reviewStatus] }}</el-tag></div><img v-if="cover" class="review-cover" :src="cover" alt="作品封面" referrerpolicy="no-referrer" @error="cover = ''" /><p class="video-description">{{ selected.description || '作者暂未填写简介。' }}</p><dl class="video-facts"><div><dt>处理状态</dt><dd>{{ processingLabels[selected.processingStatus] }}</dd></div><div><dt>视频时长</dt><dd>{{ selected.durationMillis ? `${(selected.durationMillis / 1000).toFixed(1)} 秒` : '—' }}</dd></div><div><dt>发布状态</dt><dd>{{ publicationLabels[selected.publicationStatus] }}</dd></div></dl><div class="inline-actions"><el-button :loading="previewBusy" :disabled="busy || loading || needsRefresh" @click="preview">{{ media ? '重新获取预览' : '预览视频' }}</el-button><el-button :loading="downloadBusy" :disabled="busy || loading || needsRefresh" @click="download">下载源文件</el-button><el-button type="primary" :loading="busy" :disabled="loading || needsRefresh" @click="decide('APPROVED')">通过审核</el-button><el-button type="danger" :loading="busy" :disabled="loading || needsRefresh" @click="decide('REJECTED')">驳回</el-button></div><video v-if="media" class="studio-player admin-player" :src="media.url" controls preload="metadata" @error="error = '视频无法加载或链接已过期，请重新获取预览。'"/><p v-if="media" class="muted">预览链接到期：{{ formatTime(media.expiresAt) }}</p><label class="reason-label" for="review-reason">处理说明 <span>驳回时必填</span></label><textarea id="review-reason" v-model="reason" :disabled="busy" maxlength="500" rows="4" placeholder="告诉作者需要修改什么，或记录本次审核依据。"/><h3 class="history-subheading">历史审核</h3><article v-for="record in history" :key="record.id" class="history-item"><div class="section-heading"><strong>第 {{ record.reviewRound }} 轮 · {{ record.outcome === 'APPROVED' ? '通过' : '驳回' }}</strong><time>{{ formatTime(record.createdAt) }}</time></div><p>{{ record.reason || '未附加说明' }}</p></article><p v-if="historyLoading" class="muted" role="status">正在读取历史记录…</p><p v-if="!history.length && !historyLoading" class="muted">暂无历史记录。</p><div v-if="historyTotal > 20" class="page-controls"><el-button :disabled="historyLoading || busy || historyPage <= 1" @click="loadHistory(historyPage - 1)">上一页历史</el-button><span>第 {{ historyPage }} 页</span><el-button :disabled="historyLoading || busy || historyPage * 20 >= historyTotal || historyPage >= 1000" @click="loadHistory(historyPage + 1)">下一页历史</el-button></div></section>
       <section v-else class="studio-panel empty-state">从左侧选择一部待审核作品。</section>
     </div>
   </WorkspaceShell>

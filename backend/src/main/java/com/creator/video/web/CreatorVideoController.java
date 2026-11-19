@@ -8,7 +8,11 @@ import com.creator.video.application.ReviewService;
 import com.creator.video.application.VideoDeletionService;
 import com.creator.video.application.VideoProcessingService;
 import jakarta.validation.Valid;
+import org.springframework.http.CacheControl;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -29,6 +33,15 @@ public class CreatorVideoController {
     public CreatorVideoView get(@RequestAttribute("currentActor") Actor actor, @PathVariable long id) {
         return CreatorVideoView.from(videos.get(actor, id));
     }
+    @GetMapping(value = "/export", produces = "text/csv")
+    public ResponseEntity<byte[]> export(@RequestAttribute("currentActor") Actor actor) {
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"videos.csv\"")
+                .contentType(new MediaType("text", "csv", java.nio.charset.StandardCharsets.UTF_8))
+                .body(videos.exportCsv(actor));
+    }
+
     @GetMapping
     public PageResult<CreatorVideoView> list(@RequestAttribute("currentActor") Actor actor,
             @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int size) {

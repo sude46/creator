@@ -94,6 +94,7 @@ class UploadIntegrationTest {
     @Autowired com.creator.video.application.VideoDeletionService deletionService;
     @Autowired com.creator.video.application.VideoProcessingService processingService;
     @Autowired com.creator.video.application.CreatorVideoService creatorVideos;
+    @Autowired com.creator.video.application.PublicationService publications;
     @Autowired VideoDeletionMaintenance deletionMaintenance;
     @Autowired MemoryStorage storage;
     @Autowired AuditLog audit;
@@ -147,6 +148,29 @@ class UploadIntegrationTest {
         assertEquals(1, taskPublisher.sent.size());
         assertEquals(id, taskPublisher.sent.getFirst().videoId());
         assertNotNull(database.queryForObject("SELECT published_at FROM processing_task WHERE video_id = ?", java.time.LocalDateTime.class, id));
+    }
+
+    @Test
+    void creatorExportEscapesCellsAndAdminCanListProcessing() throws Exception {
+        long id = draft(author);
+        uploads.upload(author, id, 0, new ByteArrayInputStream(mp4(1024)), 1024);
+        database.update("UPDATE video SET title = ? WHERE id = ?", "=SUM(1)", id);
+        var csv = new String(creatorVideos.exportCsv(author), java.nio.charset.StandardCharsets.UTF_8);
+        assertTrue(csv.startsWith("id,title,categoryId"));
+        assertTrue(csv.contains("\"'=SUM(1)\""));
+        mvc.perform(get("/api/creator/videos/export").session(login(author)))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition", "attachment; filename=\"videos.csv\""))
+                .andExpect(content().contentTypeCompatibleWith("text/csv"));
+
+        var admin = actor("upload_admin");
+        assertEquals(1, publications.processing(admin, new com.creator.common.PageRequest(1, 20)).total());
+        assertThrows(com.creator.common.BusinessException.class,
+                () -> publications.processing(author, new com.creator.common.PageRequest(1, 20)));
+        mvc.perform(get("/api/admin/videos/processing").session(login(admin)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.items[0].video.id").value(Long.toString(id)));
+        mvc.perform(get("/api/admin/videos/processing").session(login(other)))
+                .andExpect(status().isForbidden());
     }
 
     @Test

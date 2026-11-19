@@ -73,7 +73,7 @@ onBeforeUnmount(() => { activeRequest?.abort(); window.removeEventListener('befo
 
 <template>
   <WorkspaceShell>
-    <div class="studio-heading"><div><p class="eyebrow">FRAME ROOM / WORKSPACE</p><h1>作品工作台</h1><p class="muted">上传视频、跟进处理进度，查看审核结果。</p></div><el-button v-if="!creating" type="primary" @click="creating = true">新建作品</el-button></div>
+    <div class="studio-heading"><div><p class="eyebrow">FRAME ROOM / WORKSPACE</p><h1>作品工作台</h1><p class="muted">上传视频、跟进处理进度，查看审核结果。</p></div><div class="inline-actions"><el-button :disabled="loading || !total" @click="creatorApi.exportVideos()">导出 CSV</el-button><el-button v-if="!creating" type="primary" @click="creating = true">新建作品</el-button></div></div>
     <VideoEditor v-if="creating" @saved="saved" @cancel="creating = false; load(1)" @busy="saving = $event" />
     <el-alert v-if="error" :title="error" type="error" :closable="false" role="alert" />
     <section class="studio-panel" aria-label="我的作品" :aria-busy="loading">
