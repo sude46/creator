@@ -3,6 +3,7 @@ import type { CreatorVideo, Page, ReviewRecord, SignedMedia } from './creator'
 
 export type ManagedVideo = { ownerId: string; video: CreatorVideo }
 export type Decision = 'APPROVED' | 'REJECTED'
+export type BatchReviewResult = { results: { videoId: string; ok: boolean; code: string | null; message: string }[]; succeeded: number; failed: number }
 export type AdminModerationRecord = { id: string; actorId: string; action: string; reason: string; createdAt: string }
 export type AdminUser = { id: string; username: string; role: 'USER' | 'ADMIN'; status: 'ACTIVE' | 'DISABLED' }
 export type AuditRecord = { id: string; actorId: string; action: string; targetType: string; targetId: string; reason: string | null; requestId: string | null; createdAt: string }
@@ -31,6 +32,10 @@ export const adminApi = {
   }),
   queue: (page: number, signal: AbortSignal) => boundedRead<Page<ManagedVideo>>(`/admin/reviews?page=${page}&size=20`, signal),
   pending: (id: string, signal: AbortSignal) => boundedRead<CreatorVideo>(`/admin/reviews/${id}`, signal),
+  batch: (items: { videoId: string; version: number; reviewRound: number }[], outcome: Decision, reason: string) => request<BatchReviewResult>('/admin/reviews/batch', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ items: items.map(item => ({ ...item, outcome, reason })) }),
+  }),
   decide: (video: CreatorVideo, outcome: Decision, reason: string) => request<CreatorVideo>(`/admin/reviews/${video.id}/decision`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ version: video.version, reviewRound: video.reviewRound, outcome, reason }),
   }),

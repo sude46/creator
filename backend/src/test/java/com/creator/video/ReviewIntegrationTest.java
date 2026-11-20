@@ -35,6 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ReviewIntegrationTest {
     @Autowired JdbcTemplate database;
     @Autowired ReviewService reviews;
+    @Autowired BatchReviewService batchReviews;
     @Autowired CreatorVideoService videos;
     @Autowired DraftService drafts;
     @Autowired CategoryService categories;
@@ -97,6 +98,20 @@ class ReviewIntegrationTest {
         assertEquals("original title", record.title());
         assertEquals(admin.id().longValue(), record.reviewerId());
         assertEquals(1, database.queryForObject("SELECT COUNT(*) FROM operation_log WHERE action='REVIEW_APPROVED'", Integer.class));
+    }
+
+    @Test
+    void batchReviewReturnsPerItemResultsWithoutAtomicRollback() {
+        long good = ready(author); long stale = ready(author);
+        reviews.submit(author, good, 0);
+        var pending = reviews.pending(admin, good);
+        var result = batchReviews.decide(admin, List.of(
+                new BatchReviewService.Item(good, pending.version(), pending.reviewRound(), ReviewDecision.Outcome.APPROVED, ""),
+                new BatchReviewService.Item(stale, 0, 1, ReviewDecision.Outcome.APPROVED, "")));
+        assertEquals(1, result.succeeded());
+        assertEquals(1, result.failed());
+        assertTrue(result.results().getFirst().ok());
+        assertFalse(result.results().get(1).ok());
     }
 
     @Test

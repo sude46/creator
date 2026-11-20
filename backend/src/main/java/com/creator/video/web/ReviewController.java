@@ -2,6 +2,7 @@ package com.creator.video.web;
 
 import com.creator.common.*;
 import com.creator.identity.domain.Actor;
+import com.creator.video.application.BatchReviewService;
 import com.creator.video.application.ReviewService;
 import com.creator.video.domain.ReviewDecision;
 import jakarta.validation.Valid;
@@ -12,7 +13,8 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/admin/reviews")
 public class ReviewController {
     private final ReviewService reviews;
-    public ReviewController(ReviewService reviews) { this.reviews = reviews; }
+    private final BatchReviewService batch;
+    public ReviewController(ReviewService reviews, BatchReviewService batch) { this.reviews = reviews; this.batch = batch; }
     @GetMapping
     public PageResult<ReviewQueueItem> queue(@RequestAttribute("currentActor") Actor actor,
             @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int size) {
@@ -29,6 +31,17 @@ public class ReviewController {
             @Valid @RequestBody DecisionRequest request) {
         return CreatorVideoView.from(reviews.decide(actor, id, request.version(), request.reviewRound(), request.decision()));
     }
+    @PostMapping("/batch")
+    public BatchReviewService.BatchResult batch(@RequestAttribute("currentActor") Actor actor,
+            @Valid @RequestBody BatchRequest request) {
+        return batch.decide(actor, request.items().stream().map(item -> new BatchReviewService.Item(
+                item.videoId(), item.version(), item.reviewRound(), item.outcome(), item.reason())).toList());
+    }
+
+    public record BatchRequest(@NotNull @Size(min = 1, max = 20) java.util.List<BatchItem> items) { }
+    public record BatchItem(@NotNull @Min(1) Long videoId, @NotNull @Min(0) Long version,
+            @NotNull @Min(1) Long reviewRound, @NotNull ReviewDecision.Outcome outcome, @Size(max = 500) String reason) { }
+
     @GetMapping("/{id}/history")
     public PageResult<ReviewRecordView> history(@RequestAttribute("currentActor") Actor actor, @PathVariable long id,
             @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int size) {

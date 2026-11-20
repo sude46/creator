@@ -15,6 +15,8 @@ const reason = ref(''); const loading = ref(false); const busy = ref(false); con
 const needsRefresh = ref(false)
 const previewBusy = ref(false)
 const downloadBusy = ref(false)
+const batchBusy = ref(false)
+const batchNotice = ref('')
 let queueRequest: AbortController | undefined
 let selectionRequest: AbortController | undefined
 let previewRequest: AbortController | undefined
@@ -80,6 +82,19 @@ async function load(next = page.value) {
     }
   } catch (failure) { if (!stopped && !controller.signal.aborted) error.value = explain(failure) }
   finally { if (!stopped && !controller.signal.aborted) loading.value = false }
+}
+async function batch(outcome: 'APPROVED' | 'REJECTED') {
+  if (!items.value.length || busy.value || loading.value || batchBusy.value) return
+  let reason = ''
+  if (outcome === 'REJECTED') { reason = window.prompt('批量驳回原因（1～500 字）')?.trim() ?? ''; if (!reason || reason.length > 500) return }
+  if (!window.confirm(`对当前页 ${items.value.length} 部作品执行${outcome === 'APPROVED' ? '批量通过' : '批量驳回'}？`)) return
+  batchBusy.value = true; batchNotice.value = ''
+  try {
+    const result = await adminApi.batch(items.value.map(item => ({ videoId: item.video.id, version: item.video.version, reviewRound: item.video.reviewRound })), outcome, reason)
+    batchNotice.value = `批量完成：成功 ${result.succeeded}，失败 ${result.failed}`
+    await load(1)
+  } catch (failure) { if (!stopped) error.value = explain(failure) }
+  finally { if (!stopped) batchBusy.value = false }
 }
 async function decide(outcome: 'APPROVED' | 'REJECTED') {
   if (!selected.value || busy.value || loading.value || needsRefresh.value) return
@@ -166,7 +181,7 @@ onBeforeUnmount(() => { stopped = true; queueRequest?.abort(); clearSelectionReq
     <div class="studio-heading"><div><p class="eyebrow">FRAME ROOM / MODERATION</p><h1>审核</h1><p class="muted">先看作品内容，再决定是否让它进入公开空间。{{ queueLabel }}</p></div></div>
     <el-alert v-if="error" :title="error" type="error" :closable="false" role="alert"/><el-alert v-if="notice" :title="notice" type="success" :closable="false" role="status"/>
     <div class="admin-layout">
-      <section class="studio-panel review-queue" :aria-busy="loading"><div class="section-heading"><h2>待审核 <span class="count">{{ total }}</span></h2><el-button :loading="loading" :disabled="busy" @click="load()">刷新</el-button></div>
+      <section class="studio-panel review-queue" :aria-busy="loading"><div class="section-heading"><h2>待审核 <span class="count">{{ total }}</span></h2><div class="inline-actions"><el-button :loading="batchBusy" :disabled="busy || loading || !items.length" @click="batch('APPROVED')">批量通过本页</el-button><el-button type="danger" :loading="batchBusy" :disabled="busy || loading || !items.length" @click="batch('REJECTED')">批量驳回本页</el-button><el-button :loading="loading" :disabled="busy" @click="load()">刷新</el-button></div></div><p v-if="batchNotice" class="muted" role="status">{{ batchNotice }}</p>
         <p v-if="loading" class="empty-state">正在读取审核队列…</p><button v-for="item in items" v-else :key="item.video.id" class="queue-item" :disabled="busy || loading" :class="{selected:selected?.id === item.video.id}" @click="select(item.video)"><span><strong>{{ item.video.title }}</strong><small>作者 #{{ item.ownerId }} · 第 {{ item.video.reviewRound }} 轮</small></span><time>{{ formatTime(item.video.reviewSubmittedAt) }}</time></button><p v-if="!loading && !items.length" class="empty-state">暂无待审核作品。</p>
         <div class="page-controls"><el-button :disabled="busy || loading || page <= 1" @click="load(page - 1)">上一页</el-button><span>第 {{ page }} 页</span><el-button :disabled="busy || loading || page * 20 >= total || page >= 1000" @click="load(page + 1)">下一页</el-button></div>
       </section>
