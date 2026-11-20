@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { auth } from '../stores/auth'
+import { notificationState } from '../stores/notifications'
 import { useStudioError } from '../composables/useStudioError'
 
 const router = useRouter()
@@ -11,6 +12,11 @@ const adminArea = computed(() => user.value?.role === 'ADMIN' && (route.path ===
 const superAdmin = computed(() => user.value?.role === 'ADMIN' && (!user.value.adminScope || user.value.adminScope === 'SUPER_ADMIN'))
 const canReview = computed(() => user.value?.role === 'ADMIN' && (!user.value.adminScope || ['SUPER_ADMIN', 'REVIEWER'].includes(user.value.adminScope)))
 const canModerate = computed(() => user.value?.role === 'ADMIN' && (!user.value.adminScope || ['SUPER_ADMIN', 'MODERATOR'].includes(user.value.adminScope)))
+const unread = notificationState.unread
+let unreadTimer: ReturnType<typeof setInterval> | undefined
+function refreshUnread() { if (user.value) void notificationState.refresh() }
+watch(() => route.fullPath, refreshUnread)
+watch(() => user.value?.id, id => { if (id) refreshUnread(); else notificationState.clear() })
 const roleLabel = computed(() => !user.value || user.value.role !== 'ADMIN' ? '用户' : user.value.adminScope === 'REVIEWER' ? '审核员' : user.value.adminScope === 'MODERATOR' ? '内容管理员' : '超级管理员')
 const busy = ref(false)
 const error = ref('')
@@ -28,11 +34,12 @@ function revealActiveNav() {
     nav.scrollLeft += activeRect.left - navRect.left - (navRect.width - activeRect.width) / 2
   }
 }
-onMounted(() => { void nextTick(revealActiveNav) })
+onMounted(() => { void nextTick(revealActiveNav); refreshUnread(); unreadTimer = setInterval(refreshUnread, 60_000) })
+onBeforeUnmount(() => { if (unreadTimer) clearInterval(unreadTimer) })
 async function logout() {
   if (busy.value) return
   busy.value = true
-  try { await auth.logout(); await router.push('/login') }
+  try { await auth.logout(); notificationState.clear(); await router.push('/login') }
   catch (failure) { error.value = explain(failure) }
   finally { busy.value = false }
 }
@@ -42,7 +49,7 @@ async function logout() {
   <div ref="shell" class="workspace">
     <header class="workspace-header">
       <RouterLink class="brand" to="/">帧间<span>FRAME ROOM</span></RouterLink>
-      <nav class="workspace-nav" aria-label="主导航"><RouterLink to="/">发现</RouterLink><RouterLink to="/favorites">我的收藏</RouterLink><RouterLink to="/history">观看历史</RouterLink><RouterLink to="/studio">我的作品</RouterLink><RouterLink to="/studio/collections">我的合集</RouterLink><RouterLink to="/notifications">通知</RouterLink><RouterLink to="/settings/profile">个人资料</RouterLink><RouterLink v-if="user?.role === 'ADMIN'" to="/admin">管理后台</RouterLink></nav>
+      <nav class="workspace-nav" aria-label="主导航"><RouterLink to="/">发现</RouterLink><RouterLink to="/favorites">我的收藏</RouterLink><RouterLink to="/history">观看历史</RouterLink><RouterLink to="/studio">我的作品</RouterLink><RouterLink to="/studio/collections">我的合集</RouterLink><RouterLink to="/notifications" class="notification-link" :aria-label="unread ? `通知，${unread} 条未读` : '通知'">通知<span v-if="unread" class="nav-badge" aria-hidden="true">{{ unread > 99 ? '99+' : unread }}</span></RouterLink><RouterLink to="/settings/profile">个人资料</RouterLink><RouterLink v-if="user?.role === 'ADMIN'" to="/admin">管理后台</RouterLink></nav>
       <div class="account-menu"><span>{{ user?.username }}</span><el-tag :type="user?.role === 'ADMIN' ? 'warning' : 'info'">{{ roleLabel }}</el-tag><el-button :loading="busy" @click="logout">退出登录</el-button></div>
     </header>
     <nav v-if="adminArea" class="admin-nav" aria-label="管理导航">
@@ -64,6 +71,8 @@ async function logout() {
 .account-menu { flex: none; }
 .workspace-nav { flex-wrap: wrap; }
 .workspace-nav a { padding: 6px 10px; border-radius: 999px; }
+.notification-link { display: inline-flex; align-items: center; gap: 6px; }
+.nav-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--color-accent); color: var(--color-surface); font-size: 10px; font-weight: 700; line-height: 1; }
 .workspace-nav a.router-link-exact-active { background: var(--color-primary-soft); color: var(--color-primary); font-weight: 700; }
 @media (max-width: 1180px) {
   .workspace-header { flex-wrap: wrap; gap: 10px 18px; }
