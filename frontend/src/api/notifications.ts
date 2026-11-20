@@ -1,6 +1,6 @@
 import { request } from './http'
 import type { Page } from './creator'
-export type NotificationType = 'REVIEW' | 'COMMENT' | 'FOLLOW'
+export type NotificationType = 'REVIEW' | 'COMMENT' | 'FOLLOW' | 'REPORT' | 'APPEAL'
 export type Notification = { id: string; type: NotificationType; title: string; body: string; link: string | null; readAt: string | null; createdAt: string }
 export const notificationApi = {
   list: (page: number, unreadOnly: boolean, type: NotificationType | '', signal: AbortSignal) => {

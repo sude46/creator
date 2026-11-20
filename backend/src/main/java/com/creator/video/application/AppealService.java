@@ -15,11 +15,12 @@ public class AppealService {
     private final PublicationService publications;
     private final AccountQueryService accounts;
     private final AuditLog audit;
+    private final NotificationService notifications;
 
     public AppealService(AppealRepository appeals, CreatorVideoRepository videos, PublicationService publications,
-            AccountQueryService accounts, AuditLog audit) {
+            AccountQueryService accounts, AuditLog audit, NotificationService notifications) {
         this.appeals = appeals; this.videos = videos; this.publications = publications;
-        this.accounts = accounts; this.audit = audit;
+        this.accounts = accounts; this.audit = audit; this.notifications = notifications;
     }
 
     @Transactional(timeout = 5)
@@ -73,10 +74,12 @@ public class AppealService {
             if (!video.moderationBlocked()) throw new BusinessException(ErrorCode.PUBLICATION_STATE_CONFLICT);
             publications.unblock(actor, video.id(), video.version(), new ModerationReason("申诉受理：" + cleanReason));
         }
-        if (!appeals.resolve(id, actor.id(), cleanAction.equals("ACCEPT") ? "ACCEPTED" : "REJECTED", cleanReason)) {
+        boolean accepted = cleanAction.equals("ACCEPT");
+        if (!appeals.resolve(id, actor.id(), accepted ? "ACCEPTED" : "REJECTED", cleanReason)) {
             throw new BusinessException(ErrorCode.STALE_WRITE);
         }
         audit.record(actor, "APPEAL_" + cleanAction, "VIDEO", appeal.targetId(), cleanReason);
+        notifications.appealResolved(appeal.appellantId(), accepted, appeal.targetId(), cleanReason);
     }
 
     private String cleanReason(String reason) {

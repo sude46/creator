@@ -5,6 +5,7 @@ import com.creator.identity.application.AccountQueryService;
 import com.creator.identity.domain.Actor;
 import com.creator.identity.domain.Role;
 import com.creator.video.domain.*;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,12 +18,13 @@ public class ReportService {
     private final VideoDeletionService deletions;
     private final CommentService commentService;
     private final AccountQueryService accounts;
+    private final ObjectProvider<NotificationService> notifications;
     public ReportService(ReportRepository reports, VideoQueryRepository videos, CommentRepository comments,
             CreatorVideoRepository creatorVideos, VideoDeletionService deletions, CommentService commentService,
-            AccountQueryService accounts) {
+            AccountQueryService accounts, ObjectProvider<NotificationService> notifications) {
         this.reports = reports; this.videos = videos; this.comments = comments;
         this.creatorVideos = creatorVideos; this.deletions = deletions; this.commentService = commentService;
-        this.accounts = accounts;
+        this.accounts = accounts; this.notifications = notifications;
     }
     @Transactional(timeout = 5)
     public void report(Actor actor, String targetType, long targetId, String reason) {
@@ -52,6 +54,8 @@ public class ReportService {
         if (!(cleanAction.equals("DISMISS") || cleanAction.equals("REMOVE"))) throw new BusinessException(ErrorCode.INVALID_REQUEST);
         var report = reports.lock(id).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         if (!report.status().equals("OPEN")) throw new BusinessException(ErrorCode.STALE_WRITE);
+        String notificationLink = report.targetType().equals("VIDEO") ? "/videos/" + report.targetId()
+                : comments.find(report.targetId()).map(comment -> "/videos/" + comment.videoId()).orElse(null);
         if (cleanAction.equals("REMOVE")) {
             if (report.targetType().equals("COMMENT")) commentService.delete(actor, report.targetId());
             else {
@@ -59,9 +63,13 @@ public class ReportService {
                 deletions.deleteByAdmin(actor, video.id(), video.version(), new ModerationReason(reason == null ? "举报处理" : reason));
             }
         }
-        if (!reports.resolve(id, actor.id(), cleanAction.equals("REMOVE") ? "REMOVED" : "DISMISSED", reason)) {
+        boolean removed = cleanAction.equals("REMOVE");
+        if (!reports.resolve(id, actor.id(), removed ? "REMOVED" : "DISMISSED", reason)) {
             throw new BusinessException(ErrorCode.STALE_WRITE);
         }
+        String cleanReason = reason == null || reason.isBlank() ? "管理员已处理你的举报。" : reason;
+        notifications.ifAvailable(service -> service.reportResolved(report.reporterId(), removed, cleanReason,
+                removed ? null : notificationLink));
     }
     private void active(Actor actor) {
         if (actor == null) throw new BusinessException(ErrorCode.UNAUTHENTICATED);
