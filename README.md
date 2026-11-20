@@ -25,6 +25,8 @@
 | Docker Compose 部署 | 测试环境通过 | 生产型 Compose 已启动 MySQL/RabbitMQ/API/Worker/Web，API healthy、Web 200；正式主机待验收 |
 | 生产安全、容量、备份恢复 | 部分验证 | 本机完成负载基线、慢查询、20 MiB 上传和 MySQL/MinIO 备份恢复演练；生产环境和容量仍未验收 |
 
+2026-11-20 全量真实回归：H2 222 项（10 项真实依赖用例跳过）、0 失败；真实 MySQL 8.4.3、RabbitMQ 4.0.5、FFmpeg、MinIO 和腾讯 COS 下 **222 项、0 跳过、0 失败**。本轮把 Rabbit 死信测试改为 1 秒 TTL 临时队列，避免依赖生产队列的 10 分钟 TTL；真实回归覆盖审核、举报、标签、收藏夹/历史、管理权限、推荐、作者资料、上传、Worker、COS/MinIO 签名与媒体处理。运行 MockMvc 限流用例时不要继承生产 `SERVER_FORWARD_HEADERS_STRATEGY`，否则测试请求的 `X-Forwarded-For` 会被当作真实来源。
+
 2026-11-18 真实回归记录：JDK 21.0.13 下 MySQL 8.4.3、RabbitMQ 4.0.5、FFmpeg 6.1.1 和 MinIO 测试镜像全量 **206 项，0 失败/错误/跳过**；V1～V11 迁移实际执行通过。Flyway 已升级到 13.12.2，MySQL 8.4 迁移通过且不再出现版本支持警告。前端 `npm ci` 和生产构建通过，生产依赖审计 0 个漏洞；Firefox 完整浏览器链路、Range/CORS、收藏通过，Chromium 冒烟通过；本机负载基线和 MySQL/MinIO 备份恢复演练完成。生产容量、目标浏览器和正式主机部署仍不能由本机结果替代。
 
 2026-11-19 功能补齐：作品删除与对象/配额回收、作者/审核下载、管理员用户管理、审计查询/CSV 导出、处理中任务列表/取消/重试、创作中心封面、审核详情封面、审核历史分页、作者作品 CSV 导出已接入。V11 新增删除任务账本；后端 H2 全量 206 项通过，真实 MySQL/RabbitMQ/FFmpeg/MinIO 全量 206 项、0 跳过通过。

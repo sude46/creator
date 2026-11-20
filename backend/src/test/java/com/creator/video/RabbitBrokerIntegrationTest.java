@@ -92,11 +92,22 @@ class RabbitBrokerIntegrationTest {
 
     @Test
     void expiredMessagesEnterBoundedDeadLetterQueue() {
-        assertEquals(PublicationResult.CONFIRMED, publisher.publish(claim()));
-        var expired = template.receive(ProcessingTopology.DEAD_QUEUE, 4000);
-        assertNotNull(expired);
-        assertTrue(expired.getMessageProperties().getHeaders().containsKey("x-death"));
-        assertNull(template.receive(ProcessingTopology.QUEUE));
+        assertEquals(1000, queue.getArguments().get("x-message-ttl"));
+        assertEquals(ProcessingTopology.DEAD_EXCHANGE, queue.getArguments().get("x-dead-letter-exchange"));
+        var expiryQueue = QueueBuilder.nonDurable("creator.processing.expiry.it-" + UUID.randomUUID())
+                .autoDelete().withArgument("x-message-ttl", 1000)
+                .withArgument("x-dead-letter-exchange", ProcessingTopology.DEAD_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", ProcessingTopology.DEAD_ROUTING_KEY).build();
+        admin.declareQueue(expiryQueue);
+        try {
+            template.convertAndSend("", expiryQueue.getName(), "expire");
+            var expired = template.receive(ProcessingTopology.DEAD_QUEUE, 4000);
+            assertNotNull(expired);
+            assertTrue(expired.getMessageProperties().getHeaders().containsKey("x-death"));
+            assertNull(template.receive(ProcessingTopology.QUEUE));
+        } finally {
+            admin.deleteQueue(expiryQueue.getName());
+        }
     }
 
     private DispatchClaim claim() { return new DispatchClaim(1L, 2L, 1L, UUID.randomUUID().toString(), 1L); }
