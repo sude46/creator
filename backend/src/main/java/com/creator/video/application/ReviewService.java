@@ -135,7 +135,7 @@ public class ReviewService {
         if (!accounts.lockActiveOwner(actor)) throw new BusinessException(ErrorCode.SESSION_INVALID);
     }
     private void requireAdmin(Actor actor) {
-        if (actor.role() != Role.ADMIN) throw new BusinessException(ErrorCode.FORBIDDEN);
+        if (!actor.canReview()) throw new BusinessException(ErrorCode.FORBIDDEN);
     }
     private void stale() { throw new BusinessException(ErrorCode.STALE_WRITE); }
     private LocalDateTime now() { return LocalDateTime.now(clock).truncatedTo(ChronoUnit.MICROS); }

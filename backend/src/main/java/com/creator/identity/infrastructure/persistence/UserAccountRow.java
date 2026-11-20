@@ -12,6 +12,7 @@ public class UserAccountRow {
     private String passwordHash;
     private String role;
     private String status;
+    private String adminScope;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -21,6 +22,8 @@ public class UserAccountRow {
     public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
+    public String getAdminScope() { return adminScope; }
+    public void setAdminScope(String adminScope) { this.adminScope = adminScope; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
 }

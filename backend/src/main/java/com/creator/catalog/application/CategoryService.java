@@ -77,7 +77,7 @@ public class CategoryService {
     }
 
     private void requireAdmin(Actor actor) {
-        if (actor.role() != Role.ADMIN) {
+        if (!actor.superAdmin()) {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
     }

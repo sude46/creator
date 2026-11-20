@@ -1,7 +1,8 @@
 import { ref } from 'vue'
 import { ApiFailure, clearCsrf, request } from '../api/http'
 
-export type User = { id: string; username: string; role: 'USER' | 'ADMIN' }
+export type AdminScope = 'SUPER_ADMIN' | 'REVIEWER' | 'MODERATOR'
+export type User = { id: string; username: string; role: 'USER' | 'ADMIN'; adminScope: AdminScope | null }
 const user = ref<User | null>(null)
 let loaded = false
 

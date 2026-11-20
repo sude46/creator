@@ -4,6 +4,7 @@ import com.creator.identity.application.AccountQueryService;
 import com.creator.identity.domain.AccountCredentials;
 import com.creator.identity.domain.AccountRepository;
 import com.creator.identity.domain.AccountSummary;
+import com.creator.identity.domain.AdminScope;
 import com.creator.identity.domain.Role;
 import com.creator.identity.infrastructure.security.ActiveAccountFilter;
 import com.creator.identity.infrastructure.security.SecurityHandlers;
@@ -68,7 +69,7 @@ class SecurityFailureTest {
                 throw new DataAccessResourceFailureException("private database details");
             }
 
-            public AccountSummary insert(String username, String passwordHash, Role role) {
+            public AccountSummary insert(String username, String passwordHash, Role role, AdminScope scope) {
                 throw new UnsupportedOperationException();
             }
         });

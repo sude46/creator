@@ -35,7 +35,7 @@ public class VideoProcessingService {
 
     @Transactional(timeout = 5)
     public CreatorVideo cancelByAdmin(Actor actor, long videoId, long version, ModerationReason reason) {
-        if (actor == null || actor.role() != Role.ADMIN) throw new BusinessException(ErrorCode.FORBIDDEN);
+        if (actor == null || !actor.canReview()) throw new BusinessException(ErrorCode.FORBIDDEN);
         if (reason == null) throw new BusinessException(ErrorCode.INVALID_MODERATION_REASON);
         active(actor);
         var video = videos.findAny(videoId, true).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));

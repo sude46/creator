@@ -42,14 +42,23 @@ public class AdminUserController {
         return AdminUserView.from(users.setEnabled(actor, id, request.enabled()));
     }
 
+    @PutMapping("/{id}/admin-scope")
+    public AdminUserView adminScope(@RequestAttribute("currentActor") Actor actor, @PathVariable long id,
+            @Valid @RequestBody AdminScopeRequest request) {
+        return AdminUserView.from(users.setAdminScope(actor, id, request.adminScope()));
+    }
+
+    public record AdminScopeRequest(@NotBlank @Size(max = 16) String adminScope) { }
+
     public record CreateUserRequest(@NotBlank @Size(max = 32) String username,
             @NotBlank @Size(max = 64) String password) { }
 
     public record StatusRequest(@NotNull Boolean enabled) { }
 
-    public record AdminUserView(String id, String username, String role, String status) {
+    public record AdminUserView(String id, String username, String role, String status, String adminScope) {
         static AdminUserView from(AccountSummary account) {
-            return new AdminUserView(account.id().toString(), account.username(), account.role().name(), account.status().name());
+            return new AdminUserView(account.id().toString(), account.username(), account.role().name(), account.status().name(),
+                    account.adminScope() == null ? null : account.adminScope().name());
         }
     }
 }

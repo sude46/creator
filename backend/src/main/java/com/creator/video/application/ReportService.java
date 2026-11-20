@@ -69,6 +69,6 @@ public class ReportService {
     }
     private void requireAdmin(Actor actor) {
         active(actor);
-        if (actor.role() != Role.ADMIN) throw new BusinessException(ErrorCode.FORBIDDEN);
+        if (!actor.canModerate()) throw new BusinessException(ErrorCode.FORBIDDEN);
     }
 }

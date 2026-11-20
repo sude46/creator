@@ -29,7 +29,7 @@ public class MediaAuthorizationService {
         var active = accounts.current(actor.username());
         if (!active.equals(actor)) throw new BusinessException(ErrorCode.SESSION_INVALID);
         if (purpose == MediaPurpose.REVIEW_PREVIEW || purpose == MediaPurpose.REVIEW_DOWNLOAD) {
-            if (actor.role() != Role.ADMIN) throw new BusinessException(ErrorCode.FORBIDDEN);
+            if (!actor.canReview() && !actor.canModerate()) throw new BusinessException(ErrorCode.FORBIDDEN);
             if (version == null || version < 0 || round == null || round < 1) throw new BusinessException(ErrorCode.INVALID_REQUEST);
         }
         var target = videos.media(videoId, actor.id(), purpose, kind, version, round)

@@ -13,6 +13,7 @@ const loading = ref(false)
 const busy = ref(false)
 const error = ref('')
 const notice = ref('')
+const scopeDraft = ref<Record<string, string>>({})
 const username = ref('')
 const password = ref('')
 const creating = ref(false)
@@ -55,8 +56,26 @@ async function create() {
   finally { if (!stopped) busy.value = false }
 }
 
+function isSuper(user: AdminUser) { return user.role === 'ADMIN' && (!user.adminScope || user.adminScope === 'SUPER_ADMIN') }
+function roleLabel(user: AdminUser) { return user.role !== 'ADMIN' ? '普通用户' : user.adminScope === 'REVIEWER' ? '审核员' : user.adminScope === 'MODERATOR' ? '内容管理员' : '超级管理员' }
+function scopeValue(user: AdminUser) { return scopeDraft.value[user.id] ?? user.adminScope ?? 'NONE' }
+function setScope(user: AdminUser, event: Event) { scopeDraft.value = { ...scopeDraft.value, [user.id]: (event.target as HTMLSelectElement).value } }
+async function saveScope(user: AdminUser) {
+  if (busy.value || loading.value || isSuper(user)) return
+  busy.value = true
+  error.value = ''
+  notice.value = ''
+  try {
+    await adminApi.setAdminScope(user, scopeValue(user) as 'NONE' | 'REVIEWER' | 'MODERATOR')
+    if (stopped) return
+    notice.value = `已更新 ${user.username} 的管理权限。`
+    scopeDraft.value = {}
+    await load()
+  } catch (failure) { if (!stopped) error.value = explain(failure) }
+  finally { if (!stopped) busy.value = false }
+}
 async function toggle(user: AdminUser) {
-  if (busy.value || loading.value || user.role === 'ADMIN') return
+  if (busy.value || loading.value || isSuper(user)) return
   const action = user.status === 'ACTIVE' ? '禁用' : '启用'
   if (!window.confirm(`${action}用户 ${user.username}？`)) return
   busy.value = true
@@ -78,7 +97,7 @@ onBeforeUnmount(() => { stopped = true; activeRequest?.abort() })
 <template>
   <WorkspaceShell>
     <div class="studio-heading">
-      <div><p class="eyebrow">FRAME ROOM / PEOPLE</p><h1>用户管理</h1><p class="muted">创建、启用或禁用普通用户；管理员账号不在此处修改。</p></div>
+      <div><p class="eyebrow">FRAME ROOM / PEOPLE</p><h1>用户管理</h1><p class="muted">创建用户，分配审核员/内容管理员权限，并启用或禁用账号；超级管理员不在此处修改。</p></div>
       <el-button :disabled="busy" @click="creating = !creating">{{ creating ? '取消创建' : '创建用户' }}</el-button>
     </div>
     <el-alert v-if="error" :title="error" type="error" :closable="false" role="alert" />
@@ -96,13 +115,24 @@ onBeforeUnmount(() => { stopped = true; activeRequest?.abort() })
       <p v-if="loading" role="status">正在读取用户…</p>
       <div v-else class="user-table">
         <table>
-          <thead><tr><th scope="col">用户名</th><th scope="col">角色</th><th scope="col">状态</th><th scope="col">操作</th></tr></thead>
+          <thead><tr><th scope="col">用户名</th><th scope="col">角色</th><th scope="col">管理权限</th><th scope="col">状态</th><th scope="col">操作</th></tr></thead>
           <tbody>
             <tr v-for="user in users" :key="user.id">
               <td>{{ user.username }}</td>
-              <td>{{ user.role === 'ADMIN' ? '管理员' : '普通用户' }}</td>
+              <td>{{ roleLabel(user) }}</td>
+              <td>
+                <span v-if="isSuper(user)" class="muted">超级管理员</span>
+                <div v-else class="inline-actions scope-editor">
+                  <select :value="scopeValue(user)" :disabled="busy" :aria-label="`${user.username} 的管理权限`" @change="setScope(user, $event)">
+                    <option value="NONE">普通用户</option>
+                    <option value="REVIEWER">审核员</option>
+                    <option value="MODERATOR">内容管理员</option>
+                  </select>
+                  <el-button size="small" :disabled="busy || scopeValue(user) === (user.adminScope ?? 'NONE')" @click="saveScope(user)">保存权限</el-button>
+                </div>
+              </td>
               <td>{{ user.status === 'ACTIVE' ? '启用' : '禁用' }}</td>
-              <td><el-button v-if="user.role === 'USER'" :disabled="busy" @click="toggle(user)">{{ user.status === 'ACTIVE' ? '禁用' : '启用' }}</el-button><span v-else class="muted">不可修改</span></td>
+              <td><el-button :disabled="busy || isSuper(user)" @click="toggle(user)">{{ user.status === 'ACTIVE' ? '禁用' : '启用' }}</el-button></td>
             </tr>
           </tbody>
         </table>
@@ -117,4 +147,6 @@ onBeforeUnmount(() => { stopped = true; activeRequest?.abort() })
 .user-table { overflow-x: auto; }
 .user-table table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .user-table th, .user-table td { text-align: left; padding: 12px 8px; border-bottom: 1px solid #e5e8e2; }
+.scope-editor { gap: 8px; }
+.scope-editor select { border: 1px solid var(--color-control-border); border-radius: 3px; padding: 5px 8px; font: inherit; font-size: 13px; background: var(--color-surface); color: var(--color-text); }
 </style>

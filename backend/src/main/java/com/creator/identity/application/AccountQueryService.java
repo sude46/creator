@@ -5,6 +5,7 @@ import com.creator.common.ErrorCode;
 import com.creator.identity.domain.AccountRepository;
 import com.creator.identity.domain.AccountStatus;
 import com.creator.identity.domain.Actor;
+import com.creator.identity.domain.AdminScope;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
 
@@ -19,7 +20,11 @@ public class AccountQueryService {
     public Optional<Actor> findActive(String username) {
         return accounts.findSummary(username)
                 .filter(account -> account.status() == AccountStatus.ACTIVE)
-                .map(account -> new Actor(account.id(), account.username(), account.role()));
+                .map(account -> new Actor(account.id(), account.username(), account.role(), account.adminScope()));
+    }
+
+    public AdminScope adminScope(long id) {
+        return accounts.findById(id).map(account -> account.adminScope()).orElse(null);
     }
 
     public Actor current(String username) {

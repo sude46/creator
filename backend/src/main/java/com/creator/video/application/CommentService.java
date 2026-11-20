@@ -41,7 +41,7 @@ public class CommentService {
     public void delete(Actor actor, long id) {
         active(actor);
         var comment = comments.find(id).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-        if (actor.role() != Role.ADMIN && actor.id() != comment.userId()) throw new BusinessException(ErrorCode.FORBIDDEN);
+        if (!actor.canModerate() && actor.id() != comment.userId()) throw new BusinessException(ErrorCode.FORBIDDEN);
         if (!comments.delete(id)) throw new BusinessException(ErrorCode.NOT_FOUND);
         audit.record(actor, "COMMENT_DELETED", "COMMENT", id);
     }

@@ -8,6 +8,7 @@ import com.creator.common.PageResult;
 import com.creator.identity.domain.AccountRepository;
 import com.creator.identity.domain.AccountStatus;
 import com.creator.identity.domain.AccountSummary;
+import com.creator.identity.domain.AdminScope;
 import com.creator.identity.domain.Actor;
 import com.creator.identity.domain.PasswordPolicy;
 import com.creator.identity.domain.Role;
@@ -56,7 +57,7 @@ public class AdminUserService {
         requireAdmin(actor);
         if (actor.id() == id) throw new BusinessException(ErrorCode.FORBIDDEN);
         var target = accounts.findById(id).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-        if (target.role() != Role.USER || target.status() == AccountStatus.DELETED) {
+        if (target.status() == AccountStatus.DELETED || isSuperAdmin(target)) {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
         var next = enabled ? AccountStatus.ACTIVE : AccountStatus.DISABLED;
@@ -65,7 +66,37 @@ public class AdminUserService {
         return accounts.findById(id).orElseThrow();
     }
 
+    @Transactional(timeout = 5)
+    public AccountSummary setAdminScope(Actor actor, long id, String requested) {
+        requireAdmin(actor);
+        if (actor.id() == id) throw new BusinessException(ErrorCode.FORBIDDEN);
+        var target = accounts.findById(id).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        if (target.status() == AccountStatus.DELETED || isSuperAdmin(target)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+        String value = requested == null ? "NONE" : requested.trim().toUpperCase();
+        AdminScope scope;
+        Role role;
+        if (value.equals("NONE") || value.isEmpty()) {
+            scope = null;
+            role = Role.USER;
+        } else {
+            try { scope = AdminScope.valueOf(value); }
+            catch (IllegalArgumentException exception) { throw new BusinessException(ErrorCode.INVALID_REQUEST); }
+            role = Role.ADMIN;
+            if (scope == AdminScope.SUPER_ADMIN) throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+        if (!accounts.updateAdminScope(id, role, scope)) throw new BusinessException(ErrorCode.STALE_WRITE);
+        audit.record(actor, "ADMIN_SCOPE_UPDATED", "USER", id, scope == null ? "USER" : scope.name());
+        return accounts.findById(id).orElseThrow();
+    }
+
+    private boolean isSuperAdmin(AccountSummary account) {
+        return account.role() == Role.ADMIN
+                && (account.adminScope() == null || account.adminScope() == AdminScope.SUPER_ADMIN);
+    }
+
     private void requireAdmin(Actor actor) {
-        if (actor == null || actor.role() != Role.ADMIN) throw new BusinessException(ErrorCode.FORBIDDEN);
+        if (actor == null || !actor.superAdmin()) throw new BusinessException(ErrorCode.FORBIDDEN);
     }
 }

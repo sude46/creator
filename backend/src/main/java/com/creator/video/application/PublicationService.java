@@ -53,7 +53,7 @@ public class PublicationService {
 
     @Transactional(timeout = 5)
     public CreatorVideo block(Actor actor, long id, long version, ModerationReason reason) {
-        admin(actor);
+        moderator(actor);
         requireReason(reason);
         active(actor);
         var video = target(id, true);
@@ -66,7 +66,7 @@ public class PublicationService {
 
     @Transactional(timeout = 5)
     public CreatorVideo unblock(Actor actor, long id, long version, ModerationReason reason) {
-        admin(actor);
+        moderator(actor);
         requireReason(reason);
         active(actor);
         var video = target(id, true);
@@ -129,7 +129,11 @@ public class PublicationService {
     }
     private void admin(Actor actor) {
         if (actor == null) throw new BusinessException(ErrorCode.UNAUTHENTICATED);
-        if (actor.role() != Role.ADMIN) throw new BusinessException(ErrorCode.FORBIDDEN);
+        if (!actor.adminArea()) throw new BusinessException(ErrorCode.FORBIDDEN);
+    }
+    private void moderator(Actor actor) {
+        admin(actor);
+        if (!actor.canModerate()) throw new BusinessException(ErrorCode.FORBIDDEN);
     }
     private void currentAdmin(Actor actor) { admin(actor); current(actor); }
     private void requireReason(ModerationReason reason) {

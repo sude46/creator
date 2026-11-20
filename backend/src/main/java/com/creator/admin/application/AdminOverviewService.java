@@ -27,7 +27,7 @@ public class AdminOverviewService {
     @Transactional(readOnly = true)
     public AdminOverview get(Actor actor) {
         if (actor == null) throw new BusinessException(ErrorCode.UNAUTHENTICATED);
-        if (actor.role() != Role.ADMIN) throw new BusinessException(ErrorCode.FORBIDDEN);
+        if (!actor.adminArea()) throw new BusinessException(ErrorCode.FORBIDDEN);
         var current = accounts.current(actor.username());
         if (!current.equals(actor)) throw new BusinessException(ErrorCode.SESSION_INVALID);
         var today = LocalDate.now(clock).atStartOfDay();

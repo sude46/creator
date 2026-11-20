@@ -5,7 +5,7 @@ export type ManagedVideo = { ownerId: string; video: CreatorVideo }
 export type Decision = 'APPROVED' | 'REJECTED'
 export type BatchReviewResult = { results: { videoId: string; ok: boolean; code: string | null; message: string }[]; succeeded: number; failed: number }
 export type AdminModerationRecord = { id: string; actorId: string; action: string; reason: string; createdAt: string }
-export type AdminUser = { id: string; username: string; role: 'USER' | 'ADMIN'; status: 'ACTIVE' | 'DISABLED' }
+export type AdminUser = { id: string; username: string; role: 'USER' | 'ADMIN'; status: 'ACTIVE' | 'DISABLED'; adminScope: 'SUPER_ADMIN' | 'REVIEWER' | 'MODERATOR' | null }
 export type ContentReport = { id: string; reporterId: string; reporterName: string; targetType: 'VIDEO' | 'COMMENT'; targetId: string; reason: string; status: 'OPEN' | 'DISMISSED' | 'REMOVED'; resolverId: string | null; resolutionReason: string | null; createdAt: string; resolvedAt: string | null }
 export type AuditRecord = { id: string; actorId: string; action: string; targetType: string; targetId: string; reason: string | null; requestId: string | null; createdAt: string }
 export type AdminOverview = { pendingReviews: string; failedProcessing: string; todayUsers: string; todayDecisions: string; recentDecisions: { id: string; videoId: string; reviewerId: string; outcome: 'APPROVED' | 'REJECTED'; reason: string; title: string; createdAt: string }[] }
@@ -29,6 +29,9 @@ export const adminApi = {
   users: (page: number, signal: AbortSignal) => boundedRead<Page<AdminUser>>(`/admin/users?page=${page}&size=20`, signal),
   createUser: (username: string, password: string) => request<AdminUser>('/admin/users', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }),
+  }),
+  setAdminScope: (user: AdminUser, adminScope: 'NONE' | 'REVIEWER' | 'MODERATOR') => request<AdminUser>(`/admin/users/${user.id}/admin-scope`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ adminScope }),
   }),
   setUserStatus: (user: AdminUser, enabled: boolean) => request<AdminUser>(`/admin/users/${user.id}`, {
     method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled }),

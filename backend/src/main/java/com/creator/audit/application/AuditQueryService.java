@@ -48,7 +48,7 @@ public class AuditQueryService {
 
     private void requireAdmin(Actor actor) {
         if (actor == null) throw new BusinessException(ErrorCode.UNAUTHENTICATED);
-        if (actor.role() != Role.ADMIN) throw new BusinessException(ErrorCode.FORBIDDEN);
+        if (!actor.superAdmin()) throw new BusinessException(ErrorCode.FORBIDDEN);
         if (!accounts.current(actor.username()).equals(actor)) throw new BusinessException(ErrorCode.SESSION_INVALID);
     }
 
