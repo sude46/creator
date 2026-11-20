@@ -15,6 +15,7 @@ __pycache__/
 # impeccable 技能：本地工具安装产物，不入库
 /.opencode/skills/impeccable/
 /.opencode/commands/impeccable.md
+/.impeccable/design.json
 
 /.local/
 /uploads/
