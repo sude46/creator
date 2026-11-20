@@ -69,7 +69,7 @@ onBeforeUnmount(() => { activeRequest?.abort(); window.removeEventListener('befo
     <VideoEditor v-if="creating" @saved="saved" @cancel="creating = false; load(1)" @busy="saving = $event" />
     <el-alert v-if="error" :title="error" type="error" :closable="false" role="alert" />
     <section class="studio-panel" aria-label="我的作品" :aria-busy="loading">
-      <div class="section-heading"><h2>我的作品 <span class="count">{{ total }}</span></h2><el-button :loading="loading" @click="load()">刷新列表</el-button></div>
+      <div class="section-heading"><h2>我的作品（全部状态） <span class="count">{{ total }}</span></h2><el-button :loading="loading" @click="load()">刷新列表</el-button></div>
       <div v-if="loading" class="video-grid" aria-busy="true" aria-label="正在加载作品"><div v-for="index in 6" :key="index" class="creator-card-skeleton" aria-hidden="true"></div></div>
       <div v-else-if="videos.length" class="video-grid">
         <article v-for="(video, index) in videos" :key="video.id" class="creator-card">

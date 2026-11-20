@@ -160,7 +160,7 @@ onBeforeUnmount(() => {
     <el-alert v-if="error" :title="error" type="error" :closable="false" role="alert" />
     <div class="management-layout">
       <section class="studio-panel" :aria-busy="loading" aria-label="可管理作品">
-        <div class="section-heading"><h2>作品列表 <span class="count">{{ total }}</span></h2><el-button :loading="loading" :disabled="busy" @click="load()">刷新列表</el-button></div>
+        <div class="section-heading"><h2>作品列表（处理完成） <span class="count">{{ total }}</span></h2><el-button :loading="loading" :disabled="busy" @click="load()">刷新列表</el-button></div>
         <p v-if="loading" role="status">正在读取作品…</p>
         <button v-for="item in items" :key="item.video.id" class="managed-row" :class="{ active: selectedId === item.video.id }" :disabled="busy" :aria-pressed="selectedId === item.video.id" @click="select(item.video.id)">
           <strong>{{ item.video.title }}</strong><span>作者 #{{ item.ownerId }} · {{ adminStatus(item.video).label }}</span>

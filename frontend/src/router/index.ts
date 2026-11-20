@@ -39,6 +39,6 @@ router.beforeEach(async (to) => {
     if (!to.meta.guest) return '/login'
   }
   if (!to.meta.guest && !auth.user.value) return '/login'
-  if ((to.path === '/admin' || to.path.startsWith('/admin/')) && auth.user.value?.role !== 'ADMIN') return '/'
+  if ((to.path === '/admin' || to.path.startsWith('/admin/')) && auth.user.value?.role !== 'ADMIN') return { path: '/', query: { denied: 'admin' } }
   if (to.meta.guest && auth.user.value) return '/'
 })

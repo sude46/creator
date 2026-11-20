@@ -81,7 +81,7 @@ onBeforeUnmount(() => { stopped = true; activeRequest?.abort() })
 <template>
   <WorkspaceShell>
     <div class="studio-heading">
-      <div><p class="eyebrow">FRAME ROOM / PIPELINE</p><h1>异常处理</h1><p class="muted">查看处理中或处理失败的作品；处理中可取消，失败任务由作者重试或删除。</p></div>
+      <div><p class="eyebrow">FRAME ROOM / PIPELINE</p><h1>异常处理</h1><p class="muted">查看处理中或处理失败的作品；处理中可取消，失败任务已停止自动重试，由作者重试或删除。</p></div>
       <RouterLink to="/admin/videos">已完成作品 →</RouterLink>
     </div>
     <el-alert v-if="error" :title="error" type="error" :closable="false" role="alert" />
@@ -97,11 +97,11 @@ onBeforeUnmount(() => { stopped = true; activeRequest?.abort() })
         <div class="page-controls"><el-button :disabled="loading || busy || page <= 1" @click="load(page - 1)">上一页</el-button><span>{{ page }}</span><el-button :disabled="loading || busy || page * 20 >= total || page >= 1000" @click="load(page + 1)">下一页</el-button></div>
       </section>
       <section class="studio-panel" aria-label="取消处理">
-        <div class="section-heading"><h2>取消处理</h2></div>
+        <div class="section-heading"><h2>任务操作 <span class="count">仅处理中可取消</span></h2></div>
         <template v-if="selected">
           <h3>{{ selected.video.title }}</h3>
           <p class="muted">作品 #{{ selected.video.id }} · {{ adminStatus(selected.video).label }} · 版本 {{ selected.video.version }}</p>
-          <dl class="video-facts"><div><dt>任务状态</dt><dd>{{ selected.video.taskState || '—' }}</dd></div><div><dt>执行代次</dt><dd>{{ selected.video.processingGeneration }}</dd></div><div><dt>已尝试</dt><dd>{{ selected.video.executionAttempts }} 次</dd></div><div><dt>下次重试</dt><dd>{{ selected.video.nextAttemptAt ? formatTime(selected.video.nextAttemptAt) : '—' }}</dd></div><div><dt>失败码</dt><dd>{{ selected.video.failureCode || '—' }}</dd></div></dl>
+          <dl class="video-facts"><div><dt>任务状态</dt><dd>{{ selected.video.taskState || '—' }}</dd></div><div><dt>执行代次</dt><dd>{{ selected.video.processingGeneration }}</dd></div><div><dt>已尝试</dt><dd>{{ selected.video.executionAttempts }} 次</dd></div><div><dt>下次重试</dt><dd>{{ selected.video.taskState === 'FAILED' ? '自动重试已结束' : selected.video.nextAttemptAt ? formatTime(selected.video.nextAttemptAt) : '—' }}</dd></div><div><dt>失败码</dt><dd>{{ selected.video.failureCode || '—' }}</dd></div></dl>
           <p class="video-description">{{ selected.video.description || '作者未填写简介。' }}</p>
           <p class="muted">{{ adminStatus(selected.video).detail }}</p>
           <form v-if="selectedActive" class="studio-form" @submit.prevent="cancel">

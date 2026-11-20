@@ -47,6 +47,11 @@ async function logout() {
 
 <style scoped>
 .workspace-nav { flex-wrap: wrap; }
+@media (max-width: 760px) {
+  .workspace-nav { flex-wrap: nowrap; width: 100%; overflow-x: auto; gap: 2px; padding: 2px 0 4px; scrollbar-width: none; }
+  .workspace-nav::-webkit-scrollbar { display: none; }
+  .workspace-nav a { display: inline-flex; align-items: center; min-height: 40px; padding: 0 12px; white-space: nowrap; }
+}
 .workspace-nav a { padding: 6px 10px; border-radius: 999px; }
 .workspace-nav a.router-link-exact-active { background: var(--color-primary-soft); color: var(--color-primary); font-weight: 700; }
 .admin-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; padding: 11px 28px; border-top: 1px solid #d9ddd5; border-bottom: 1px solid #d9ddd5; background: #fff; font-size: 13px; }

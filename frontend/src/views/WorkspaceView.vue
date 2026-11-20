@@ -119,12 +119,13 @@ onBeforeUnmount(() => { stopped = true; activeRequest?.abort(); categoryRequest?
       <button type="button" :class="{ active: !tag }" @click="navigate(1, category, '', sort)">全部</button>
       <button v-for="item in tags" :key="item.name" type="button" :class="{ active: tag === item.name }" @click="navigate(1, category, item.name, sort)">{{ item.name }} <small>{{ item.uses }}</small></button>
     </div>
+    <el-alert v-if="route.query.denied === 'admin'" title="该页面仅管理员可访问。" type="warning" role="alert" />
     <el-alert v-if="tagError" :title="tagError" type="error" :closable="false" role="alert" />
     <el-alert v-if="categoryError" :title="categoryError" type="error" :closable="false" role="alert" />
 
     <div class="public-results-heading">
       <h2>{{ route.query.title ? `“${route.query.title}” 的搜索结果` : tag ? `标签“${tag}”` : '最新发布' }}</h2>
-      <span v-if="!loading && !error">{{ total }} 部作品</span>
+      <span v-if="!loading && !error">{{ total }} 部公开作品</span>
       <div class="sort-toggle" role="group" aria-label="排序方式">
         <button type="button" :class="{ active: sort === 'recommended' }" @click="navigate(1, category, tag, 'recommended')">推荐</button>
         <button type="button" :class="{ active: sort === 'latest' }" @click="navigate(1, category, tag, 'latest')">最新</button>
