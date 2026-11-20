@@ -72,6 +72,9 @@ class FavoriteIntegrationTest {
         database.update("DELETE FROM notification");
         database.update("DELETE FROM content_report");
         database.update("DELETE FROM user_profile");
+        database.update("DELETE FROM user_follow");
+        database.update("DELETE FROM video_collection_item");
+        database.update("DELETE FROM video_collection");
         database.update("DELETE FROM user_account");
         registration.execute("favorite_author", "SafePassword123");
         registration.execute("favorite_viewer", "SafePassword123");

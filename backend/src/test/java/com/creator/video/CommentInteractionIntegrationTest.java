@@ -54,6 +54,9 @@ class CommentInteractionIntegrationTest {
         database.update("DELETE FROM video");
         database.update("DELETE FROM video_category");
         database.update("DELETE FROM user_profile");
+        database.update("DELETE FROM user_follow");
+        database.update("DELETE FROM video_collection_item");
+        database.update("DELETE FROM video_collection");
         database.update("DELETE FROM user_account");
         registration.execute("comment_author", "SafePassword123");
         registration.execute("comment_other", "SafePassword123");

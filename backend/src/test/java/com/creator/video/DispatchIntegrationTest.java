@@ -68,6 +68,9 @@ class DispatchIntegrationTest {
         database.update("DELETE FROM notification");
         database.update("DELETE FROM content_report");
         database.update("DELETE FROM user_profile");
+        database.update("DELETE FROM user_follow");
+        database.update("DELETE FROM video_collection_item");
+        database.update("DELETE FROM video_collection");
         database.update("DELETE FROM user_account");
         database.update("INSERT INTO user_account (username, password_hash) VALUES ('dispatch_author', 'not-used-by-these-tests')");
         ownerId = database.queryForObject("SELECT id FROM user_account WHERE username = 'dispatch_author'", Long.class);

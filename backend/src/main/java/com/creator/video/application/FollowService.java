@@ -1,9 +1,12 @@
 package com.creator.video.application;
 
 import com.creator.common.BusinessException;
+import com.creator.common.PageRequest;
+import com.creator.common.PageResult;
 import com.creator.common.ErrorCode;
 import com.creator.identity.application.AccountQueryService;
 import com.creator.identity.domain.Actor;
+import com.creator.video.domain.AuthorCard;
 import com.creator.video.domain.FollowRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.ObjectProvider;
@@ -29,6 +32,28 @@ public class FollowService {
         return new Profile(authorId, username, details.displayName(), details.bio(), details.website(), details.hasAvatar(),
                 details.version(), follows.followerCount(authorId), follows.followingCount(authorId),
                 authorId != actor.id() && follows.exists(actor.id(), authorId), authorId == actor.id());
+    }
+
+    @Transactional(readOnly = true)
+    public PageResult<AuthorCard> followers(Actor actor, long authorId, PageRequest page) {
+        active(actor);
+        requireActiveAuthor(authorId);
+        return new PageResult<>(follows.followers(authorId, actor.id(), page), follows.followerCount(authorId),
+                page.page(), page.size());
+    }
+
+    @Transactional(readOnly = true)
+    public PageResult<AuthorCard> following(Actor actor, long authorId, PageRequest page) {
+        active(actor);
+        requireActiveAuthor(authorId);
+        return new PageResult<>(follows.following(authorId, actor.id(), page), follows.followingCount(authorId),
+                page.page(), page.size());
+    }
+
+    private void requireActiveAuthor(long authorId) {
+        if (authorId <= 0 || follows.activeUsername(authorId) == null) {
+            throw new BusinessException(ErrorCode.NOT_FOUND);
+        }
     }
 
     @Transactional(timeout = 5)

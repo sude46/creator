@@ -3,6 +3,7 @@ import type { Page, SignedMedia } from './creator'
 
 export type PublicVideo = { id: string; authorId: string; authorName: string; categoryId: string; categoryName: string; title: string; description: string; durationMillis: number; width: number; height: number; publishedAt: string; hasCover: boolean; coverKey: string | null; viewCount: number; favoriteCount: number; likeCount: number }
 export type Comment = { id: string; videoId: string; userId: string; username: string; content: string; parentId: string | null; likeCount: number; liked: boolean; replyCount: number; createdAt: string }
+export type AuthorCard = { id: string; username: string; displayName: string | null; bio: string; hasAvatar: boolean; profileVersion: number; followerCount: number; following: boolean }
 export type AuthorProfile = { id: string; username: string; displayName: string | null; bio: string; website: string; hasAvatar: boolean; profileVersion: number; followerCount: number; followingCount: number; following: boolean; self: boolean }
 export type PublicCollection = { id: string; ownerId: string; ownerName: string; title: string; description: string; visibility: string; version: number; itemCount: number; createdAt: string }
 export type AnchorPage = { items: PublicVideo[]; anchorIndex: number | null; hasBefore: boolean; hasAfter: boolean }
@@ -52,6 +53,8 @@ export const publicApi = {
   report: (targetType: 'VIDEO' | 'COMMENT', targetId: string, reason: string) => request<void>('/reports', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ targetType, targetId, reason }) }),
   following: (page: number, signal: AbortSignal) => read<Page<PublicVideo>>(`/videos/following?page=${page}&size=12`, signal),
   authorProfile: (authorId: string, signal: AbortSignal) => read<AuthorProfile>(`/authors/${authorId}/profile`, signal),
+  authorFollowers: (authorId: string, page: number, signal: AbortSignal) => read<Page<AuthorCard>>(`/authors/${authorId}/followers?page=${page}&size=20`, signal),
+  authorFollowing: (authorId: string, page: number, signal: AbortSignal) => read<Page<AuthorCard>>(`/authors/${authorId}/following?page=${page}&size=20`, signal),
   follow: (authorId: string, add: boolean) => request<void>(`/authors/${authorId}/follow`, { method: add ? 'PUT' : 'DELETE' }),
   authorCollections: (authorId: string, signal: AbortSignal) => read<Page<PublicCollection>>(`/authors/${authorId}/collections?page=1&size=20`, signal),
   collection: (id: string, page: number, signal: AbortSignal) => read<{ collection: PublicCollection; items: Page<PublicVideo> }>(`/collections/${id}?page=${page}&size=12`, signal),

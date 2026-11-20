@@ -51,5 +51,30 @@ class FollowIntegrationTest {
         follows.unfollow(a, b.id()); follows.unfollow(a, b.id());
         assertFalse(follows.profile(a, b.id()).following());
     }
+    @Test void followerAndFollowingListsArePagedAndHideInactiveAccounts() {
+        registerUser.execute("follow_c", "SafePassword123");
+        Actor c = actor("follow_c");
+        follows.follow(a, b.id());
+        follows.follow(c, b.id());
+        follows.follow(b, a.id());
+
+        var first = follows.followers(a, b.id(), new PageRequest(1, 1));
+        assertEquals(2, first.total());
+        assertEquals(1, first.items().size());
+        assertEquals(c.id(), first.items().getFirst().id());
+        assertFalse(first.items().getFirst().following());
+        var second = follows.followers(a, b.id(), new PageRequest(2, 1));
+        assertEquals(a.id(), second.items().getFirst().id());
+        assertFalse(second.items().getFirst().following());
+
+        var following = follows.following(a, b.id(), new PageRequest(1, 20));
+        assertEquals(1, following.total());
+        assertEquals(a.id(), following.items().getFirst().id());
+
+        database.update("UPDATE user_account SET status='DISABLED' WHERE id=?", c.id());
+        assertEquals(1, follows.followers(a, b.id(), new PageRequest(1, 20)).total());
+        assertEquals(1, follows.profile(a, b.id()).followerCount());
+    }
+
     private Actor actor(String name) { var x = accounts.findSummary(name).orElseThrow(); return new Actor(x.id(), name, x.role()); }
 }

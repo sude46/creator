@@ -53,7 +53,7 @@ onBeforeUnmount(() => { stopped = true; activeRequest?.abort() })
         <p class="eyebrow">FRAME ROOM / AUTHOR</p>
         <h1>{{ displayName || authorName || profile?.username || '作者作品' }}</h1>
         <p v-if="profile?.bio" class="author-bio">{{ profile.bio }}</p>
-        <p class="muted">公开作品 · {{ total }} 部<span v-if="profile"> · {{ profile.followerCount }} 关注者 · {{ profile.followingCount }} 关注中</span></p>
+        <p class="muted author-stats">公开作品 · {{ total }} 部<span v-if="profile"> · <RouterLink :to="`/authors/${id}/followers`">{{ profile.followerCount }} 关注者</RouterLink> · <RouterLink :to="`/authors/${id}/following`">{{ profile.followingCount }} 关注中</RouterLink></span></p>
         <a v-if="profile?.website" class="author-link" :href="profile.website" target="_blank" rel="noopener noreferrer nofollow">{{ profile.website }}</a>
       </div>
       <div class="inline-actions author-actions"><template v-if="profile?.self"><RouterLink class="create-link" to="/settings/profile">编辑资料</RouterLink></template><el-button v-else-if="profile" :loading="followBusy" @click="toggleFollow">{{ profile.following ? '已关注' : '关注' }}</el-button><RouterLink class="create-link" to="/">返回发现</RouterLink></div>
@@ -74,6 +74,8 @@ onBeforeUnmount(() => { stopped = true; activeRequest?.abort() })
 .author-avatar { width: 92px; height: 92px; border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: var(--color-primary-soft); color: var(--color-primary); font-size: 34px; border: 1px solid var(--color-border); }
 .author-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .author-copy h1 { font-size: 30px; margin: 4px 0 8px; }
+.author-stats a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.author-stats a:hover { color: var(--color-primary); }
 .author-bio { max-width: 640px; margin: 0 0 10px; color: var(--color-secondary); line-height: 1.7; white-space: pre-wrap; }
 .author-link { display: inline-block; margin-top: 6px; font-size: 13px; color: var(--color-accent-text); overflow-wrap: anywhere; }
 .author-actions { flex-wrap: wrap; justify-content: flex-end; }

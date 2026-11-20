@@ -138,6 +138,9 @@ class UploadIntegrationTest {
         database.update("DELETE FROM notification");
         database.update("DELETE FROM content_report");
         database.update("DELETE FROM user_profile");
+        database.update("DELETE FROM user_follow");
+        database.update("DELETE FROM video_collection_item");
+        database.update("DELETE FROM video_collection");
         database.update("DELETE FROM user_account");
         registerUser.execute("upload_author", "SafePassword123");
         registerUser.execute("upload_other", "SafePassword123");
