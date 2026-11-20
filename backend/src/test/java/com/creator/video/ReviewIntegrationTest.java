@@ -65,6 +65,7 @@ class ReviewIntegrationTest {
         database.update("DELETE FROM video");
         database.update("DELETE FROM video_category");
         database.update("DELETE FROM notification");
+        database.update("DELETE FROM content_report");
         database.update("DELETE FROM user_account");
         registration.execute("review_author", "SafePassword123");
         registration.execute("review_other", "SafePassword123");

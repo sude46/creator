@@ -18,6 +18,7 @@ export const router = createRouter({
     { path: '/admin/processing', component: () => import('../views/AdminProcessingView.vue') },
     { path: '/admin/categories', component: () => import('../views/AdminCategoriesView.vue') },
     { path: '/admin/users', component: () => import('../views/AdminUsersView.vue') },
+    { path: '/admin/reports', component: () => import('../views/AdminReportsView.vue') },
     { path: '/admin/audit', component: () => import('../views/AdminAuditView.vue') },
     { path: '/feed/:id?', component: () => import('../views/FeedView.vue') },
     { path: '/videos/:id', component: () => import('../views/PublicVideoView.vue') },

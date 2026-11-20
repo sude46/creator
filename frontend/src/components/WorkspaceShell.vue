@@ -31,7 +31,7 @@ async function logout() {
       <span class="admin-nav-group">概览</span><RouterLink to="/admin">总览</RouterLink>
       <span class="admin-nav-group">内容</span><RouterLink to="/admin/videos">作品管理</RouterLink><RouterLink to="/admin/reviews">审核</RouterLink><RouterLink to="/admin/processing">异常处理</RouterLink>
       <span class="admin-nav-group">配置</span><RouterLink to="/admin/categories">分类管理</RouterLink>
-      <span class="admin-nav-group">系统</span><RouterLink to="/admin/users">用户管理</RouterLink><RouterLink to="/admin/audit">审计记录</RouterLink>
+      <span class="admin-nav-group">系统</span><RouterLink to="/admin/users">用户管理</RouterLink><RouterLink to="/admin/reports">举报处理</RouterLink><RouterLink to="/admin/audit">审计记录</RouterLink>
     </nav>
     <main class="studio-main">
       <el-alert v-if="error" :title="error" type="error" :closable="false" role="alert" />

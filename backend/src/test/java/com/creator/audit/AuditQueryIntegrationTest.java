@@ -44,6 +44,7 @@ class AuditQueryIntegrationTest {
         database.update("DELETE FROM video");
         database.update("DELETE FROM video_category");
         database.update("DELETE FROM notification");
+        database.update("DELETE FROM content_report");
         database.update("DELETE FROM user_account");
         registerUser.execute("audit_author", "SafePassword123");
         bootstrapAdmin.execute("audit_admin", "SafePassword123");

@@ -20,6 +20,7 @@ class FollowIntegrationTest {
     Actor a; Actor b;
     @BeforeEach void reset() {
         database.update("DELETE FROM user_follow"); database.update("DELETE FROM notification");
+        database.update("DELETE FROM content_report");
         database.update("DELETE FROM user_account");
         registerUser.execute("follow_a", "SafePassword123"); registerUser.execute("follow_b", "SafePassword123");
         a = actor("follow_a"); b = actor("follow_b");

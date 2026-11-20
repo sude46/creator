@@ -31,6 +31,7 @@ export const publicApi = {
   deleteComment: (id: string) => request<void>(`/comments/${id}`, { method: 'DELETE' }),
   likeState: (id: string, signal: AbortSignal) => read<{ liked: boolean }>(`/videos/${id}/like`, signal),
   view: (id: string) => request<{ viewCount: number }>(`/videos/${id}/view`, { method: 'POST' }),
+  report: (targetType: 'VIDEO' | 'COMMENT', targetId: string, reason: string) => request<void>('/reports', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ targetType, targetId, reason }) }),
   following: (page: number, signal: AbortSignal) => read<Page<PublicVideo>>(`/videos/following?page=${page}&size=12`, signal),
   authorProfile: (authorId: string, signal: AbortSignal) => read<AuthorProfile>(`/authors/${authorId}/profile`, signal),
   follow: (authorId: string, add: boolean) => request<void>(`/authors/${authorId}/follow`, { method: add ? 'PUT' : 'DELETE' }),
