@@ -20,6 +20,8 @@ public enum ErrorCode {
     CATEGORY_IN_USE("分类仍被作品引用，请先迁移作品或停用分类"),
     STALE_WRITE("数据已变更，请刷新后重试"),
     INVALID_VIDEO("标题需为 1～120 位，简介最多 2000 位且不能包含非法控制字符"),
+    INVALID_PROFILE("昵称需为 1～32 位，简介最多 200 位，外链仅支持 http/https"),
+    INVALID_AVATAR("头像需为不超过 200 KiB 的 PNG、JPEG 或 WebP 图片"),
     INVALID_FOLDER_NAME("收藏夹名称需为 1～30 位且不能包含控制字符"),
     FOLDER_NAME_TAKEN("收藏夹名称已存在"),
     FOLDER_LIMIT_REACHED("收藏夹数量已达上限"),

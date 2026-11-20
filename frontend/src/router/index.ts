@@ -25,6 +25,7 @@ export const router = createRouter({
     { path: '/authors/:id', component: () => import('../views/AuthorView.vue') },
     { path: '/collections/:id', component: () => import('../views/CollectionView.vue') },
     { path: '/notifications', component: () => import('../views/NotificationsView.vue') },
+    { path: '/settings/profile', component: () => import('../views/ProfileSettingsView.vue') },
     { path: '/history', component: () => import('../views/HistoryView.vue') },
     { path: '/favorites', component: () => import('../views/FavoritesView.vue') },
     { path: '/:pathMatch(.*)*', component: () => import('../views/NotFoundView.vue') },

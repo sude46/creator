@@ -7,14 +7,15 @@ import org.apache.ibatis.annotations.*;
 @Mapper
 public interface VideoQueryMapper {
     String FROM = " FROM video v JOIN user_account owner ON owner.id = v.owner_id"
-            + " JOIN video_category category ON category.id = v.category_id";
+            + " JOIN video_category category ON category.id = v.category_id"
+            + " LEFT JOIN user_profile profile ON profile.user_id = owner.id";
     String READY = "v.processing_status = 'READY' AND v.deleted_at IS NULL AND v.moderation_blocked = FALSE"
             + " AND owner.status = 'ACTIVE' AND v.duration_millis IS NOT NULL AND v.media_width IS NOT NULL AND v.media_height IS NOT NULL"
             + " AND EXISTS (SELECT 1 FROM media_asset source WHERE source.id = v.source_asset_id AND source.video_id = v.id AND source.kind = 'SOURCE')"
             + " AND EXISTS (SELECT 1 FROM media_asset cover WHERE cover.video_id = v.id AND cover.kind = 'COVER')"
             + " AND EXISTS (SELECT 1 FROM processing_task task WHERE task.video_id = v.id AND task.generation = v.processing_generation AND task.state = 'SUCCEEDED')";
     String PUBLIC = READY + " AND v.review_status = 'APPROVED' AND v.publication_status = 'PUBLISHED' AND v.published_at IS NOT NULL";
-    String COLUMNS = "v.id, v.owner_id, owner.username AS author_name, v.category_id, category.name AS category_name,"
+    String COLUMNS = "v.id, v.owner_id, COALESCE(profile.display_name, owner.username) AS author_name, v.category_id, category.name AS category_name,"
             + " v.title, v.description, v.duration_millis, v.media_width, v.media_height, v.published_at,"
             + " (SELECT cover.object_key FROM media_asset cover WHERE cover.video_id = v.id AND cover.kind = 'COVER'"
             + " ORDER BY cover.id DESC LIMIT 1) AS cover_key, v.view_count,"

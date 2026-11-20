@@ -14,8 +14,10 @@ public class FollowService {
     private final FollowRepository follows;
     private final AccountQueryService accounts;
     private final ObjectProvider<NotificationService> notifications;
-    public FollowService(FollowRepository follows, AccountQueryService accounts, ObjectProvider<NotificationService> notifications) {
-        this.follows = follows; this.accounts = accounts; this.notifications = notifications;
+    private final ProfileService profiles;
+    public FollowService(FollowRepository follows, AccountQueryService accounts, ObjectProvider<NotificationService> notifications,
+            ProfileService profiles) {
+        this.follows = follows; this.accounts = accounts; this.notifications = notifications; this.profiles = profiles;
     }
 
     @Transactional(readOnly = true)
@@ -23,7 +25,9 @@ public class FollowService {
         active(actor);
         String username = follows.activeUsername(authorId);
         if (username == null) throw new BusinessException(ErrorCode.NOT_FOUND);
-        return new Profile(authorId, username, follows.followerCount(authorId), follows.followingCount(authorId),
+        var details = profiles.summary(authorId);
+        return new Profile(authorId, username, details.displayName(), details.bio(), details.website(), details.hasAvatar(),
+                details.version(), follows.followerCount(authorId), follows.followingCount(authorId),
                 authorId != actor.id() && follows.exists(actor.id(), authorId), authorId == actor.id());
     }
 
@@ -44,5 +48,6 @@ public class FollowService {
         if (actor == null) throw new BusinessException(ErrorCode.UNAUTHENTICATED);
         if (!accounts.current(actor.username()).equals(actor)) throw new BusinessException(ErrorCode.SESSION_INVALID);
     }
-    public record Profile(long id, String username, long followerCount, long followingCount, boolean following, boolean self) { }
+    public record Profile(long id, String username, String displayName, String bio, String website, boolean hasAvatar,
+            long profileVersion, long followerCount, long followingCount, boolean following, boolean self) { }
 }

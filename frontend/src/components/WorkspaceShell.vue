@@ -28,7 +28,7 @@ async function logout() {
   <div class="workspace">
     <header class="workspace-header">
       <RouterLink class="brand" to="/">帧间<span>FRAME ROOM</span></RouterLink>
-      <nav class="workspace-nav" aria-label="主导航"><RouterLink to="/">发现</RouterLink><RouterLink to="/favorites">我的收藏</RouterLink><RouterLink to="/history">观看历史</RouterLink><RouterLink to="/studio">我的作品</RouterLink><RouterLink to="/studio/collections">我的合集</RouterLink><RouterLink to="/notifications">通知</RouterLink><RouterLink v-if="user?.role === 'ADMIN'" to="/admin">管理后台</RouterLink></nav>
+      <nav class="workspace-nav" aria-label="主导航"><RouterLink to="/">发现</RouterLink><RouterLink to="/favorites">我的收藏</RouterLink><RouterLink to="/history">观看历史</RouterLink><RouterLink to="/studio">我的作品</RouterLink><RouterLink to="/studio/collections">我的合集</RouterLink><RouterLink to="/notifications">通知</RouterLink><RouterLink to="/settings/profile">个人资料</RouterLink><RouterLink v-if="user?.role === 'ADMIN'" to="/admin">管理后台</RouterLink></nav>
       <div class="account-menu"><span>{{ user?.username }}</span><el-tag :type="user?.role === 'ADMIN' ? 'warning' : 'info'">{{ roleLabel }}</el-tag><el-button :loading="busy" @click="logout">退出登录</el-button></div>
     </header>
     <nav v-if="adminArea" class="admin-nav" aria-label="管理导航">

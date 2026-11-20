@@ -3,7 +3,7 @@ import type { Page, SignedMedia } from './creator'
 
 export type PublicVideo = { id: string; authorId: string; authorName: string; categoryId: string; categoryName: string; title: string; description: string; durationMillis: number; width: number; height: number; publishedAt: string; hasCover: boolean; coverKey: string | null; viewCount: number; favoriteCount: number; likeCount: number }
 export type Comment = { id: string; videoId: string; userId: string; username: string; content: string; createdAt: string }
-export type AuthorProfile = { id: string; username: string; followerCount: number; followingCount: number; following: boolean; self: boolean }
+export type AuthorProfile = { id: string; username: string; displayName: string | null; bio: string; website: string; hasAvatar: boolean; profileVersion: number; followerCount: number; followingCount: number; following: boolean; self: boolean }
 export type PublicCollection = { id: string; ownerId: string; ownerName: string; title: string; description: string; visibility: string; version: number; itemCount: number; createdAt: string }
 export type AnchorPage = { items: PublicVideo[]; anchorIndex: number | null; hasBefore: boolean; hasAfter: boolean }
 export type FavoriteFolder = { id: string; name: string; version: number; itemCount: number; createdAt: string }

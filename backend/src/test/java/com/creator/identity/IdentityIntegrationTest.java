@@ -74,6 +74,7 @@ class IdentityIntegrationTest {
         database.update("DELETE FROM video");
         database.update("DELETE FROM notification");
         database.update("DELETE FROM content_report");
+        database.update("DELETE FROM user_profile");
         database.update("DELETE FROM user_account");
     }
 
