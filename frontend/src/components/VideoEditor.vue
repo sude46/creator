@@ -18,6 +18,7 @@ const total = ref(0)
 const loading = ref(false)
 const busy = ref(false)
 const uploading = ref(false)
+const uploadPercent = ref<number>()
 const uncertain = ref(false)
 const error = ref('')
 const categoryError = ref('')
@@ -32,8 +33,8 @@ const selectedOutsidePage = computed(() => form.categoryId && !categories.value.
 const creating = computed(() => !props.video)
 const primaryLabel = computed(() => {
   if (!creating.value) return '保存修改'
-  if (createdDraft.value) return uploading.value ? '正在上传…' : '重试上传'
-  return uploading.value ? '正在上传…' : '创建并上传'
+  if (createdDraft.value) return uploading.value ? `正在上传 ${uploadPercent.value ?? 0}%` : '重试上传'
+  return uploading.value ? `正在上传 ${uploadPercent.value ?? 0}%` : '创建并上传'
 })
 
 async function loadCategories(next = 1) {
@@ -76,12 +77,14 @@ async function uploadDraft(draft: Draft) {
   uploadRequest = controller
   const deadline = setTimeout(() => controller.abort(), 180000)
   uploading.value = true
+  uploadPercent.value = 0
   try {
-    await creatorApi.upload(draft, file.value, controller.signal)
+    await creatorApi.upload(draft, file.value, controller.signal, value => { uploadPercent.value = value })
   } finally {
     clearTimeout(deadline)
     uploading.value = false
     uploadRequest = undefined
+    setTimeout(() => { if (!uploading.value) uploadPercent.value = undefined }, 800)
   }
 }
 
@@ -179,6 +182,7 @@ onBeforeUnmount(() => { categoryRequest?.abort(); uploadRequest?.abort() })
           <p v-if="createdDraft" class="muted">作品草稿已创建。上传失败时可直接重试，不要重复创建作品。</p>
         </template>
       </fieldset>
+      <progress v-if="uploading" class="upload-progress" :value="uploadPercent ?? 0" max="100" aria-label="上传进度"></progress>
       <div class="inline-actions">
         <el-button type="primary" native-type="submit" :loading="busy || uploading" :disabled="uncertain">{{ primaryLabel }}</el-button>
         <el-button v-if="creating && !createdDraft" :disabled="busy" @click="saveDraftOnly">仅保存草稿</el-button>
@@ -187,3 +191,7 @@ onBeforeUnmount(() => { categoryRequest?.abort(); uploadRequest?.abort() })
     </form>
   </section>
 </template>
+
+<style scoped>
+.upload-progress { display: block; width: 100%; height: 6px; margin: 12px 0 0; accent-color: var(--color-primary); }
+</style>

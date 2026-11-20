@@ -11,6 +11,11 @@ export function clearCsrf() {
   csrf = undefined
 }
 
+export async function csrfHeader(): Promise<CsrfToken> {
+  csrf ??= await request<CsrfToken>('/auth/csrf')
+  return csrf
+}
+
 export async function request<Result>(path: string, options: RequestInit = {}): Promise<Result> {
   const method = (options.method ?? 'GET').toUpperCase()
   const headers = new Headers(options.headers)

@@ -1,4 +1,4 @@
-import { request } from './http'
+import { ApiFailure, clearCsrf, csrfHeader, request } from './http'
 
 export type Page<Result> = { items: Result[]; total: number; page: number; size: number }
 export type Category = { id: string; name: string; enabled: boolean }
@@ -26,6 +26,39 @@ export type UploadTarget = { id: string; version: number }
 export type CreatorCommand = 'processing-retry' | 'review-submissions' | 'review-withdrawal' | 'offline' | 'publication'
 
 const json = (method: string, body: unknown): RequestInit => ({ method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+function uploadWithProgress(video: UploadTarget, file: File, signal: AbortSignal, onProgress?: (percent: number) => void): Promise<UploadState> {
+  return new Promise((resolve, reject) => {
+    csrfHeader().then(csrf => {
+      const xhr = new XMLHttpRequest()
+      xhr.open('PUT', `/api/creator/videos/${video.id}/source`)
+      xhr.setRequestHeader('Content-Type', 'video/mp4')
+      xhr.setRequestHeader('X-Video-Version', String(video.version))
+      xhr.setRequestHeader(csrf.headerName, csrf.token)
+      const abort = () => xhr.abort()
+      signal.addEventListener('abort', abort, { once: true })
+      const finish = () => signal.removeEventListener('abort', abort)
+      xhr.upload.onprogress = event => {
+        if (event.lengthComputable) onProgress?.(Math.min(99, Math.round((event.loaded / event.total) * 100)))
+      }
+      xhr.onload = () => {
+        finish()
+        if (xhr.status >= 200 && xhr.status < 300) {
+          onProgress?.(100)
+          try { resolve(JSON.parse(xhr.responseText) as UploadState) }
+          catch { reject(new ApiFailure(0, '上传响应无法解析，请查询上传状态')) }
+          return
+        }
+        if (xhr.status === 403) clearCsrf()
+        let body: { message?: string; code?: string } = {}
+        try { body = JSON.parse(xhr.responseText) } catch { /* keep generic error */ }
+        reject(new ApiFailure(xhr.status, body.message || '上传失败，请查询状态后重试', body.code))
+      }
+      xhr.onerror = () => { finish(); reject(new ApiFailure(0, '无法连接上传服务，请查询状态后重试')) }
+      xhr.onabort = () => { finish(); reject(new DOMException('Upload aborted', 'AbortError')) }
+      xhr.send(file)
+    }).catch(reject)
+  })
+}
 const read = <Result>(path: string, signal?: AbortSignal) => request<Result>(path, {
   signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(30000)]) : undefined,
 })
@@ -39,9 +72,8 @@ export const creatorApi = {
   update: (video: CreatorVideo, metadata: Metadata) => request<Draft>(video.sourceUploaded ? `/creator/videos/${video.id}` : `/creator/drafts/${video.id}`,
     json('PUT', { ...metadata, version: video.version })),
   command: (video: CreatorVideo, command: CreatorCommand) => request<CreatorVideo>(`/creator/videos/${video.id}/${command}`, json('POST', { version: video.version })),
-  upload: (video: UploadTarget, file: File, signal: AbortSignal) => request<UploadState>(`/creator/videos/${video.id}/source`, {
-    method: 'PUT', headers: { 'Content-Type': 'video/mp4', 'X-Video-Version': String(video.version) }, body: file, signal,
-  }),
+  upload: (video: UploadTarget, file: File, signal: AbortSignal, onProgress?: (percent: number) => void) =>
+    uploadWithProgress(video, file, signal, onProgress),
   uploadState: (id: string) => read<UploadState>(`/creator/videos/${id}/upload`),
   reviews: (id: string, page: number, signal?: AbortSignal) => read<Page<ReviewRecord>>(`/creator/videos/${id}/reviews?page=${page}&size=10`, signal),
   moderation: (id: string, page: number, signal?: AbortSignal) => read<Page<ModerationRecord>>(`/creator/videos/${id}/moderation-history?page=${page}&size=10`, signal),

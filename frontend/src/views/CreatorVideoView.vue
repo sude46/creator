@@ -20,6 +20,7 @@ const needsRefresh = ref(false)
 const editing = ref(false)
 const editorBusy = ref(false)
 const uploading = ref(false)
+const uploadPercent = ref<number>()
 const uploadUnknown = ref(false)
 const file = ref<File>()
 const fileInput = ref<HTMLInputElement>()
@@ -155,6 +156,7 @@ async function upload() {
   if (!video.value || !file.value || blocked.value || uploadUnknown.value) return
   busy.value = true
   uploading.value = true
+  uploadPercent.value = 0
   uploadUnknown.value = true
   error.value = ''
   notice.value = ''
@@ -162,7 +164,7 @@ async function upload() {
   uploadRequest = controller
   const deadline = setTimeout(() => controller.abort(), 180000)
   try {
-    await creatorApi.upload(video.value, file.value, controller.signal)
+    await creatorApi.upload(video.value, file.value, controller.signal, value => { uploadPercent.value = value })
     if (stopped) return
     uploadUnknown.value = false
     file.value = undefined
@@ -303,7 +305,8 @@ onBeforeUnmount(() => {
         <label class="file-picker" for="source-video">选择视频文件</label><input id="source-video" ref="fileInput" type="file" accept=".mp4,video/mp4" :disabled="blocked || uploadUnknown" @change="chooseFile" />
         <p v-if="file" class="muted">{{ file.name }} · {{ (file.size / 1024 / 1024).toFixed(2) }} MiB</p>
         <div class="inline-actions"><el-button type="primary" :loading="uploading" :disabled="!file || blocked || uploadUnknown" @click="upload">上传视频</el-button><el-button v-if="uploading" @click="uploadRequest?.abort()">停止上传并核对状态</el-button><el-button v-if="uploadUnknown && !uploading" :disabled="blocked" @click="confirmUpload">查询上传结果</el-button></div>
-        <p v-if="uploading" role="status" class="muted">正在上传，请保持页面打开。完成后会核对作品状态。</p>
+        <progress v-if="uploading" class="upload-progress" :value="uploadPercent ?? 0" max="100" aria-label="上传进度"></progress>
+        <p v-if="uploading" role="status" class="muted">正在上传 {{ uploadPercent ?? 0 }}%，请保持页面打开。完成后会核对作品状态。</p>
       </section>
       <section v-if="preview || previewError" class="studio-panel">
         <h2>本人预览</h2><el-alert v-if="previewError" :title="previewError" type="error" :closable="false" role="alert" />
@@ -328,3 +331,7 @@ onBeforeUnmount(() => {
     </template>
   </WorkspaceShell>
 </template>
+
+<style scoped>
+.upload-progress { display: block; width: 100%; height: 6px; margin: 10px 0; accent-color: var(--color-primary); }
+</style>
