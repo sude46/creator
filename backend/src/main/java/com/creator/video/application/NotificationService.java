@@ -29,16 +29,29 @@ public class NotificationService {
         notifications.add(userId, "FOLLOW", follower + " 关注了你", "", "/authors/" + userId);
     }
     @Transactional(readOnly = true)
-    public PageResult<Notification> list(Actor actor, PageRequest page) {
+    public PageResult<Notification> list(Actor actor, boolean unreadOnly, String type, PageRequest page) {
         active(actor);
-        return new PageResult<>(notifications.page(actor.id(), page), notifications.count(actor.id()), page.page(), page.size());
+        String cleanType = type == null || type.isBlank() ? null : type.trim().toUpperCase();
+        if (cleanType != null && !(cleanType.equals("REVIEW") || cleanType.equals("COMMENT") || cleanType.equals("FOLLOW"))) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+        return new PageResult<>(notifications.page(actor.id(), unreadOnly, cleanType, page),
+                notifications.count(actor.id(), unreadOnly, cleanType), page.page(), page.size());
     }
+    public PageResult<Notification> list(Actor actor, PageRequest page) { return list(actor, false, null, page); }
     @Transactional(readOnly = true)
     public long unread(Actor actor) { active(actor); return notifications.unread(actor.id()); }
     @Transactional(timeout = 5)
     public void markRead(Actor actor, long id) { active(actor); notifications.markRead(actor.id(), id); }
     @Transactional(timeout = 5)
     public void markAll(Actor actor) { active(actor); notifications.markAll(actor.id()); }
+    @Transactional(timeout = 5)
+    public void delete(Actor actor, long id) {
+        active(actor);
+        if (id <= 0 || !notifications.delete(actor.id(), id)) throw new BusinessException(ErrorCode.NOT_FOUND);
+    }
+    @Transactional(timeout = 5)
+    public void clearRead(Actor actor) { active(actor); notifications.clearRead(actor.id()); }
     private void active(Actor actor) {
         if (actor == null) throw new BusinessException(ErrorCode.UNAUTHENTICATED);
         if (!accounts.current(actor.username()).equals(actor)) throw new BusinessException(ErrorCode.SESSION_INVALID);

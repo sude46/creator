@@ -16,8 +16,9 @@ public class NotificationController {
     public NotificationController(NotificationService notifications) { this.notifications = notifications; }
     @GetMapping
     public PageResult<NotificationView> list(@RequestAttribute("currentActor") Actor actor,
-            @RequestParam(defaultValue="1") int page, @RequestParam(defaultValue="20") int size) {
-        var result = notifications.list(actor, new PageRequest(page, size));
+            @RequestParam(defaultValue="1") int page, @RequestParam(defaultValue="20") int size,
+            @RequestParam(defaultValue="false") boolean unreadOnly, @RequestParam(required=false) String type) {
+        var result = notifications.list(actor, unreadOnly, type, new PageRequest(page, size));
         return new PageResult<>(result.items().stream().map(NotificationView::from).toList(), result.total(), result.page(), result.size());
     }
     @GetMapping("/unread")
@@ -28,6 +29,12 @@ public class NotificationController {
     @PostMapping("/read-all")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void readAll(@RequestAttribute("currentActor") Actor actor) { notifications.markAll(actor); }
+    @DeleteMapping("/read")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void clearRead(@RequestAttribute("currentActor") Actor actor) { notifications.clearRead(actor); }
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@RequestAttribute("currentActor") Actor actor, @PathVariable long id) { notifications.delete(actor, id); }
     public record UnreadView(long unread) { }
     public record NotificationView(String id, String type, String title, String body, String link,
             LocalDateTime readAt, LocalDateTime createdAt) {

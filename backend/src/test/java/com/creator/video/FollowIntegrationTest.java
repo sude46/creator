@@ -77,5 +77,27 @@ class FollowIntegrationTest {
         assertEquals(1, follows.profile(a, b.id()).followerCount());
     }
 
+    @Test void notificationFiltersDeleteAndClearReadWork() {
+        registerUser.execute("follow_c", "SafePassword123");
+        Actor c = actor("follow_c");
+        follows.follow(a, b.id());
+        var item = notifications.list(b, new PageRequest(1, 20)).items().getFirst();
+        assertEquals(1, notifications.list(b, true, null, new PageRequest(1, 20)).total());
+        assertEquals(1, notifications.list(b, false, "FOLLOW", new PageRequest(1, 20)).total());
+        assertEquals(0, notifications.list(b, false, "COMMENT", new PageRequest(1, 20)).total());
+        assertThrows(BusinessException.class, () -> notifications.list(b, false, "SYSTEM", new PageRequest(1, 20)));
+        assertThrows(BusinessException.class, () -> notifications.delete(a, item.id()));
+
+        notifications.markAll(b);
+        assertEquals(0, notifications.list(b, true, null, new PageRequest(1, 20)).total());
+        notifications.clearRead(b);
+        assertEquals(0, notifications.list(b, false, null, new PageRequest(1, 20)).total());
+
+        follows.follow(c, b.id());
+        var second = notifications.list(b, new PageRequest(1, 20)).items().getFirst();
+        notifications.delete(b, second.id());
+        assertEquals(0, notifications.list(b, new PageRequest(1, 20)).total());
+    }
+
     private Actor actor(String name) { var x = accounts.findSummary(name).orElseThrow(); return new Actor(x.id(), name, x.role()); }
 }
