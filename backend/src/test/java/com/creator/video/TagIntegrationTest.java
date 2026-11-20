@@ -41,6 +41,9 @@ class TagIntegrationTest {
         database.update("DELETE FROM upload_attempt");
         database.update("UPDATE video SET source_asset_id=NULL");
         database.update("DELETE FROM media_asset");
+        database.update("DELETE FROM favorite_folder_item");
+        database.update("DELETE FROM favorite_folder");
+        database.update("DELETE FROM view_history");
         database.update("DELETE FROM video_tag_item");
         database.update("DELETE FROM video_tag");
         database.update("DELETE FROM video");

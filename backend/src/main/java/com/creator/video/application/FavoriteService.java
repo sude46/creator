@@ -14,11 +14,14 @@ public class FavoriteService {
     private final FavoriteRepository favorites;
     private final VideoQueryRepository videos;
     private final AccountQueryService accounts;
+    private final FavoriteFolderRepository folders;
 
-    public FavoriteService(FavoriteRepository favorites, VideoQueryRepository videos, AccountQueryService accounts) {
+    public FavoriteService(FavoriteRepository favorites, VideoQueryRepository videos, AccountQueryService accounts,
+            FavoriteFolderRepository folders) {
         this.favorites = favorites;
         this.videos = videos;
         this.accounts = accounts;
+        this.folders = folders;
     }
 
     @Transactional(timeout = 5)
@@ -34,6 +37,7 @@ public class FavoriteService {
         active(actor);
         validId(videoId);
         favorites.remove(actor.id(), videoId);
+        folders.removeVideoFromAll(actor.id(), videoId);
     }
 
     @Transactional(readOnly = true)

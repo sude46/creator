@@ -8,7 +8,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class PublicVideoService {
     private final VideoQueryRepository videos;
-    public PublicVideoService(VideoQueryRepository videos) { this.videos = videos; }
+    private final HistoryService histories;
+    public PublicVideoService(VideoQueryRepository videos, HistoryService histories) {
+        this.videos = videos;
+        this.histories = histories;
+    }
     @Transactional(readOnly = true)
     public PageResult<PublicVideo> list(VideoSearch search, PageRequest page) {
         return list(search, page, "latest");
@@ -31,8 +35,12 @@ public class PublicVideoService {
     public PublicVideo get(long id) { return videos.findPublic(id).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND)); }
 
     @Transactional(timeout = 5)
-    public long recordView(long id) {
+    public long recordView(long id) { return recordView(id, null); }
+
+    @Transactional(timeout = 5)
+    public long recordView(long id, Long userId) {
         if (!videos.incrementView(id)) throw new BusinessException(ErrorCode.NOT_FOUND);
+        if (userId != null) histories.record(userId, id);
         return videos.findPublic(id).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND)).viewCount();
     }
 }

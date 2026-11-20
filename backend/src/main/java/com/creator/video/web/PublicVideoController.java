@@ -74,7 +74,10 @@ public class PublicVideoController {
     public record LikeState(boolean liked) { }
 
     @PostMapping("/{id}/view")
-    public ViewCountView view(@PathVariable long id) { return new ViewCountView(videos.recordView(id)); }
+    public ViewCountView view(@PathVariable long id,
+            @RequestAttribute(value = "currentActor", required = false) com.creator.identity.domain.Actor actor) {
+        return new ViewCountView(videos.recordView(id, actor == null ? null : actor.id()));
+    }
 
     public record ViewCountView(long viewCount) { }
 }

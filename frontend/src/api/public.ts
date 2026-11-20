@@ -6,6 +6,8 @@ export type Comment = { id: string; videoId: string; userId: string; username: s
 export type AuthorProfile = { id: string; username: string; followerCount: number; followingCount: number; following: boolean; self: boolean }
 export type PublicCollection = { id: string; ownerId: string; ownerName: string; title: string; description: string; visibility: string; version: number; itemCount: number; createdAt: string }
 export type AnchorPage = { items: PublicVideo[]; anchorIndex: number | null; hasBefore: boolean; hasAfter: boolean }
+export type FavoriteFolder = { id: string; name: string; version: number; itemCount: number; createdAt: string }
+export type HistoryEntry = { videoId: string; viewedAt: string; available: boolean; video: PublicVideo | null }
 export type TagCount = { name: string; uses: number }
 export type Favorite = { videoId: string; createdAt: string; available: boolean; video: PublicVideo | null }
 function read<Result>(path: string, signal: AbortSignal) { return request<Result>(path, { signal: AbortSignal.any([signal, AbortSignal.timeout(30000)]) }) }
@@ -26,6 +28,16 @@ export const publicApi = {
   },
   get: (id: string, signal: AbortSignal) => read<PublicVideo>(`/videos/${id}`, signal),
   media: async (id: string, kind: 'SOURCE' | 'COVER', signal: AbortSignal) => { const signed = await request<SignedMedia>(`/videos/${id}/media?kind=${kind}`, { method: 'POST', signal: AbortSignal.any([signal, AbortSignal.timeout(30000)]) }); const address = new URL(signed.url); if (!['https:', 'http:'].includes(address.protocol) || address.username || address.password) throw new Error('媒体地址无效'); return signed },
+  folders: (signal: AbortSignal) => read<{ items: FavoriteFolder[] }>('/favorite-folders', signal),
+  createFolder: (name: string) => request<FavoriteFolder>('/favorite-folders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) }),
+  renameFolder: (folder: FavoriteFolder, name: string) => request<FavoriteFolder>(`/favorite-folders/${folder.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, version: folder.version }) }),
+  deleteFolder: (folder: FavoriteFolder) => request<void>(`/favorite-folders/${folder.id}`, { method: 'DELETE' }),
+  folderVideos: (id: string, page: number, signal: AbortSignal) => read<Page<PublicVideo>>(`/favorite-folders/${id}/videos?page=${page}&size=12`, signal),
+  addToFolder: (id: string, videoId: string) => request<void>(`/favorite-folders/${id}/videos/${videoId}`, { method: 'PUT' }),
+  removeFromFolder: (id: string, videoId: string) => request<void>(`/favorite-folders/${id}/videos/${videoId}`, { method: 'DELETE' }),
+  history: (page: number, signal: AbortSignal) => read<Page<HistoryEntry>>(`/history?page=${page}&size=12`, signal),
+  removeHistory: (videoId: string) => request<void>(`/history/${videoId}`, { method: 'DELETE' }),
+  clearHistory: () => request<void>('/history', { method: 'DELETE' }),
   favorites: (page: number, signal: AbortSignal) => read<Page<Favorite>>(`/favorites?page=${page}&size=12`, signal),
   favoriteState: (id: string, signal: AbortSignal) => read<{ favorited: boolean }>(`/favorites/${id}`, signal),
   favorite: (id: string, add: boolean) => request<void>(`/favorites/${id}`, { method: add ? 'PUT' : 'DELETE' }),
