@@ -69,5 +69,5 @@ export const failureLabels: Record<string, string> = {
 export function formatTime(value: string | null) {
   if (!value) return '—'
   const time = new Date(/(?:Z|[+-]\d{2}:\d{2})$/.test(value) ? value : `${value}Z`)
-  return Number.isNaN(time.getTime()) ? '—' : time.toLocaleString('zh-CN', { hour12: false })
+  return Number.isNaN(time.getTime()) ? '—' : time.toLocaleString('zh-CN', { hour12: false, timeZone: 'Asia/Shanghai' })
 }

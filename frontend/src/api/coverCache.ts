@@ -21,11 +21,13 @@ function release() {
   waiting.shift()?.()
 }
 
-export async function cachedCover(key: string, request: () => Promise<SignedMedia>): Promise<CoverEntry> {
-  const cached = cache.get(key)
-  if (cached && cached.expiresAt - 30_000 > Date.now()) return cached
-  const running = inflight.get(key)
-  if (running) return running
+export async function cachedCover(key: string, request: () => Promise<SignedMedia>, force = false): Promise<CoverEntry> {
+  if (!force) {
+    const cached = cache.get(key)
+    if (cached && cached.expiresAt - 30_000 > Date.now()) return cached
+    const running = inflight.get(key)
+    if (running) return running
+  }
   const task = (async () => {
     await acquire()
     try {
