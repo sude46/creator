@@ -20,7 +20,13 @@ class FollowIntegrationTest {
     Actor a; Actor b;
     @BeforeEach void reset() {
         database.update("DELETE FROM user_follow"); database.update("DELETE FROM notification");
-        database.update("DELETE FROM content_report");
+        database.update("DELETE FROM content_report"); database.update("DELETE FROM operation_log");
+        database.update("DELETE FROM video_comment"); database.update("DELETE FROM video_like");
+        database.update("DELETE FROM video_favorite"); database.update("DELETE FROM video_collection_item");
+        database.update("DELETE FROM video_collection"); database.update("DELETE FROM review_record");
+        database.update("DELETE FROM processing_task"); database.update("DELETE FROM upload_attempt");
+        database.update("UPDATE video SET source_asset_id=NULL"); database.update("DELETE FROM media_asset");
+        database.update("DELETE FROM video"); database.update("DELETE FROM video_category");
         database.update("DELETE FROM user_account");
         registerUser.execute("follow_a", "SafePassword123"); registerUser.execute("follow_b", "SafePassword123");
         a = actor("follow_a"); b = actor("follow_b");
