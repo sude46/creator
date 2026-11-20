@@ -10,6 +10,7 @@ export const router = createRouter({
     { path: '/register', component: AuthView, meta: { guest: true } },
     { path: '/', component: WorkspaceView },
     { path: '/studio', component: () => import('../views/CreatorCenterView.vue') },
+    { path: '/studio/analytics', component: () => import('../views/CreatorAnalyticsView.vue') },
     { path: '/studio/collections', component: () => import('../views/CollectionsView.vue') },
     { path: '/studio/collections/:id', component: () => import('../views/CollectionManageView.vue') },
     { path: '/studio/:id', component: () => import('../views/CreatorVideoView.vue') },

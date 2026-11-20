@@ -33,6 +33,7 @@ class FollowIntegrationTest {
         database.update("DELETE FROM view_history");
         database.update("DELETE FROM video_tag_item");
         database.update("DELETE FROM video_tag");
+        database.update("DELETE FROM video_view_daily");
         database.update("DELETE FROM video"); database.update("DELETE FROM video_category");
         database.update("DELETE FROM user_profile");
         database.update("DELETE FROM user_account");

@@ -51,6 +51,7 @@ class RecommendationIntegrationTest {
         database.update("DELETE FROM video_tag");
         database.update("DELETE FROM notification");
         database.update("DELETE FROM content_report");
+        database.update("DELETE FROM video_view_daily");
         database.update("DELETE FROM video");
         database.update("DELETE FROM video_category");
         database.update("DELETE FROM user_profile");

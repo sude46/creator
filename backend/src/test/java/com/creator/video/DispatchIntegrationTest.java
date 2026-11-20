@@ -64,6 +64,7 @@ class DispatchIntegrationTest {
         database.update("DELETE FROM video_comment");
         database.update("DELETE FROM video_like");
         database.update("DELETE FROM video_favorite");
+        database.update("DELETE FROM video_view_daily");
         database.update("DELETE FROM video");
         database.update("DELETE FROM video_category");
         database.update("DELETE FROM notification");

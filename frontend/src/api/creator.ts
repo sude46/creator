@@ -20,6 +20,7 @@ export type ReviewRecord = { id: string; reviewRound: number; outcome: string; r
 export type ModerationRecord = { id: string; action: string; reason: string; createdAt: string }
 export type UploadState = { videoId: string; version: number; sourceUploaded: boolean; processingStatus: string }
 export type SignedMedia = { url: string; expiresAt: string }
+export type CreatorAnalytics = { videoCount: number; views: number; likes: number; favorites: number; comments: number; followers: number; from: string; to: string; daily: { date: string; views: number }[]; topVideos: { id: string; title: string; views: number; likes: number; favorites: number; comments: number }[] }
 export type CollectionItem = { videoId: string; title: string; processingStatus: string; reviewStatus: string; publicationStatus: string; deleted: boolean; sortOrder: number }
 export type Collection = { id: string; ownerId: string; ownerName: string; title: string; description: string; visibility: 'PUBLIC' | 'PRIVATE'; version: number; itemCount: number; createdAt: string }
 export type UploadTarget = { id: string; version: number }
@@ -86,6 +87,7 @@ export const creatorApi = {
   createCollection: (title: string, description: string, visibility: 'PUBLIC' | 'PRIVATE') => request<Collection>('/creator/collections', json('POST', { title, description, visibility })),
   updateCollection: (collection: Collection, title: string, description: string, visibility: 'PUBLIC' | 'PRIVATE') => request<Collection>(`/creator/collections/${collection.id}`, json('PUT', { version: collection.version, title, description, visibility })),
   removeCollection: (collection: Collection) => request<void>(`/creator/collections/${collection.id}?version=${collection.version}`, { method: 'DELETE' }),
+  analytics: (days: number, signal?: AbortSignal) => read<CreatorAnalytics>(`/creator/analytics?days=${days}`, signal),
   collection: (id: string, signal?: AbortSignal) => read<Collection>(`/creator/collections/${id}`, signal),
   collectionItems: (id: string, signal?: AbortSignal) => read<CollectionItem[]>(`/creator/collections/${id}/videos`, signal),
   moveCollectionItem: (collectionId: string, videoId: string, direction: 'UP' | 'DOWN') => request<void>(`/creator/collections/${collectionId}/videos/${videoId}/move`, json('POST', { direction })),

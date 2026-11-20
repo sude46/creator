@@ -2,6 +2,8 @@ package com.creator.video.application;
 
 import com.creator.common.*;
 import com.creator.video.domain.*;
+import java.time.Clock;
+import java.time.LocalDate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -9,9 +11,14 @@ import org.springframework.transaction.annotation.Transactional;
 public class PublicVideoService {
     private final VideoQueryRepository videos;
     private final HistoryService histories;
-    public PublicVideoService(VideoQueryRepository videos, HistoryService histories) {
+    private final AnalyticsRepository analytics;
+    private final Clock clock;
+    public PublicVideoService(VideoQueryRepository videos, HistoryService histories, AnalyticsRepository analytics,
+            Clock clock) {
         this.videos = videos;
         this.histories = histories;
+        this.analytics = analytics;
+        this.clock = clock;
     }
     @Transactional(readOnly = true)
     public PageResult<PublicVideo> list(VideoSearch search, PageRequest page) {
@@ -46,6 +53,7 @@ public class PublicVideoService {
     @Transactional(timeout = 5)
     public long recordView(long id, Long userId) {
         if (!videos.incrementView(id)) throw new BusinessException(ErrorCode.NOT_FOUND);
+        analytics.recordView(id, LocalDate.now(clock));
         if (userId != null) histories.record(userId, id);
         return videos.findPublic(id).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND)).viewCount();
     }
