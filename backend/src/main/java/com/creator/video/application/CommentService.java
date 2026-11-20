@@ -26,16 +26,42 @@ public class CommentService {
     @Transactional(readOnly = true)
     public PageResult<Comment> list(Actor actor, long videoId, PageRequest page) {
         active(actor); videos.findPublic(videoId).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-        return new PageResult<>(comments.page(videoId, page), comments.count(videoId), page.page(), page.size());
+        return new PageResult<>(comments.page(videoId, actor.id(), page), comments.count(videoId), page.page(), page.size());
+    }
+    @Transactional(readOnly = true)
+    public PageResult<Comment> replies(Actor actor, long parentId, PageRequest page) {
+        active(actor);
+        var parent = comments.find(parentId).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        videos.findPublic(parent.videoId()).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        return new PageResult<>(comments.replies(parentId, actor.id(), page), comments.replyCount(parentId), page.page(), page.size());
     }
     @Transactional(timeout = 5)
-    public Comment add(Actor actor, long videoId, String content) {
+    public Comment add(Actor actor, long videoId, String content) { return add(actor, videoId, content, null); }
+    @Transactional(timeout = 5)
+    public Comment add(Actor actor, long videoId, String content, Long parentId) {
         active(actor); var video = videos.findPublic(videoId).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         String clean = content == null ? "" : content.trim();
         if (clean.isEmpty() || clean.length() > 500) throw new BusinessException(ErrorCode.INVALID_REQUEST);
-        long id = comments.insert(videoId, actor.id(), clean);
-        if (video.ownerId() != actor.id()) notifications.ifAvailable(service -> service.comment(video.ownerId(), actor.username(), videoId));
-        return comments.find(id).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        Long rootId = null;
+        Comment parent = null;
+        if (parentId != null) {
+            parent = comments.find(parentId).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+            if (parent.videoId() != videoId) throw new BusinessException(ErrorCode.INVALID_REQUEST);
+            rootId = parent.parentId() == null ? parent.id() : parent.parentId();
+        }
+        long id = comments.insert(videoId, actor.id(), rootId, clean);
+        Comment parentComment = parent;
+        Long recipient = parentComment == null ? video.ownerId() : parentComment.userId();
+        if (recipient != actor.id()) {
+            String link = "/videos/" + videoId;
+            if (parentComment == null) {
+                notifications.ifAvailable(service -> service.comment(recipient, actor.username(), videoId));
+            } else {
+                notifications.ifAvailable(service -> service.commentReply(recipient, actor.username(), videoId,
+                        parentComment.id(), link));
+            }
+        }
+        return comments.find(id, actor.id()).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
     }
     @Transactional(timeout = 5)
     public void delete(Actor actor, long id) {
@@ -44,6 +70,23 @@ public class CommentService {
         if (!actor.canModerate() && actor.id() != comment.userId()) throw new BusinessException(ErrorCode.FORBIDDEN);
         if (!comments.delete(id)) throw new BusinessException(ErrorCode.NOT_FOUND);
         audit.record(actor, "COMMENT_DELETED", "COMMENT", id);
+    }
+    @Transactional(timeout = 5)
+    public void like(Actor actor, long id) {
+        active(actor);
+        var comment = comments.find(id).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        videos.findPublic(comment.videoId()).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        comments.like(id, actor.id());
+    }
+    @Transactional(timeout = 5)
+    public void unlike(Actor actor, long id) {
+        active(actor);
+        comments.unlike(id, actor.id());
+    }
+    @Transactional(readOnly = true)
+    public boolean liked(Actor actor, long id) {
+        active(actor);
+        return comments.liked(id, actor.id());
     }
     private void active(Actor actor) {
         if (actor == null) throw new BusinessException(ErrorCode.UNAUTHENTICATED);

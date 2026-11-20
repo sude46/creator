@@ -2,7 +2,7 @@ import { request } from './http'
 import type { Page, SignedMedia } from './creator'
 
 export type PublicVideo = { id: string; authorId: string; authorName: string; categoryId: string; categoryName: string; title: string; description: string; durationMillis: number; width: number; height: number; publishedAt: string; hasCover: boolean; coverKey: string | null; viewCount: number; favoriteCount: number; likeCount: number }
-export type Comment = { id: string; videoId: string; userId: string; username: string; content: string; createdAt: string }
+export type Comment = { id: string; videoId: string; userId: string; username: string; content: string; parentId: string | null; likeCount: number; liked: boolean; replyCount: number; createdAt: string }
 export type AuthorProfile = { id: string; username: string; displayName: string | null; bio: string; website: string; hasAvatar: boolean; profileVersion: number; followerCount: number; followingCount: number; following: boolean; self: boolean }
 export type PublicCollection = { id: string; ownerId: string; ownerName: string; title: string; description: string; visibility: string; version: number; itemCount: number; createdAt: string }
 export type AnchorPage = { items: PublicVideo[]; anchorIndex: number | null; hasBefore: boolean; hasAfter: boolean }
@@ -43,7 +43,9 @@ export const publicApi = {
   favorite: (id: string, add: boolean) => request<void>(`/favorites/${id}`, { method: add ? 'PUT' : 'DELETE' }),
   like: (id: string, add: boolean) => request<void>(`/videos/${id}/like`, { method: add ? 'PUT' : 'DELETE' }),
   comments: (videoId: string, page: number, signal: AbortSignal) => read<Page<Comment>>(`/videos/${videoId}/comments?page=${page}&size=10`, signal),
-  addComment: (videoId: string, content: string) => request<Comment>(`/videos/${videoId}/comments`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content }) }),
+  addComment: (videoId: string, content: string, parentId?: string) => request<Comment>(`/videos/${videoId}/comments`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content, parentId }) }),
+  replies: (commentId: string, signal: AbortSignal) => read<Page<Comment>>(`/comments/${commentId}/replies?page=1&size=50`, signal),
+  likeComment: (commentId: string, add: boolean) => request<void>(`/comments/${commentId}/like`, { method: add ? 'PUT' : 'DELETE' }),
   deleteComment: (id: string) => request<void>(`/comments/${id}`, { method: 'DELETE' }),
   likeState: (id: string, signal: AbortSignal) => read<{ liked: boolean }>(`/videos/${id}/like`, signal),
   view: (id: string) => request<{ viewCount: number }>(`/videos/${id}/view`, { method: 'POST' }),

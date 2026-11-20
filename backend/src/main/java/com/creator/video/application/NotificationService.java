@@ -22,6 +22,9 @@ public class NotificationService {
     public void comment(long userId, String author, long videoId) {
         notifications.add(userId, "COMMENT", author + " 评论了你的作品", "", "/videos/" + videoId);
     }
+    public void commentReply(long userId, String author, long videoId, Long parentId, String link) {
+        notifications.add(userId, "COMMENT", author + " 回复了你的评论", "", link);
+    }
     public void follow(long userId, String follower) {
         notifications.add(userId, "FOLLOW", follower + " 关注了你", "", "/authors/" + userId);
     }
