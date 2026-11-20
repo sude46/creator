@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import WorkspaceShell from '../components/WorkspaceShell.vue'
 import PublicVideoCard from '../components/PublicVideoCard.vue'
@@ -27,6 +27,17 @@ let activeRequest: AbortController | undefined
 let categoryRequest: AbortController | undefined
 let tagRequest: AbortController | undefined
 let stopped = false
+
+const heading = computed(() => {
+  const query = typeof route.query.title === 'string' ? route.query.title.trim() : ''
+  if (query) return `搜索“${query.length > 18 ? `${query.slice(0, 18)}…` : query}”`
+  if (tag.value) return `标签“${tag.value}”`
+  if (category.value) return categories.value.find(item => item.id === category.value)?.name ?? '分类作品'
+  return '今天，看点什么'
+})
+const sortLabel = computed(() => sort.value === 'popular' ? '最多播放' : sort.value === 'recommended' ? '为你推荐' : '最新发布')
+const hasFilters = computed(() => Boolean(title.value.trim() || category.value || tag.value || sort.value !== 'latest'))
+const lede = computed(() => loading.value ? '正在整理片单…' : error.value ? '片单暂时没有加载出来。' : '按分类、标签和热度，慢慢挑一部。')
 
 async function loadCategories() {
   categoryRequest?.abort()
@@ -93,6 +104,11 @@ function navigate(next = 1, nextCategory = category.value, nextTag = tag.value, 
   void router.push({ path: '/', query })
 }
 
+function clearFilters() {
+  title.value = ''
+  navigate(1, '', '', 'latest')
+}
+
 watch(() => route.fullPath, load, { immediate: true })
 onMounted(() => { void loadCategories(); void loadTags() })
 onBeforeUnmount(() => { stopped = true; activeRequest?.abort(); categoryRequest?.abort(); tagRequest?.abort() })
@@ -100,39 +116,69 @@ onBeforeUnmount(() => { stopped = true; activeRequest?.abort(); categoryRequest?
 
 <template>
   <WorkspaceShell>
-    <div class="studio-heading public-hero">
-      <div><p class="eyebrow">FRAME ROOM / WATCH</p><h1>{{ route.query.title ? '搜索作品' : tag ? `标签：${tag}` : '发现' }}</h1></div>
-      <div class="home-actions"><RouterLink class="home-action secondary" to="/feed"><span aria-hidden="true">▷</span>竖屏浏览</RouterLink><RouterLink class="home-action primary" to="/studio"><span aria-hidden="true">＋</span>发布作品</RouterLink></div>
-    </div>
+    <section class="discover-hero">
+      <div class="discover-intro">
+        <h1>{{ heading }}</h1>
+        <p class="discover-lede">{{ lede }}</p>
+      </div>
+      <div class="home-actions">
+        <RouterLink class="home-action secondary" to="/feed">
+          <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="2.25" y="3.75" width="15.5" height="12.5" rx="1.5" /><path d="M8.5 7.5 12.5 10l-4 2.5Z" fill="currentColor" stroke="none" /></svg>
+          <span>竖屏浏览</span>
+        </RouterLink>
+        <RouterLink class="home-action primary" to="/studio">
+          <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M10 4.5v11M4.5 10h11" /></svg>
+          <span>发布作品</span>
+        </RouterLink>
+      </div>
+    </section>
 
     <form class="public-search" role="search" @submit.prevent="navigate()">
       <label class="sr-only" for="video-search">按标题找作品</label>
+      <svg class="search-icon" viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="9" cy="9" r="5.25" /><path d="m13 13 3.5 3.5" stroke-linecap="round" /></svg>
       <input id="video-search" v-model="title" type="search" maxlength="120" placeholder="按标题搜索作品" />
-      <el-button type="primary" native-type="submit">搜索</el-button>
+      <el-button class="search-submit" type="primary" native-type="submit">搜索</el-button>
     </form>
-    <div class="category-chips" aria-label="按分类筛选">
-      <button type="button" :class="{ active: !category }" @click="navigate(1, '', tag, sort)">全部</button>
-      <button v-for="item in categories" :key="item.id" type="button" :class="{ active: category === item.id }" @click="navigate(1, item.id, tag, sort)">{{ item.name }}</button>
+
+    <div class="filter-deck">
+      <div class="filter-row" role="group" aria-label="按分类筛选">
+        <span class="filter-label" aria-hidden="true">分类</span>
+        <div class="filter-scroll">
+          <button type="button" :aria-pressed="!category" @click="navigate(1, '', tag, sort)">全部</button>
+          <button v-for="item in categories" :key="item.id" type="button" :aria-pressed="category === item.id" @click="navigate(1, item.id, tag, sort)">{{ item.name }}</button>
+        </div>
+      </div>
+      <div v-if="tags.length || tagError" class="filter-row" role="group" aria-label="按标签筛选">
+        <span class="filter-label" aria-hidden="true">标签</span>
+        <div class="filter-scroll">
+          <button type="button" :aria-pressed="!tag" @click="navigate(1, category, '', sort)">全部</button>
+          <button v-for="item in tags" :key="item.name" type="button" :aria-pressed="tag === item.name" @click="navigate(1, category, item.name, sort)">{{ item.name }} <small>{{ item.uses }}</small></button>
+        </div>
+      </div>
     </div>
-    <div v-if="tags.length || tagError" class="tag-chips" aria-label="按标签筛选">
-      <span>标签</span>
-      <button type="button" :class="{ active: !tag }" @click="navigate(1, category, '', sort)">全部</button>
-      <button v-for="item in tags" :key="item.name" type="button" :class="{ active: tag === item.name }" @click="navigate(1, category, item.name, sort)">{{ item.name }} <small>{{ item.uses }}</small></button>
-    </div>
+
     <el-alert v-if="route.query.denied === 'admin'" title="该页面仅管理员可访问。" type="warning" role="alert" />
     <el-alert v-if="tagError" :title="tagError" type="error" :closable="false" role="alert" />
     <el-alert v-if="categoryError" :title="categoryError" type="error" :closable="false" role="alert" />
 
-    <div class="public-results-heading">
-      <h2>{{ route.query.title ? `“${route.query.title}” 的搜索结果` : tag ? `标签“${tag}”` : '最新发布' }}</h2>
-      <span v-if="!loading && !error">{{ total }} 部公开作品</span>
-      <div class="sort-toggle" role="group" aria-label="排序方式">
-        <button type="button" :class="{ active: sort === 'recommended' }" @click="navigate(1, category, tag, 'recommended')">推荐</button>
-        <button type="button" :class="{ active: sort === 'latest' }" @click="navigate(1, category, tag, 'latest')">最新</button>
-        <button type="button" :class="{ active: sort === 'popular' }" @click="navigate(1, category, tag, 'popular')">最热</button>
+    <div class="discover-results">
+      <div class="discover-results-title">
+        <h2>{{ sortLabel }}</h2>
+        <p v-if="!loading && !error"><span class="tabular">{{ total }}</span> 部公开作品</p>
+        <p v-else-if="loading">正在加载…</p>
       </div>
-      <el-button :loading="loading" @click="load">刷新</el-button>
+      <div class="discover-tools">
+        <div class="sort-toggle" role="group" aria-label="排序方式">
+          <button type="button" :aria-pressed="sort === 'recommended'" @click="navigate(1, category, tag, 'recommended')">推荐</button>
+          <button type="button" :aria-pressed="sort === 'latest'" @click="navigate(1, category, tag, 'latest')">最新</button>
+          <button type="button" :aria-pressed="sort === 'popular'" @click="navigate(1, category, tag, 'popular')">最热</button>
+        </div>
+        <button class="icon-button" type="button" :disabled="loading" aria-label="刷新作品列表" @click="load()">
+          <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 10a6 6 0 1 1-1.76-4.24" /><path d="M16 3.6V7h-3.4" /></svg>
+        </button>
+      </div>
     </div>
+
     <el-alert v-if="error" :title="error" type="error" :closable="false" role="alert" />
     <div v-if="loading" class="public-video-grid" aria-busy="true" aria-label="正在加载作品">
       <div v-for="index in 6" :key="index" class="public-card-skeleton" aria-hidden="true"></div>
@@ -140,11 +186,16 @@ onBeforeUnmount(() => { stopped = true; activeRequest?.abort(); categoryRequest?
     <div v-else-if="videos.length" class="public-video-grid">
       <PublicVideoCard v-for="video in videos" :key="video.id" :video="video" />
     </div>
-    <p v-else-if="!error" class="empty-state">{{ route.query.title || category || tag ? '没有找到匹配的作品，换个关键词、标签或分类试试。' : '还没有已发布的作品。你可以进入“我的作品”上传视频并提交审核。' }}</p>
+    <div v-else-if="!error" class="discover-empty">
+      <h3>{{ hasFilters ? '没有找到匹配的作品' : '还没有公开作品' }}</h3>
+      <p>{{ hasFilters ? '换个关键词、标签或分类试试。' : '进入“我的作品”上传视频并提交审核，通过后会出现在这里。' }}</p>
+      <button v-if="hasFilters" class="home-action secondary" type="button" @click="clearFilters">清除筛选</button>
+      <RouterLink v-else class="home-action primary" to="/studio">去发布</RouterLink>
+    </div>
     <div v-if="error" class="inline-actions empty-retry"><el-button @click="load">重新加载</el-button></div>
-    <div class="page-controls">
+    <div v-if="videos.length" class="discover-pagination">
       <el-button :disabled="loading || page <= 1" @click="navigate(page - 1, category, tag, sort)">上一页</el-button>
-      <span>第 {{ page }} 页</span>
+      <span class="tabular">第 {{ page }} 页</span>
       <el-button :disabled="loading || !!error || page * 12 >= total || page >= 1000" @click="navigate(page + 1, category, tag, sort)">下一页</el-button>
     </div>
   </WorkspaceShell>

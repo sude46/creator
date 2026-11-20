@@ -6,6 +6,9 @@
   --color-primary-dark: var(--green-dark);
   --color-primary-soft: var(--green-soft);
   --color-accent: #c65b3d;
+  --color-accent-text: #a94a2f;
+  --color-muted-text: #657166;
+  --color-focus: var(--color-accent-text);
   --color-bg: #f4f3ed;
   --color-surface: #fff;
   --color-surface-soft: #f8f7f1;

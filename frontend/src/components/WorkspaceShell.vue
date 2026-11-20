@@ -46,14 +46,17 @@ async function logout() {
 </template>
 
 <style scoped>
+.brand { flex: none; white-space: nowrap; }
+.account-menu { flex: none; }
 .workspace-nav { flex-wrap: wrap; }
-@media (max-width: 760px) {
-  .workspace-nav { flex-wrap: nowrap; width: 100%; overflow-x: auto; gap: 2px; padding: 2px 0 4px; scrollbar-width: none; }
+.workspace-nav a { padding: 6px 10px; border-radius: 999px; }
+.workspace-nav a.router-link-exact-active { background: var(--color-primary-soft); color: var(--color-primary); font-weight: 700; }
+@media (max-width: 1180px) {
+  .workspace-header { flex-wrap: wrap; gap: 10px 18px; }
+  .workspace-nav { order: 3; width: 100%; flex-wrap: nowrap; overflow-x: auto; gap: 2px; padding: 2px 0 4px; scrollbar-width: none; }
   .workspace-nav::-webkit-scrollbar { display: none; }
   .workspace-nav a { display: inline-flex; align-items: center; min-height: 40px; padding: 0 12px; white-space: nowrap; }
 }
-.workspace-nav a { padding: 6px 10px; border-radius: 999px; }
-.workspace-nav a.router-link-exact-active { background: var(--color-primary-soft); color: var(--color-primary); font-weight: 700; }
 .admin-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; padding: 11px 28px; border-top: 1px solid #d9ddd5; border-bottom: 1px solid #d9ddd5; background: #fff; font-size: 13px; }
 .admin-nav a { color: #4f5f56; }
 .admin-nav a.router-link-exact-active { color: #c65b3d; font-weight: 700; }
