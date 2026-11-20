@@ -6,6 +6,7 @@ import com.creator.identity.application.*;
 import com.creator.identity.domain.*;
 import com.creator.video.application.*;
 import com.creator.video.domain.*;
+import java.time.LocalDateTime;
 import java.util.*;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -73,9 +74,10 @@ class RecommendationIntegrationTest {
         }
         database.update("INSERT INTO video_favorite (user_id, video_id) VALUES (?,?)", actor("rec_like_a").id(), engaged);
         database.update("INSERT INTO video_comment (video_id, user_id, content) VALUES (?,?,?)", engaged, actor("rec_like_a").id(), "好");
-        database.update("UPDATE video SET view_count=5, published_at=DATEADD('HOUR', -1, CURRENT_TIMESTAMP) WHERE id=?", popular);
-        database.update("UPDATE video SET view_count=0, published_at=DATEADD('HOUR', -3, CURRENT_TIMESTAMP) WHERE id=?", recent);
-        database.update("UPDATE video SET view_count=100, published_at=DATEADD('HOUR', -100, CURRENT_TIMESTAMP) WHERE id=?", oldViral);
+        var now = LocalDateTime.now(java.time.ZoneOffset.UTC);
+        database.update("UPDATE video SET view_count=5, published_at=? WHERE id=?", now.minusHours(1), popular);
+        database.update("UPDATE video SET view_count=0, published_at=? WHERE id=?", now.minusHours(3), recent);
+        database.update("UPDATE video SET view_count=100, published_at=? WHERE id=?", now.minusHours(100), oldViral);
 
         var page = publicVideos.list(new VideoSearch("", null), new PageRequest(1, 12), "recommended");
         assertEquals(List.of(engaged, popular, recent, oldViral), page.items().stream().map(PublicVideo::id).toList());
