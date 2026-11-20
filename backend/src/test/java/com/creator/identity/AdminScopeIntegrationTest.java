@@ -55,6 +55,7 @@ class AdminScopeIntegrationTest {
         database.update("DELETE FROM user_profile");
         database.update("DELETE FROM video_collection_item");
         database.update("DELETE FROM video_collection");
+        database.update("DELETE FROM content_appeal");
         database.update("DELETE FROM user_account");
         bootstrap.execute("scope_admin", "SafePassword123");
         registration.execute("scope_reviewer", "SafePassword123");

@@ -58,6 +58,7 @@ class CollectionIntegrationTest {
         database.update("DELETE FROM content_report");
         database.update("DELETE FROM user_profile");
         database.update("DELETE FROM user_follow");
+        database.update("DELETE FROM content_appeal");
         database.update("DELETE FROM user_account");
         registerUser.execute("collection_author", "SafePassword123");
         registerUser.execute("collection_other", "SafePassword123");

@@ -2,6 +2,8 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { creatorApi, formatTime } from '../api/creator'
+import { appealApi } from '../api/appeals'
+import type { Appeal } from '../api/appeals'
 import type { Collection, CreatorCommand, CreatorVideo, ModerationRecord, ReviewRecord, SignedMedia } from '../api/creator'
 import { ApiFailure } from '../api/http'
 import { validateVideoFile } from '../api/uploadFile'
@@ -26,6 +28,10 @@ const file = ref<File>()
 const fileInput = ref<HTMLInputElement>()
 const error = ref('')
 const notice = ref('')
+const appeals = ref<Appeal[]>([])
+const appealText = ref('')
+const appealBusy = ref(false)
+const appealError = ref('')
 const collections = ref<Collection[]>([])
 const collectionId = ref('')
 const collectionBusy = ref(false)
@@ -77,6 +83,7 @@ async function load(manual = true) {
     if (stopped || controller.signal.aborted) return
     if (current.version !== video.value?.version || current.moderationBlocked) { preview.value = undefined; previewError.value = '' }
     video.value = current
+    void loadAppeals()
     needsRefresh.value = false
     error.value = ''
     refreshFailures = 0
@@ -93,6 +100,28 @@ async function load(manual = true) {
     if (!stopped && !controller.signal.aborted) { loading.value = false; schedule() }
   }
 }
+async function loadAppeals() {
+  try {
+    const result = await appealApi.mine(id, activeRequest?.signal)
+    if (!stopped && !activeRequest?.signal.aborted) appeals.value = result.items
+  } catch { /* appeals are optional on the work detail */ }
+}
+async function submitAppeal() {
+  const reason = appealText.value.trim()
+  if (!reason || appealBusy.value) return
+  appealBusy.value = true
+  appealError.value = ''
+  try {
+    await appealApi.create(id, reason)
+    if (stopped) return
+    appealText.value = ''
+    notice.value = '申诉已提交，等待管理员处理。'
+    await loadAppeals()
+  } catch (failure) { if (!stopped) appealError.value = explain(failure) }
+  finally { if (!stopped) appealBusy.value = false }
+}
+const openAppeal = computed(() => appeals.value.find(item => item.status === 'OPEN'))
+function appealLabel(status: string) { return status === 'OPEN' ? '待处理' : status === 'ACCEPTED' ? '已受理' : '已驳回' }
 async function loadHistory(reviewPage = historyPage.value, blockPage = moderationPage.value) {
   historyRequest?.abort()
   const controller = new AbortController()
@@ -298,6 +327,22 @@ onBeforeUnmount(() => {
             <el-button type="danger" :loading="deleteBusy" :disabled="blocked" @click="remove">删除作品</el-button>
           </div>
         </details>
+      </section>
+      <section v-if="video.moderationBlocked || appeals.length" class="studio-panel">
+        <h2>作品申诉</h2>
+        <p class="muted">仅被封禁的作品可以提交申诉；管理员受理后会解除封禁，驳回则保留原处理。</p>
+        <el-alert v-if="appealError" :title="appealError" type="error" :closable="false" role="alert" />
+        <article v-for="appeal in appeals" :key="appeal.id" class="history-item">
+          <div class="section-heading"><strong>{{ appealLabel(appeal.status) }} · {{ formatTime(appeal.createdAt) }}</strong><el-tag :type="appeal.status === 'OPEN' ? 'warning' : appeal.status === 'ACCEPTED' ? 'success' : 'danger'">{{ appealLabel(appeal.status) }}</el-tag></div>
+          <p class="history-reason">{{ appeal.reason }}</p>
+          <p v-if="appeal.resolutionReason" class="muted">处理说明：{{ appeal.resolutionReason }}</p>
+        </article>
+        <template v-if="video.moderationBlocked && !openAppeal">
+          <label class="reason-label" for="appeal-reason">申诉说明</label>
+          <textarea id="appeal-reason" v-model="appealText" maxlength="500" rows="4" placeholder="说明作品为什么应当恢复，1～500 字。" :disabled="appealBusy" />
+          <div class="inline-actions"><el-button type="primary" :loading="appealBusy" :disabled="!appealText.trim()" @click="submitAppeal">提交申诉</el-button></div>
+        </template>
+        <p v-else-if="openAppeal" class="muted">已有待处理申诉，请等待管理员处理。</p>
       </section>
       <VideoEditor v-if="editing" :key="video.id" :video="video" @saved="saved" @cancel="editing = false; load()" @busy="editorBusy = $event" />
       <section v-if="draft && !editing" ref="uploadPanel" class="studio-panel">

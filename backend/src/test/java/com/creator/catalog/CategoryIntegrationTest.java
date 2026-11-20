@@ -75,6 +75,7 @@ class CategoryIntegrationTest {
         database.update("DELETE FROM user_follow");
         database.update("DELETE FROM video_collection_item");
         database.update("DELETE FROM video_collection");
+        database.update("DELETE FROM content_appeal");
         database.update("DELETE FROM user_account");
         bootstrapAdmin.execute("catalog_admin", "SafePassword123");
         var account = accounts.findSummary("catalog_admin").orElseThrow();

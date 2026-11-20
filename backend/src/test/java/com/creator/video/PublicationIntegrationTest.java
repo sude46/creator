@@ -82,6 +82,7 @@ class PublicationIntegrationTest {
         database.update("DELETE FROM user_follow");
         database.update("DELETE FROM video_collection_item");
         database.update("DELETE FROM video_collection");
+        database.update("DELETE FROM content_appeal");
         database.update("DELETE FROM user_account");
         registration.execute("publication_author", "SafePassword123");
         registration.execute("publication_other", "SafePassword123");
