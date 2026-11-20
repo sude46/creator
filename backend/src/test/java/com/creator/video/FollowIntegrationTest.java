@@ -22,6 +22,7 @@ class FollowIntegrationTest {
         database.update("DELETE FROM user_follow"); database.update("DELETE FROM notification");
         database.update("DELETE FROM content_report"); database.update("DELETE FROM operation_log");
         database.update("DELETE FROM video_comment_like");
+        database.update("DELETE FROM video_comment WHERE parent_id IS NOT NULL");
         database.update("DELETE FROM video_comment"); database.update("DELETE FROM video_like");
         database.update("DELETE FROM video_favorite"); database.update("DELETE FROM video_collection_item");
         database.update("DELETE FROM video_collection"); database.update("DELETE FROM review_record");

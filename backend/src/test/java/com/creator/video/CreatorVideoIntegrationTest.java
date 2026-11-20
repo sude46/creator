@@ -62,6 +62,7 @@ class CreatorVideoIntegrationTest {
         database.update("DELETE FROM media_asset");
         database.update("DELETE FROM video_favorite");
         database.update("DELETE FROM video_comment_like");
+        database.update("DELETE FROM video_comment WHERE parent_id IS NOT NULL");
         database.update("DELETE FROM video_comment");
         database.update("DELETE FROM favorite_folder_item");
         database.update("DELETE FROM favorite_folder");
