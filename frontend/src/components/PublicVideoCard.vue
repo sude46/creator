@@ -13,6 +13,7 @@ async function loadCover(force = false) {
     const entry = await cachedCover(props.video.coverKey ?? `public:${props.video.id}`, () => publicApi.media(props.video.id, 'COVER', controller.signal), force)
     if (controller.signal.aborted) return
     coverError.value = false
+    attempts = 0
     cover.value = entry.url
     clearTimeout(refresh)
     refresh = setTimeout(() => void loadCover(true), Math.max(30_000, entry.expiresAt - Date.now() - 30_000))
