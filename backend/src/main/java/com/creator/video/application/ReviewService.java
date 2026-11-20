@@ -21,9 +21,11 @@ public class ReviewService {
     private final AuditLog audit;
     private final Clock clock;
     private final ObjectProvider<NotificationService> notifications;
+    private final TagRepository tags;
 
     public ReviewService(CreatorVideoRepository videos, ReviewRepository reviews, UploadRepository accounts,
-            CategorySelection categories, AuditLog audit, Clock clock, ObjectProvider<NotificationService> notifications) {
+            CategorySelection categories, AuditLog audit, Clock clock, ObjectProvider<NotificationService> notifications,
+            TagRepository tags) {
         this.videos = videos;
         this.reviews = reviews;
         this.accounts = accounts;
@@ -31,6 +33,7 @@ public class ReviewService {
         this.audit = audit;
         this.clock = clock;
         this.notifications = notifications;
+        this.tags = tags;
     }
 
     @Transactional(timeout = 5)
@@ -42,6 +45,7 @@ public class ReviewService {
         video.requireVersion(version);
         video.requireEditable();
         if (!reviews.updateMetadata(actor.id(), id, version, metadata)) stale();
+        tags.replace(id, metadata.tags());
         audit.record(actor, "VIDEO_METADATA_UPDATED", "VIDEO", id);
         return owned(actor, id, false);
     }

@@ -9,6 +9,7 @@ import com.creator.common.PageResult;
 import com.creator.identity.domain.Actor;
 import com.creator.video.domain.DraftCreation;
 import com.creator.video.domain.DraftRepository;
+import com.creator.video.domain.TagRepository;
 import com.creator.video.domain.VideoDraft;
 import com.creator.video.domain.VideoMetadata;
 import java.util.UUID;
@@ -21,11 +22,13 @@ public class DraftService {
     private final DraftRepository drafts;
     private final CategorySelection categories;
     private final AuditLog audit;
+    private final TagRepository tags;
 
-    public DraftService(DraftRepository drafts, CategorySelection categories, AuditLog audit) {
+    public DraftService(DraftRepository drafts, CategorySelection categories, AuditLog audit, TagRepository tags) {
         this.drafts = drafts;
         this.categories = categories;
         this.audit = audit;
+        this.tags = tags;
     }
 
     @Transactional(timeout = WRITE_TIMEOUT_SECONDS)
@@ -37,7 +40,10 @@ public class DraftService {
         boolean created = drafts.insert(actor.id(), key, metadata);
         var creation = drafts.findCreation(actor.id(), key, true).orElseThrow();
         var result = replay(creation, metadata);
-        if (created) audit.record(actor, "DRAFT_CREATED", "VIDEO", result.id());
+        if (created) {
+            tags.replace(result.id(), metadata.tags());
+            audit.record(actor, "DRAFT_CREATED", "VIDEO", result.id());
+        }
         return result;
     }
 
@@ -58,6 +64,7 @@ public class DraftService {
         if (version < 0 || !drafts.update(actor.id(), id, version, metadata)) {
             throw new BusinessException(ErrorCode.STALE_WRITE);
         }
+        tags.replace(id, metadata.tags());
         audit.record(actor, "DRAFT_UPDATED", "VIDEO", id);
         return new VideoDraft(id, actor.id(), metadata, version + 1);
     }

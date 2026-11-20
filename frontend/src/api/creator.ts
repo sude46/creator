@@ -2,7 +2,7 @@ import { request } from './http'
 
 export type Page<Result> = { items: Result[]; total: number; page: number; size: number }
 export type Category = { id: string; name: string; enabled: boolean }
-export type Metadata = { title: string; description: string; categoryId: string }
+export type Metadata = { title: string; description: string; categoryId: string; tags: string[] }
 export type Draft = Metadata & { id: string; version: number }
 export type CreatorVideo = Draft & {
   processingGeneration: number; sourceUploaded: boolean; moderationBlocked: boolean
@@ -32,6 +32,7 @@ const read = <Result>(path: string, signal?: AbortSignal) => request<Result>(pat
 export const creatorApi = {
   list: (page: number, signal?: AbortSignal) => read<Page<CreatorVideo>>(`/creator/videos?page=${page}&size=10`, signal),
   get: (id: string, signal?: AbortSignal) => read<CreatorVideo>(`/creator/videos/${id}`, signal),
+  tags: (id: string, signal?: AbortSignal) => read<{ tags: string[] }>(`/creator/videos/${id}/tags`, signal),
   categories: (page: number, signal?: AbortSignal) => read<Page<Category>>(`/categories?page=${page}&size=20`, signal),
   create: (metadata: Metadata, requestKey: string) => request<Draft>('/creator/drafts', json('POST', { ...metadata, requestKey })),
   update: (video: CreatorVideo, metadata: Metadata) => request<Draft>(video.sourceUploaded ? `/creator/videos/${video.id}` : `/creator/drafts/${video.id}`,

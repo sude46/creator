@@ -20,6 +20,7 @@ public enum ErrorCode {
     CATEGORY_IN_USE("分类仍被作品引用，请先迁移作品或停用分类"),
     STALE_WRITE("数据已变更，请刷新后重试"),
     INVALID_VIDEO("标题需为 1～120 位，简介最多 2000 位且不能包含非法控制字符"),
+    INVALID_TAG("标签最多 5 个，每个 1～20 个字符，不能重复或包含逗号和控制字符"),
     INVALID_REQUEST_KEY("创建请求键必须为标准 UUID"),
     REQUEST_KEY_CONFLICT("该请求键已用于不同的创建内容"),
     CATEGORY_UNAVAILABLE("分类不存在或已停用"),

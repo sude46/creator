@@ -167,7 +167,7 @@ async function loadFeed(nextCategory = category.value, followingMode = false) {
       if (stopped || controller.signal.aborted) return
       items.value = page.items
     } else {
-      const page = await publicApi.list('', nextCategory, 1, controller.signal)
+      const page = await publicApi.list('', nextCategory, '', 'latest', 1, controller.signal)
       if (stopped || controller.signal.aborted) return
       items.value = page.items
     }

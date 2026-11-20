@@ -6,14 +6,18 @@ export type Comment = { id: string; videoId: string; userId: string; username: s
 export type AuthorProfile = { id: string; username: string; followerCount: number; followingCount: number; following: boolean; self: boolean }
 export type PublicCollection = { id: string; ownerId: string; ownerName: string; title: string; description: string; visibility: string; version: number; itemCount: number; createdAt: string }
 export type AnchorPage = { items: PublicVideo[]; anchorIndex: number | null; hasBefore: boolean; hasAfter: boolean }
+export type TagCount = { name: string; uses: number }
 export type Favorite = { videoId: string; createdAt: string; available: boolean; video: PublicVideo | null }
 function read<Result>(path: string, signal: AbortSignal) { return request<Result>(path, { signal: AbortSignal.any([signal, AbortSignal.timeout(30000)]) }) }
 export const publicApi = {
-  list: (title: string, categoryId: string, page: number, signal: AbortSignal) => {
-    const query = new URLSearchParams({ title, page: String(page), size: '12' })
+  list: (title: string, categoryId: string, tag: string, sort: string, page: number, signal: AbortSignal) => {
+    const query = new URLSearchParams({ title, page: String(page), size: '12', sort })
     if (categoryId) query.set('categoryId', categoryId)
+    if (tag) query.set('tag', tag)
     return read<Page<PublicVideo>>(`/videos?${query}`, signal)
   },
+  tags: (signal: AbortSignal) => read<{ items: TagCount[] }>('/tags?limit=20', signal),
+  videoTags: (id: string, signal: AbortSignal) => read<{ tags: string[] }>(`/videos/${id}/tags`, signal),
   categories: (signal: AbortSignal) => read<Page<{ id: string; name: string; enabled: boolean }>>('/categories?page=1&size=50', signal),
   anchor: (anchorId: string, categoryId: string, before: number, after: number, signal: AbortSignal) => {
     const query = new URLSearchParams({ anchorId, before: String(before), after: String(after) })

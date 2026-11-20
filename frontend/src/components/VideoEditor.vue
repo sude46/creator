@@ -10,7 +10,8 @@ import { useStudioError } from '../composables/useStudioError'
 const props = defineProps<{ video?: CreatorVideo }>()
 const original = props.video
 const emit = defineEmits<{ saved: [draft: Draft]; cancel: []; busy: [value: boolean] }>()
-const form = reactive<Metadata>({ title: props.video?.title ?? '', description: props.video?.description ?? '', categoryId: props.video?.categoryId ?? '' })
+const form = reactive<Metadata>({ title: props.video?.title ?? '', description: props.video?.description ?? '', categoryId: props.video?.categoryId ?? '', tags: [] })
+const tagText = ref('')
 const categories = ref<Category[]>([])
 const page = ref(1)
 const total = ref(0)
@@ -84,8 +85,19 @@ async function uploadDraft(draft: Draft) {
   }
 }
 
+function parsedTags(): string[] | undefined {
+  const names = tagText.value.split(/[,，]/).map(value => value.trim().replace(/^#+/, '').trim()).filter(Boolean)
+  if (names.length > 5) { error.value = '标签最多 5 个。'; return undefined }
+  if (names.some(name => [...name].length > 20)) { error.value = '每个标签最多 20 个字符。'; return undefined }
+  if (new Set(names.map(name => name.toLowerCase())).size !== names.length) { error.value = '标签不能重复。'; return undefined }
+  return names
+}
+
 async function save() {
   if (busy.value) return
+  const tags = parsedTags()
+  if (!tags) return
+  form.tags = tags
   if (!form.title.trim() || !form.categoryId) { error.value = '请填写标题并选择分类'; return }
   if (creating.value && !file.value && !createdDraft.value) { error.value = '请选择视频文件，或使用“仅保存草稿”。'; return }
   busy.value = true
@@ -134,7 +146,7 @@ async function saveDraftOnly() {
   } finally { busy.value = false; emit('busy', false) }
 }
 
-onMounted(() => void loadCategories())
+onMounted(() => { void loadCategories(); if (props.video) void creatorApi.tags(props.video.id).then(result => { tagText.value = result.tags.join('，') }).catch(() => { /* tags can be re-entered when the detail request fails */ }) })
 onBeforeUnmount(() => { categoryRequest?.abort(); uploadRequest?.abort() })
 </script>
 
@@ -153,6 +165,9 @@ onBeforeUnmount(() => { categoryRequest?.abort(); uploadRequest?.abort() })
           <option v-if="selectedOutsidePage" :value="form.categoryId">已选分类 #{{ form.categoryId }}（当前页未列出）</option>
           <option v-for="category in categories" :key="category.id" :value="category.id">{{ category.name }}</option>
         </select>
+        <label for="video-tags">标签</label>
+        <input id="video-tags" v-model="tagText" maxlength="200" placeholder="用逗号分隔，最多 5 个，每个不超过 20 字" />
+        <p class="muted">标签用于发现和筛选；修改信息后，已发布作品需要重新提交审核。</p>
         <div class="inline-actions category-pages"><el-button size="small" :disabled="loading || page <= 1" @click="loadCategories(page - 1)">上一页分类</el-button><span class="muted">第 {{ page }} 页 · 共 {{ total }} 项</span><el-button size="small" :disabled="loading || page * 20 >= total || page >= 1000" @click="loadCategories(page + 1)">下一页分类</el-button><el-button v-if="categoryError" size="small" @click="loadCategories(page)">重试分类</el-button></div>
         <p v-if="categoryError" class="field-error" role="alert">{{ categoryError }}</p>
         <p v-else-if="!loading && total === 0" class="muted">暂无可选分类，请联系管理员创建或启用分类。</p>

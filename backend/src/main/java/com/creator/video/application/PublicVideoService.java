@@ -11,7 +11,15 @@ public class PublicVideoService {
     public PublicVideoService(VideoQueryRepository videos) { this.videos = videos; }
     @Transactional(readOnly = true)
     public PageResult<PublicVideo> list(VideoSearch search, PageRequest page) {
-        return new PageResult<>(videos.findPage(search, page), videos.count(search), page.page(), page.size());
+        return list(search, page, "latest");
+    }
+
+    @Transactional(readOnly = true)
+    public PageResult<PublicVideo> list(VideoSearch search, PageRequest page, String sort) {
+        String order = sort == null ? "latest" : sort.trim().toLowerCase();
+        if (!order.equals("latest") && !order.equals("popular")) throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        var items = order.equals("popular") ? videos.findPopularPage(search, page) : videos.findPage(search, page);
+        return new PageResult<>(items, videos.count(search), page.page(), page.size());
     }
     @Transactional(readOnly = true)
     public PageResult<PublicVideo> listByAuthor(long authorId, PageRequest page) {

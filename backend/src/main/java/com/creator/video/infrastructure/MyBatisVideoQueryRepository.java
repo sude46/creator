@@ -12,13 +12,16 @@ public class MyBatisVideoQueryRepository implements VideoQueryRepository {
     private final VideoQueryMapper mapper;
     public MyBatisVideoQueryRepository(VideoQueryMapper mapper) { this.mapper = mapper; }
     public List<PublicVideo> findPage(VideoSearch search, PageRequest page) {
-        return mapper.findPage(search.title(), search.pattern(), search.categoryId(), page.size(), page.offset());
+        return mapper.findPage(search.title(), search.pattern(), search.categoryId(), search.tag(), page.size(), page.offset());
     }
-    public long count(VideoSearch search) { return mapper.count(search.title(), search.pattern(), search.categoryId()); }
+    public long count(VideoSearch search) { return mapper.count(search.title(), search.pattern(), search.categoryId(), search.tag()); }
+    public List<PublicVideo> findPopularPage(VideoSearch search, PageRequest page) {
+        return mapper.findPopularPage(search.title(), search.pattern(), search.categoryId(), search.tag(), page.size(), page.offset());
+    }
     public Optional<PublicVideo> findPublic(long videoId) { return Optional.ofNullable(mapper.findPublic(videoId)); }
     public boolean incrementView(long videoId) { return mapper.incrementView(videoId) == 1; }
     public Optional<PublicVideo> findPublicInSearch(VideoSearch search, long videoId) {
-        return Optional.ofNullable(mapper.findPublicInSearch(videoId, search.title(), search.pattern(), search.categoryId()));
+        return Optional.ofNullable(mapper.findPublicInSearch(videoId, search.title(), search.pattern(), search.categoryId(), search.tag()));
     }
     public List<PublicVideo> findPublicByIds(List<Long> videoIds) {
         if (videoIds.isEmpty()) return List.of();
@@ -36,8 +39,8 @@ public class MyBatisVideoQueryRepository implements VideoQueryRepository {
         return Optional.ofNullable(mapper.media(videoId, actorId, purpose, kind, version, round));
     }
     public AnchoredVideos anchor(VideoSearch search, PublicVideo anchor, int before, int after) {
-        var newer = mapper.findNewer(search.title(), search.pattern(), search.categoryId(), anchor.publishedAt(), anchor.id(), before + 1);
-        var older = mapper.findOlder(search.title(), search.pattern(), search.categoryId(), anchor.publishedAt(), anchor.id(), after + 1);
+        var newer = mapper.findNewer(search.title(), search.pattern(), search.categoryId(), search.tag(), anchor.publishedAt(), anchor.id(), before + 1);
+        var older = mapper.findOlder(search.title(), search.pattern(), search.categoryId(), search.tag(), anchor.publishedAt(), anchor.id(), after + 1);
         boolean hasBefore = newer.size() > before;
         boolean hasAfter = older.size() > after;
         int beforeCount = Math.min(before, newer.size());

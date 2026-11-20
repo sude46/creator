@@ -32,16 +32,19 @@ public class PublicVideoController {
 
     @GetMapping(params = "!anchorId")
     public PageResult<PublicVideoView> list(@RequestParam(defaultValue = "") String title, @RequestParam(required = false) Long categoryId,
-            @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int size) {
-        var result = videos.list(new VideoSearch(title, categoryId), new PageRequest(page, size));
+            @RequestParam(defaultValue = "") String tag,
+            @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "latest") String sort) {
+        var result = videos.list(new VideoSearch(title, categoryId, tag), new PageRequest(page, size), sort);
         return new PageResult<>(result.items().stream().map(PublicVideoView::from).toList(), result.total(), result.page(), result.size());
     }
 
     @GetMapping(params = "anchorId")
     public AnchorView anchor(@RequestParam(defaultValue = "") String title, @RequestParam(required = false) Long categoryId,
+            @RequestParam(defaultValue = "") String tag,
             @RequestParam long anchorId, @RequestParam(defaultValue = "3") int before,
             @RequestParam(defaultValue = "4") int after) {
-        var result = anchors.anchor(new VideoSearch(title, categoryId), anchorId, before, after);
+        var result = anchors.anchor(new VideoSearch(title, categoryId, tag), anchorId, before, after);
         return new AnchorView(result.items().stream().map(PublicVideoView::from).toList(),
                 result.anchorIndex(), result.hasBefore(), result.hasAfter());
     }
