@@ -35,5 +35,9 @@ public class MyBatisCollectionRepository implements CollectionRepository {
     public List<PublicVideo> publicItems(long collectionId, PageRequest p) {
         return videos.findPublicByCollection(collectionId, p.size(), p.offset());
     }
+    public List<CollectionItem> ownerItems(long collectionId) { return mapper.ownerItems(collectionId); }
+    public void updateItemOrder(long collectionId, long videoId, int sortOrder) {
+        mapper.updateItemOrder(collectionId, videoId, sortOrder);
+    }
     public long publicItemCount(long collectionId) { return videos.countPublicByCollection(collectionId); }
 }

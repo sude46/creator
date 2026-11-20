@@ -48,4 +48,14 @@ public interface CollectionMapper {
     long publicCountByOwner(long ownerId);
     @Select("SELECT " + COLS + FROM + " WHERE c.id=#{id} AND c.visibility='PUBLIC' AND owner.status='ACTIVE'")
     VideoCollection findPublic(long id);
+
+    @Select("SELECT v.id AS video_id, v.title, v.processing_status, v.review_status, v.publication_status,"
+            + " (v.deleted_at IS NOT NULL) AS deleted, item.sort_order"
+            + " FROM video_collection_item item JOIN video v ON v.id = item.video_id"
+            + " WHERE item.collection_id = #{collectionId} ORDER BY item.sort_order, item.id")
+    List<CollectionItem> ownerItems(long collectionId);
+
+    @Update("UPDATE video_collection_item SET sort_order = #{sortOrder} WHERE collection_id = #{collectionId} AND video_id = #{videoId}")
+    int updateItemOrder(@Param("collectionId") long collectionId, @Param("videoId") long videoId,
+            @Param("sortOrder") int sortOrder);
 }

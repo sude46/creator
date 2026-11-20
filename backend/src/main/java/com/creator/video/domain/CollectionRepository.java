@@ -22,4 +22,6 @@ public interface CollectionRepository {
     Optional<VideoCollection> findPublic(long id);
     List<PublicVideo> publicItems(long collectionId, PageRequest page);
     long publicItemCount(long collectionId);
+    List<CollectionItem> ownerItems(long collectionId);
+    void updateItemOrder(long collectionId, long videoId, int sortOrder);
 }

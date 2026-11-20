@@ -11,6 +11,7 @@ export const router = createRouter({
     { path: '/', component: WorkspaceView },
     { path: '/studio', component: () => import('../views/CreatorCenterView.vue') },
     { path: '/studio/collections', component: () => import('../views/CollectionsView.vue') },
+    { path: '/studio/collections/:id', component: () => import('../views/CollectionManageView.vue') },
     { path: '/studio/:id', component: () => import('../views/CreatorVideoView.vue') },
     { path: '/admin', component: () => import('../views/AdminOverviewView.vue') },
     { path: '/admin/reviews', component: () => import('../views/AdminReviewView.vue') },

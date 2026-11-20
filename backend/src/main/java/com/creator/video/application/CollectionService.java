@@ -4,6 +4,7 @@ import com.creator.common.*;
 import com.creator.identity.application.AccountQueryService;
 import com.creator.identity.domain.Actor;
 import com.creator.video.domain.*;
+import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +22,37 @@ public class CollectionService {
     public PageResult<VideoCollection> list(Actor actor, PageRequest page) {
         active(actor);
         return new PageResult<>(collections.ownPage(actor.id(), page), collections.ownCount(actor.id()), page.page(), page.size());
+    }
+
+    @Transactional(readOnly = true)
+    public VideoCollection get(Actor actor, long id) {
+        active(actor);
+        return collections.findOwned(actor.id(), id, false)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+    }
+
+    @Transactional(readOnly = true)
+    public List<CollectionItem> ownerItems(Actor actor, long id) {
+        active(actor);
+        collections.findOwned(actor.id(), id, false).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        return collections.ownerItems(id);
+    }
+
+    @Transactional(timeout = 5)
+    public void move(Actor actor, long id, long videoId, String direction) {
+        active(actor);
+        collections.findOwned(actor.id(), id, true).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        String dir = direction == null ? "" : direction.trim().toUpperCase();
+        if (!(dir.equals("UP") || dir.equals("DOWN"))) throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        var items = collections.ownerItems(id);
+        int index = -1;
+        for (int i = 0; i < items.size(); i++) if (items.get(i).videoId() == videoId) { index = i; break; }
+        if (index < 0) throw new BusinessException(ErrorCode.NOT_FOUND);
+        int target = dir.equals("UP") ? index - 1 : index + 1;
+        if (target < 0 || target >= items.size()) return;
+        for (int i = 0; i < items.size(); i++) collections.updateItemOrder(id, items.get(i).videoId(), i);
+        collections.updateItemOrder(id, items.get(index).videoId(), target);
+        collections.updateItemOrder(id, items.get(target).videoId(), index);
     }
 
     @Transactional(timeout = 5)

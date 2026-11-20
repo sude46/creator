@@ -83,6 +83,30 @@ class CollectionIntegrationTest {
         assertEquals(0, collections.list(author, new PageRequest(1, 20)).total());
     }
 
+    @Test
+    void ownerReordersItemsAndOtherCannotMoveOrRead() {
+        long first = drafts.create(author, UUID.randomUUID().toString(), new VideoMetadata("一", "", categoryId)).id();
+        long second = drafts.create(author, UUID.randomUUID().toString(), new VideoMetadata("二", "", categoryId)).id();
+        long third = drafts.create(author, UUID.randomUUID().toString(), new VideoMetadata("三", "", categoryId)).id();
+        var collection = collections.create(author, "排序合集", "", "PRIVATE");
+        collections.add(author, collection.id(), first);
+        collections.add(author, collection.id(), second);
+        collections.add(author, collection.id(), third);
+        assertEquals("排序合集", collections.get(author, collection.id()).title());
+        assertThrows(BusinessException.class, () -> collections.ownerItems(other, collection.id()));
+
+        collections.move(author, collection.id(), third, "UP");
+        assertEquals(java.util.List.of(first, third, second), collections.ownerItems(author, collection.id())
+                .stream().map(com.creator.video.domain.CollectionItem::videoId).toList());
+        collections.move(author, collection.id(), third, "UP");
+        collections.move(author, collection.id(), third, "UP");
+        collections.move(author, collection.id(), first, "DOWN");
+        assertEquals(java.util.List.of(third, second, first), collections.ownerItems(author, collection.id())
+                .stream().map(com.creator.video.domain.CollectionItem::videoId).toList());
+        assertThrows(BusinessException.class, () -> collections.move(other, collection.id(), second, "UP"));
+        assertThrows(BusinessException.class, () -> collections.move(author, collection.id(), second, "LEFT"));
+    }
+
     private Actor actor(String username) {
         var a = accounts.findSummary(username).orElseThrow();
         return new Actor(a.id(), username, a.role());

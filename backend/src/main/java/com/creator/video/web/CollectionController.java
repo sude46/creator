@@ -31,6 +31,23 @@ public class CollectionController {
         return new PageResult<>(result.items().stream().map(CollectionView::from).toList(), result.total(), result.page(), result.size());
     }
 
+    @GetMapping("/api/creator/collections/{id}")
+    public CollectionView get(@RequestAttribute("currentActor") Actor actor, @PathVariable long id) {
+        return CollectionView.from(collections.get(actor, id));
+    }
+
+    @GetMapping("/api/creator/collections/{id}/videos")
+    public List<ItemView> videos(@RequestAttribute("currentActor") Actor actor, @PathVariable long id) {
+        return collections.ownerItems(actor, id).stream().map(ItemView::from).toList();
+    }
+
+    @PostMapping("/api/creator/collections/{id}/videos/{videoId}/move")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void move(@RequestAttribute("currentActor") Actor actor, @PathVariable long id, @PathVariable long videoId,
+            @Valid @RequestBody MoveRequest request) {
+        collections.move(actor, id, videoId, request.direction());
+    }
+
     @PostMapping("/api/creator/collections")
     @ResponseStatus(HttpStatus.CREATED)
     public CollectionView create(@RequestAttribute("currentActor") Actor actor, @Valid @RequestBody WriteRequest request) {
@@ -82,6 +99,14 @@ public class CollectionController {
     public record UpdateRequest(@NotNull Long version, @NotBlank @Size(max = 80) String title,
             @Size(max = 500) String description, @NotBlank String visibility) { }
     public record ItemRequest(@NotNull Long videoId) { }
+    public record MoveRequest(@NotBlank String direction) { }
+    public record ItemView(String videoId, String title, String processingStatus, String reviewStatus,
+            String publicationStatus, boolean deleted, int sortOrder) {
+        static ItemView from(com.creator.video.domain.CollectionItem item) {
+            return new ItemView(Long.toString(item.videoId()), item.title(), item.processingStatus(),
+                    item.reviewStatus(), item.publicationStatus(), item.deleted(), item.sortOrder());
+        }
+    }
     public record CollectionView(String id, String ownerId, String ownerName, String title, String description,
             String visibility, long version, long itemCount, java.time.LocalDateTime createdAt) {
         static CollectionView from(VideoCollection c) {
