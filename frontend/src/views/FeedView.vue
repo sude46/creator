@@ -16,6 +16,12 @@ const items = ref<PublicVideo[]>([])
 const categories = ref<{ id: string; name: string }[]>([])
 const category = ref(''); const following = ref(false); const recommended = ref(false)
 const current = ref(0)
+const feedPage = ref(1)
+const feedTotal = ref(0)
+const hasMore = ref(false)
+const loadingMore = ref(false)
+const mode = ref<'latest' | 'recommended' | 'following'>('latest')
+let anchorMode = false
 const sources = ref<Record<string, string>>({})
 const covers = ref<Record<string, string>>({})
 const loading = ref(true)
@@ -28,6 +34,7 @@ const progress = ref(0)
 const signing = new Set<string>()
 let observer: IntersectionObserver | undefined
 let request: AbortController | undefined
+let moreRequest: AbortController | undefined
 let categoryRequest: AbortController | undefined
 let favoriteRequest: AbortController | undefined
 let stopped = false
@@ -87,6 +94,7 @@ function playCurrent() {
 function setCurrent(index: number) {
   if (index < 0 || index >= items.value.length || index === current.value) return
   current.value = index
+  if (index >= items.value.length - 3) void loadMore()
   progress.value = 0
   savePosition()
   void loadMedia(index)
@@ -144,6 +152,33 @@ function onTimeUpdate(event: Event, index: number) {
   progress.value = video.duration ? (video.currentTime / video.duration) * 100 : 0
 }
 
+async function loadMore() {
+  if (loading.value || loadingMore.value || !hasMore.value || anchorMode || !items.value.length) return
+  loadingMore.value = true
+  const controller = new AbortController()
+  moreRequest = controller
+  const next = feedPage.value + 1
+  try {
+    const page = mode.value === 'following'
+      ? await publicApi.following(next, controller.signal)
+      : await publicApi.list('', category.value, '', mode.value === 'recommended' ? 'recommended' : 'latest', next, controller.signal)
+    if (stopped || controller.signal.aborted) return
+    const known = new Set(items.value.map(item => item.id))
+    const appended = page.items.filter(item => !known.has(item.id))
+    items.value = [...items.value, ...appended]
+    feedPage.value = page.page
+    feedTotal.value = page.total
+    hasMore.value = items.value.length < page.total
+    await nextTick()
+    slides.value.forEach(slide => slide && observer?.observe(slide))
+    playCurrent()
+  } catch {
+    if (!stopped && !controller.signal.aborted) notice.value = '加载更多失败，继续上滑会重试。'
+  } finally {
+    if (!stopped && !controller.signal.aborted) loadingMore.value = false
+  }
+}
+
 async function loadCategories() {
   categoryRequest?.abort(); const controller = new AbortController(); categoryRequest = controller
   try {
@@ -153,8 +188,9 @@ async function loadCategories() {
 }
 
 async function loadFeed(nextCategory = category.value, followingMode = false, recommendedMode = false) {
-  request?.abort(); const controller = new AbortController(); request = controller
+  request?.abort(); moreRequest?.abort(); const controller = new AbortController(); request = controller
   loading.value = true; error.value = ''; items.value = []; sources.value = {}; covers.value = {}; current.value = 0; category.value = nextCategory; following.value = followingMode; recommended.value = recommendedMode
+  feedPage.value = 1; feedTotal.value = 0; hasMore.value = false; anchorMode = false; mode.value = followingMode ? 'following' : recommendedMode ? 'recommended' : 'latest'
   const deepId = !followingMode && !recommendedMode && (typeof route.params.id === 'string' ? route.params.id : (sessionStorage.getItem('frame-feed-anchor') ?? ''))
   try {
     if (deepId && /^[1-9]\d{0,18}$/.test(deepId)) {
@@ -162,14 +198,19 @@ async function loadFeed(nextCategory = category.value, followingMode = false, re
       if (stopped || controller.signal.aborted) return
       items.value = page.items
       current.value = page.anchorIndex ?? 0
+      anchorMode = true
     } else if (followingMode) {
       const page = await publicApi.following(1, controller.signal)
       if (stopped || controller.signal.aborted) return
       items.value = page.items
+      feedTotal.value = page.total
+      hasMore.value = page.items.length < page.total
     } else {
       const page = await publicApi.list('', nextCategory, '', recommendedMode ? 'recommended' : 'latest', 1, controller.signal)
       if (stopped || controller.signal.aborted) return
       items.value = page.items
+      feedTotal.value = page.total
+      hasMore.value = page.items.length < page.total
     }
     loading.value = false
     await nextTick()
@@ -193,7 +234,7 @@ watch(current, () => { savePosition(); void nextTick().then(playCurrent) })
 watch(sources, () => { void nextTick().then(playCurrent) }, { deep: true })
 onMounted(async () => { await loadCategories(); await loadFeed() })
 onBeforeUnmount(() => {
-  stopped = true; request?.abort(); categoryRequest?.abort(); favoriteRequest?.abort(); observer?.disconnect()
+  stopped = true; request?.abort(); moreRequest?.abort(); categoryRequest?.abort(); favoriteRequest?.abort(); observer?.disconnect()
   videoRefs.value.forEach(video => { video.pause(); video.removeAttribute('src'); video.load() })
 })
 </script>
