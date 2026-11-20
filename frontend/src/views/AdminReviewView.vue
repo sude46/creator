@@ -17,11 +17,34 @@ const previewBusy = ref(false)
 const downloadBusy = ref(false)
 const batchBusy = ref(false)
 const batchNotice = ref('')
+const checked = ref<Record<string, { video: CreatorVideo }>>({})
 let queueRequest: AbortController | undefined
 let selectionRequest: AbortController | undefined
 let previewRequest: AbortController | undefined
 let historyRequest: AbortController | undefined
 let stopped = false
+const checkedCount = computed(() => Object.keys(checked.value).length)
+const allPageChecked = computed(() => items.value.length > 0 && items.value.every(item => !!checked.value[item.video.id]))
+function isChecked(id: string) { return !!checked.value[id] }
+function toggleCheck(item: { video: CreatorVideo }) {
+  const id = item.video.id
+  const next = { ...checked.value }
+  if (next[id]) delete next[id]
+  else if (checkedCount.value >= 20) { batchNotice.value = '单次最多选择 20 部作品。'; return }
+  else next[id] = { video: item.video }
+  checked.value = next
+}
+function togglePage() {
+  const next = { ...checked.value }
+  if (allPageChecked.value) items.value.forEach(item => { delete next[item.video.id] })
+  else {
+    for (const item of items.value) {
+      if (Object.keys(next).length >= 20) { batchNotice.value = '单次最多选择 20 部作品。'; break }
+      next[item.video.id] = { video: item.video }
+    }
+  }
+  checked.value = next
+}
 const queueLabel = computed(() => total.value ? `${total.value} 个待审核作品` : '审核队列为空')
 function clearSelectionRequests() {
   selectionRequest?.abort()
@@ -84,14 +107,16 @@ async function load(next = page.value) {
   finally { if (!stopped && !controller.signal.aborted) loading.value = false }
 }
 async function batch(outcome: 'APPROVED' | 'REJECTED') {
-  if (!items.value.length || busy.value || loading.value || batchBusy.value) return
+  if (!checkedCount.value || busy.value || loading.value || batchBusy.value) return
+  const chosen = Object.values(checked.value).map(item => item.video)
   let reason = ''
   if (outcome === 'REJECTED') { reason = window.prompt('批量驳回原因（1～500 字）')?.trim() ?? ''; if (!reason || reason.length > 500) return }
-  if (!window.confirm(`对当前页 ${items.value.length} 部作品执行${outcome === 'APPROVED' ? '批量通过' : '批量驳回'}？`)) return
+  if (!window.confirm(`对已选 ${chosen.length} 部作品执行${outcome === 'APPROVED' ? '批量通过' : '批量驳回'}？`)) return
   batchBusy.value = true; batchNotice.value = ''
   try {
-    const result = await adminApi.batch(items.value.map(item => ({ videoId: item.video.id, version: item.video.version, reviewRound: item.video.reviewRound })), outcome, reason)
+    const result = await adminApi.batch(chosen.map(item => ({ videoId: item.id, version: item.version, reviewRound: item.reviewRound })), outcome, reason)
     batchNotice.value = `批量完成：成功 ${result.succeeded}，失败 ${result.failed}`
+    checked.value = {}
     await load(1)
   } catch (failure) { if (!stopped) error.value = explain(failure) }
   finally { if (!stopped) batchBusy.value = false }
@@ -181,8 +206,8 @@ onBeforeUnmount(() => { stopped = true; queueRequest?.abort(); clearSelectionReq
     <div class="studio-heading"><div><p class="eyebrow">FRAME ROOM / MODERATION</p><h1>审核</h1><p class="muted">先看作品内容，再决定是否让它进入公开空间。{{ queueLabel }}</p></div></div>
     <el-alert v-if="error" :title="error" type="error" :closable="false" role="alert"/><el-alert v-if="notice" :title="notice" type="success" :closable="false" role="status"/>
     <div class="admin-layout">
-      <section class="studio-panel review-queue" :aria-busy="loading"><div class="section-heading"><h2>待审核 <span class="count">{{ total }}</span></h2><div class="inline-actions"><el-button :loading="batchBusy" :disabled="busy || loading || !items.length" @click="batch('APPROVED')">批量通过本页</el-button><el-button type="danger" :loading="batchBusy" :disabled="busy || loading || !items.length" @click="batch('REJECTED')">批量驳回本页</el-button><el-button :loading="loading" :disabled="busy" @click="load()">刷新</el-button></div></div><p v-if="batchNotice" class="muted" role="status">{{ batchNotice }}</p>
-        <p v-if="loading" class="empty-state">正在读取审核队列…</p><button v-for="item in items" v-else :key="item.video.id" class="queue-item" :disabled="busy || loading" :class="{selected:selected?.id === item.video.id}" @click="select(item.video)"><span><strong>{{ item.video.title }}</strong><small>作者 #{{ item.ownerId }} · 第 {{ item.video.reviewRound }} 轮</small></span><time>{{ formatTime(item.video.reviewSubmittedAt) }}</time></button><p v-if="!loading && !items.length" class="empty-state">暂无待审核作品。</p>
+      <section class="studio-panel review-queue" :aria-busy="loading"><div class="section-heading"><h2>待审核 <span class="count">{{ total }}</span></h2><div class="inline-actions"><el-button :disabled="busy || loading || !items.length" @click="togglePage">{{ allPageChecked ? '取消本页' : '全选本页' }}</el-button><el-button :loading="batchBusy" :disabled="busy || loading || !checkedCount" @click="batch('APPROVED')">批量通过已选（{{ checkedCount }}）</el-button><el-button type="danger" :loading="batchBusy" :disabled="busy || loading || !checkedCount" @click="batch('REJECTED')">批量驳回已选（{{ checkedCount }}）</el-button><el-button :loading="loading" :disabled="busy" @click="load()">刷新</el-button></div></div><p v-if="batchNotice" class="muted" role="status">{{ batchNotice }}</p>
+        <p v-if="loading" class="empty-state">正在读取审核队列…</p><div v-for="item in items" v-else :key="item.video.id" class="queue-row"><input class="queue-check" type="checkbox" :checked="isChecked(item.video.id)" :disabled="busy || loading" :aria-label="`选择 ${item.video.title}`" @click.stop @change="toggleCheck(item)" /><button class="queue-item" :disabled="busy || loading" :class="{selected:selected?.id === item.video.id}" @click="select(item.video)"><span><strong>{{ item.video.title }}</strong><small>作者 #{{ item.ownerId }} · 第 {{ item.video.reviewRound }} 轮</small></span><time>{{ formatTime(item.video.reviewSubmittedAt) }}</time></button></div><p v-if="!loading && !items.length" class="empty-state">暂无待审核作品。</p>
         <div class="page-controls"><el-button :disabled="busy || loading || page <= 1" @click="load(page - 1)">上一页</el-button><span>第 {{ page }} 页</span><el-button :disabled="busy || loading || page * 20 >= total || page >= 1000" @click="load(page + 1)">下一页</el-button></div>
       </section>
       <section class="studio-panel review-detail" v-if="selected"><div class="review-detail-head"><div><p class="card-number">作品 #{{ selected.id }} · 作者作品</p><h2>{{ selected.title }}</h2></div><el-tag>{{ reviewLabels[selected.reviewStatus] }}</el-tag></div><img v-if="cover" class="review-cover" :src="cover" alt="作品封面" referrerpolicy="no-referrer" @error="cover = ''" /><p class="video-description">{{ selected.description || '作者暂未填写简介。' }}</p><dl class="video-facts"><div><dt>处理状态</dt><dd>{{ processingLabels[selected.processingStatus] }}</dd></div><div><dt>视频时长</dt><dd>{{ selected.durationMillis ? `${(selected.durationMillis / 1000).toFixed(1)} 秒` : '—' }}</dd></div><div><dt>发布状态</dt><dd>{{ publicationLabels[selected.publicationStatus] }}</dd></div></dl><div class="inline-actions"><el-button :loading="previewBusy" :disabled="busy || loading || needsRefresh" @click="preview">{{ media ? '重新获取预览' : '预览视频' }}</el-button><el-button :loading="downloadBusy" :disabled="busy || loading || needsRefresh" @click="download">下载源文件</el-button><el-button type="primary" :loading="busy" :disabled="loading || needsRefresh" @click="decide('APPROVED')">通过审核</el-button><el-button type="danger" :loading="busy" :disabled="loading || needsRefresh" @click="decide('REJECTED')">驳回</el-button></div><video v-if="media" class="studio-player admin-player" :src="media.url" controls preload="metadata" @error="error = '视频无法加载或链接已过期，请重新获取预览。'"/><p v-if="media" class="muted">预览链接到期：{{ formatTime(media.expiresAt) }}</p><label class="reason-label" for="review-reason">处理说明 <span>驳回时必填</span></label><div class="reason-presets" aria-label="常用驳回理由"><el-button v-for="preset in reasonPresets" :key="preset" size="small" :disabled="busy" @click="applyReason(preset)">{{ preset }}</el-button></div><textarea id="review-reason" v-model="reason" :disabled="busy" maxlength="500" rows="4" placeholder="告诉作者需要修改什么，或记录本次审核依据。"/><h3 class="history-subheading">历史审核</h3><article v-for="record in history" :key="record.id" class="history-item"><div class="section-heading"><strong>第 {{ record.reviewRound }} 轮 · {{ record.outcome === 'APPROVED' ? '通过' : '驳回' }}</strong><time>{{ formatTime(record.createdAt) }}</time></div><p>{{ record.reason || '未附加说明' }}</p></article><p v-if="historyLoading" class="muted" role="status">正在读取历史记录…</p><p v-if="!history.length && !historyLoading" class="muted">暂无历史记录。</p><div v-if="historyTotal > 20" class="page-controls"><el-button :disabled="historyLoading || busy || historyPage <= 1" @click="loadHistory(historyPage - 1)">上一页历史</el-button><span>第 {{ historyPage }} 页</span><el-button :disabled="historyLoading || busy || historyPage * 20 >= historyTotal || historyPage >= 1000" @click="loadHistory(historyPage + 1)">下一页历史</el-button></div></section>
@@ -190,3 +215,9 @@ onBeforeUnmount(() => { stopped = true; queueRequest?.abort(); clearSelectionReq
     </div>
   </WorkspaceShell>
 </template>
+
+<style scoped>
+.queue-row { display: flex; align-items: center; gap: 8px; }
+.queue-row .queue-item { flex: 1; min-width: 0; }
+.queue-check { width: 18px; height: 18px; accent-color: var(--color-primary); flex: none; cursor: pointer; }
+</style>
