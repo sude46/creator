@@ -132,7 +132,7 @@ onBeforeUnmount(() => { stopped = true; activeRequest?.abort() })
                 </div>
               </td>
               <td>{{ user.status === 'ACTIVE' ? '启用' : '禁用' }}</td>
-              <td><el-button :disabled="busy || isSuper(user)" @click="toggle(user)">{{ user.status === 'ACTIVE' ? '禁用' : '启用' }}</el-button></td>
+              <td><span v-if="isSuper(user)" class="muted">不可修改</span><el-button v-else :disabled="busy" @click="toggle(user)">{{ user.status === 'ACTIVE' ? '禁用' : '启用' }}</el-button></td>
             </tr>
           </tbody>
         </table>

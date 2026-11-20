@@ -158,7 +158,7 @@ onBeforeUnmount(() => { stopped = true; activeRequest?.abort(); ElMessageBox.clo
         <fieldset :disabled="busy">
           <label for="category-name">分类名称</label><input id="category-name" v-model="name" required maxlength="128" aria-describedby="category-name-hint" />
           <p id="category-name-hint" class="muted">规范化后最多 32 字；名称不能重复。</p>
-          <label for="category-order">排序值</label><input id="category-order" v-model="sortOrder" type="number" min="0" max="10000" step="1" required />
+          <label for="category-order">排序值</label><input id="category-order" v-model="sortOrder" type="number" min="0" max="10000" step="1" required /><p class="muted">排序值允许相同；相同值按创建顺序稳定排列。</p>
           <template v-if="editing"><label for="category-enabled">状态</label><select id="category-enabled" v-model="enabled"><option :value="true">启用</option><option :value="false">停用</option></select></template>
           <p v-else class="muted">新增分类默认启用。</p>
           <div class="inline-actions"><el-button native-type="submit" type="primary" :loading="busy" :disabled="loading || needsRefresh || editorStale">保存分类</el-button></div>

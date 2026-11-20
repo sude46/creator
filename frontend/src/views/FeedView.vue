@@ -213,7 +213,7 @@ onBeforeUnmount(() => {
       <section v-for="(item, index) in items" :key="item.id" :ref="el => slides[index] = el as HTMLElement" class="feed-slide" :data-index="index" :aria-label="item.title">
         <div class="feed-backdrop" :style="covers[item.id] ? { backgroundImage: `url(${covers[item.id]})` } : undefined"></div>
         <video v-if="Math.abs(index - current) <= 1 && sources[item.id]" :ref="el => videoRefs[index] = el as HTMLVideoElement" class="feed-video" :src="sources[item.id]" :muted="muted" playsinline preload="metadata" loop @click="openDetail" @canplay="index === current && playCurrent()" @timeupdate="onTimeUpdate($event, index)" />
-        <img v-else-if="covers[item.id]" class="feed-poster" :src="covers[item.id]" alt="" referrerpolicy="no-referrer" @click="openDetail" />
+        <img v-else-if="covers[item.id]" class="feed-poster" :src="covers[item.id]" alt="" role="button" tabindex="0" :aria-label="`播放：${item.title}`" referrerpolicy="no-referrer" @click="openDetail" @keydown.enter="openDetail" @keydown.space.prevent="openDetail" />
         <div class="feed-shade"></div>
         <aside class="feed-rail">
           <button :disabled="likeBusy || liked === undefined" :aria-pressed="liked" @click="toggleLike">{{ liked ? '♥' : '♡' }}<span>{{ liked ? '已赞' : '点赞' }}</span></button>
