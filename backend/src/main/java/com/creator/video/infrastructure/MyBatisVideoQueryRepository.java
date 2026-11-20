@@ -18,6 +18,10 @@ public class MyBatisVideoQueryRepository implements VideoQueryRepository {
     public List<PublicVideo> findPopularPage(VideoSearch search, PageRequest page) {
         return mapper.findPopularPage(search.title(), search.pattern(), search.categoryId(), search.tag(), page.size(), page.offset());
     }
+    public List<PublicVideo> findRecommendedPage(VideoSearch search, PageRequest page) {
+        return mapper.findRecommendedPage(search.title(), search.pattern(), search.categoryId(), search.tag(),
+                page.size(), page.offset());
+    }
     public Optional<PublicVideo> findPublic(long videoId) { return Optional.ofNullable(mapper.findPublic(videoId)); }
     public boolean incrementView(long videoId) { return mapper.incrementView(videoId) == 1; }
     public Optional<PublicVideo> findPublicInSearch(VideoSearch search, long videoId) {

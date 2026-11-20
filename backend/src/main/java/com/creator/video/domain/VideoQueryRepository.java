@@ -7,6 +7,7 @@ import java.util.Optional;
 public interface VideoQueryRepository {
     List<PublicVideo> findPage(VideoSearch search, PageRequest page);
     List<PublicVideo> findPopularPage(VideoSearch search, PageRequest page);
+    List<PublicVideo> findRecommendedPage(VideoSearch search, PageRequest page);
     long count(VideoSearch search);
     Optional<PublicVideo> findPublic(long videoId);
     boolean incrementView(long videoId);

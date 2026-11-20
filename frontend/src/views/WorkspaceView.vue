@@ -65,10 +65,10 @@ async function load() {
   title.value = queryTitle
   category.value = queryCategory
   tag.value = queryTag
-  sort.value = querySort === 'popular' ? 'popular' : 'latest'
+  sort.value = querySort === 'popular' || querySort === 'recommended' ? querySort : 'latest'
   if (queryTitle.length > 120 || !Number.isInteger(queryPage) || queryPage < 1 || queryPage > 1000
       || (queryCategory && !/^[1-9]\d{0,18}$/.test(queryCategory))
-      || queryTag.length > 20 || (querySort !== 'latest' && querySort !== 'popular')) {
+      || queryTag.length > 20 || !['latest', 'popular', 'recommended'].includes(querySort)) {
     error.value = '搜索词最长 120 字，标签最长 20 字，分类无效或页码不在 1～1000 之间。'
     loading.value = false
     return
@@ -88,7 +88,7 @@ function navigate(next = 1, nextCategory = category.value, nextTag = tag.value, 
   if (title.value.trim()) query.title = title.value.trim()
   if (nextCategory) query.category = nextCategory
   if (nextTag) query.tag = nextTag
-  if (nextSort === 'popular') query.sort = 'popular'
+  if (nextSort !== 'latest') query.sort = nextSort
   if (next > 1) query.page = String(next)
   void router.push({ path: '/', query })
 }
@@ -126,6 +126,7 @@ onBeforeUnmount(() => { stopped = true; activeRequest?.abort(); categoryRequest?
       <h2>{{ route.query.title ? `“${route.query.title}” 的搜索结果` : tag ? `标签“${tag}”` : '最新发布' }}</h2>
       <span v-if="!loading && !error">{{ total }} 部作品</span>
       <div class="sort-toggle" role="group" aria-label="排序方式">
+        <button type="button" :class="{ active: sort === 'recommended' }" @click="navigate(1, category, tag, 'recommended')">推荐</button>
         <button type="button" :class="{ active: sort === 'latest' }" @click="navigate(1, category, tag, 'latest')">最新</button>
         <button type="button" :class="{ active: sort === 'popular' }" @click="navigate(1, category, tag, 'popular')">最热</button>
       </div>

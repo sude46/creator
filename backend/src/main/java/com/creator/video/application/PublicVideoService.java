@@ -21,8 +21,14 @@ public class PublicVideoService {
     @Transactional(readOnly = true)
     public PageResult<PublicVideo> list(VideoSearch search, PageRequest page, String sort) {
         String order = sort == null ? "latest" : sort.trim().toLowerCase();
-        if (!order.equals("latest") && !order.equals("popular")) throw new BusinessException(ErrorCode.INVALID_REQUEST);
-        var items = order.equals("popular") ? videos.findPopularPage(search, page) : videos.findPage(search, page);
+        if (!order.equals("latest") && !order.equals("popular") && !order.equals("recommended")) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+        var items = switch (order) {
+            case "popular" -> videos.findPopularPage(search, page);
+            case "recommended" -> videos.findRecommendedPage(search, page);
+            default -> videos.findPage(search, page);
+        };
         return new PageResult<>(items, videos.count(search), page.page(), page.size());
     }
     @Transactional(readOnly = true)

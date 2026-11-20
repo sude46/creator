@@ -20,6 +20,11 @@ public interface VideoQueryMapper {
             + " ORDER BY cover.id DESC LIMIT 1) AS cover_key, v.view_count,"
             + " (SELECT COUNT(*) FROM video_favorite favorite WHERE favorite.video_id = v.id) AS favorite_count,"
             + " (SELECT COUNT(*) FROM video_like liked WHERE liked.video_id = v.id) AS like_count";
+    String SCORE = "(v.view_count"
+            + " + 3 * (SELECT COUNT(*) FROM video_like liked WHERE liked.video_id = v.id)"
+            + " + 4 * (SELECT COUNT(*) FROM video_favorite favorite WHERE favorite.video_id = v.id)"
+            + " + 5 * (SELECT COUNT(*) FROM video_comment comment WHERE comment.video_id = v.id AND comment.status = 'ACTIVE')"
+            + " - 2 * TIMESTAMPDIFF(HOUR, v.published_at, CURRENT_TIMESTAMP))";
     String FILTER = "<if test='title != null'> AND v.title LIKE #{pattern} ESCAPE '!'</if>"
             + "<if test='categoryId != null'> AND v.category_id = #{categoryId}</if>"
             + "<if test='tag != null'> AND EXISTS (SELECT 1 FROM video_tag_item tag_item"
@@ -34,6 +39,12 @@ public interface VideoQueryMapper {
     @Select("<script>SELECT " + COLUMNS + FROM + " WHERE " + PUBLIC + FILTER
             + " ORDER BY v.view_count DESC, v.published_at DESC, v.id DESC LIMIT #{limit} OFFSET #{offset}</script>")
     List<PublicVideo> findPopularPage(@Param("title") String title, @Param("pattern") String pattern,
+            @Param("categoryId") Long categoryId, @Param("tag") String tag,
+            @Param("limit") int limit, @Param("offset") int offset);
+
+    @Select("<script>SELECT " + COLUMNS + FROM + " WHERE " + PUBLIC + FILTER
+            + " ORDER BY " + SCORE + " DESC, v.published_at DESC, v.id DESC LIMIT #{limit} OFFSET #{offset}</script>")
+    List<PublicVideo> findRecommendedPage(@Param("title") String title, @Param("pattern") String pattern,
             @Param("categoryId") Long categoryId, @Param("tag") String tag,
             @Param("limit") int limit, @Param("offset") int offset);
 
