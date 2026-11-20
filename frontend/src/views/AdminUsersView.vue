@@ -145,8 +145,8 @@ onBeforeUnmount(() => { stopped = true; activeRequest?.abort() })
 
 <style scoped>
 .user-table { overflow-x: auto; }
-.user-table table { width: 100%; border-collapse: collapse; font-size: 14px; }
-.user-table th, .user-table td { text-align: left; padding: 12px 8px; border-bottom: 1px solid #e5e8e2; }
+.user-table table { width: 100%; min-width: 720px; border-collapse: collapse; font-size: 14px; }
+.user-table th, .user-table td { text-align: left; padding: 12px 8px; border-bottom: 1px solid #e5e8e2; white-space: nowrap; }
 .scope-editor { gap: 8px; }
 .scope-editor select { border: 1px solid var(--color-control-border); border-radius: 3px; padding: 5px 8px; font: inherit; font-size: 13px; background: var(--color-surface); color: var(--color-text); }
 </style>

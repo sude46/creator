@@ -79,12 +79,12 @@ onBeforeUnmount(() => { stopped = true; activeRequest?.abort() })
 .admin-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin: 22px 0; }
 .metric-card { display: grid; gap: 8px; padding: 22px; border: 1px solid #d9ddd5; border-radius: 4px; background: #fff; color: #182522; }
 .metric-card:hover { border-color: #245e52; }
-.metric-card span { color: #748277; font-size: 13px; }
+.metric-card span { color: var(--color-muted); font-size: 13px; }
 .metric-card strong { font-size: 34px; line-height: 1; letter-spacing: -.04em; }
-.metric-card small { color: #c65b3d; font-size: 12px; }
+.metric-card small { color: var(--color-accent-text); font-size: 12px; }
 .metric-skeleton { min-height: 124px; background: linear-gradient(90deg, #f1f0ea, #faf9f4, #f1f0ea); background-size: 200% 100%; animation: pulse 1.4s infinite; }
 .admin-table-wrap { overflow-x: auto; }
-.admin-table-wrap table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.admin-table-wrap table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 13px; }
 .admin-table-wrap th, .admin-table-wrap td { text-align: left; padding: 11px 8px; border-bottom: 1px solid #e5e8e2; }
 @keyframes pulse { to { background-position: -200% 0; } }
 @media (max-width: 900px) { .admin-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }@media (max-width: 560px) { .admin-metrics { grid-template-columns: 1fr; } }

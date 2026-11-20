@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { auth } from '../stores/auth'
 import { useStudioError } from '../composables/useStudioError'
@@ -14,7 +14,21 @@ const canModerate = computed(() => user.value?.role === 'ADMIN' && (!user.value.
 const roleLabel = computed(() => !user.value || user.value.role !== 'ADMIN' ? '用户' : user.value.adminScope === 'REVIEWER' ? '审核员' : user.value.adminScope === 'MODERATOR' ? '内容管理员' : '超级管理员')
 const busy = ref(false)
 const error = ref('')
+const shell = ref<HTMLElement>()
 const explain = useStudioError()
+function revealActiveNav() {
+  const root = shell.value
+  if (!root) return
+  for (const nav of root.querySelectorAll<HTMLElement>('.workspace-nav, .admin-nav')) {
+    if (nav.scrollWidth <= nav.clientWidth) continue
+    const active = nav.querySelector<HTMLElement>('a.router-link-exact-active')
+    if (!active) continue
+    const navRect = nav.getBoundingClientRect()
+    const activeRect = active.getBoundingClientRect()
+    nav.scrollLeft += activeRect.left - navRect.left - (navRect.width - activeRect.width) / 2
+  }
+}
+onMounted(() => { void nextTick(revealActiveNav) })
 async function logout() {
   if (busy.value) return
   busy.value = true
@@ -25,7 +39,7 @@ async function logout() {
 </script>
 
 <template>
-  <div class="workspace">
+  <div ref="shell" class="workspace">
     <header class="workspace-header">
       <RouterLink class="brand" to="/">帧间<span>FRAME ROOM</span></RouterLink>
       <nav class="workspace-nav" aria-label="主导航"><RouterLink to="/">发现</RouterLink><RouterLink to="/favorites">我的收藏</RouterLink><RouterLink to="/history">观看历史</RouterLink><RouterLink to="/studio">我的作品</RouterLink><RouterLink to="/studio/collections">我的合集</RouterLink><RouterLink to="/notifications">通知</RouterLink><RouterLink to="/settings/profile">个人资料</RouterLink><RouterLink v-if="user?.role === 'ADMIN'" to="/admin">管理后台</RouterLink></nav>
@@ -59,9 +73,14 @@ async function logout() {
 }
 .admin-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; padding: 11px 28px; border-top: 1px solid #d9ddd5; border-bottom: 1px solid #d9ddd5; background: #fff; font-size: 13px; }
 .admin-nav a { color: #4f5f56; }
-.admin-nav a.router-link-exact-active { color: #c65b3d; font-weight: 700; }
-.admin-nav-group { color: #87918a; font-size: 11px; letter-spacing: .14em; margin-left: 8px; }
+.admin-nav a.router-link-exact-active { color: var(--color-accent-text); font-weight: 700; }
+.admin-nav-group { color: var(--color-muted-soft); font-size: 11px; letter-spacing: .14em; margin-left: 8px; }
 .admin-nav-group:first-child { margin-left: 0; }
 .workspace-footer { border-top: 1px solid var(--color-border); padding: 22px 28px 30px; text-align: center; color: var(--color-muted-soft); font-size: 12px; letter-spacing: .08em; }
-@media (max-width: 760px) { .admin-nav { padding: 10px 16px; } }
+@media (max-width: 760px) {
+  .admin-nav { flex-wrap: nowrap; overflow-x: auto; gap: 6px 14px; padding: 8px 16px; scrollbar-width: none; }
+  .admin-nav::-webkit-scrollbar { display: none; }
+  .admin-nav a { display: inline-flex; align-items: center; min-height: 40px; white-space: nowrap; }
+  .admin-nav-group { white-space: nowrap; margin-left: 4px; }
+}
 </style>

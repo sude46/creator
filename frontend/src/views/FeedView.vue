@@ -247,6 +247,9 @@ onBeforeUnmount(() => {
 .feed-poster{width:100%;height:100%;object-fit:contain}
 .feed-rail{position:absolute;right:18px;bottom:150px;z-index:2;display:grid;gap:18px;justify-items:center}.feed-rail button{display:grid;gap:5px;place-items:center;border:0;background:rgba(10,18,15,.35);color:var(--color-surface);font:inherit;font-size:22px;cursor:pointer;padding:9px;border-radius:50%;width:52px;height:52px}.feed-rail button span{font-size:10px;line-height:1}.feed-rail button[aria-pressed="true"]{color:#f0a096}
 .feed-copy{position:absolute;z-index:2;left:20px;right:90px;bottom:34px}.feed-category{color:#f0a096;font-size:11px;letter-spacing:.1em;margin:0 0 6px}.feed-copy h1{font-size:24px;line-height:1.25;margin:0 0 8px;overflow-wrap:anywhere}.feed-description{font-size:13px;line-height:1.6;color:rgba(247,244,236,.8);margin:0 0 8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.feed-detail{color:#f0a096;text-decoration:underline}.feed-author{font-size:13px;color:rgba(247,244,236,.72);margin:0}
+.feed-author a{color:var(--color-on-primary)}
+.feed-author a:hover{color:#f0a096}
+.feed-copy a:focus-visible{outline:2px solid #f0a096;outline-offset:2px;border-radius:2px}
 .feed-mute{position:absolute;z-index:2;right:18px;bottom:100px;border:1px solid rgba(247,244,236,.35);background:rgba(10,18,15,.35);color:var(--color-surface);border-radius:999px;padding:5px 9px;font-size:11px;cursor:pointer}
 .feed-progress{position:absolute;z-index:3;left:0;right:0;bottom:0;height:2px;background:rgba(247,244,236,.2)}.feed-progress span{display:block;height:100%;background:var(--color-accent)}
 .feed-state{height:100dvh;display:grid;place-items:center;padding:30px;text-align:center;color:var(--color-on-primary);background:var(--color-cover)}.feed-state a,.feed-state button{color:#f0a096;background:none;border:0;font:inherit;text-decoration:underline;cursor:pointer}

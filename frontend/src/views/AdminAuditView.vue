@@ -68,7 +68,7 @@ onBeforeUnmount(() => { stopped = true; activeRequest?.abort() })
 
 <style scoped>
 .audit-filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin-bottom: 20px; }
-.audit-filters label { display: grid; gap: 6px; font-size: 12px; color: #748277; }
+.audit-filters label { display: grid; gap: 6px; font-size: 12px; color: var(--color-muted); }
 .audit-filters input { min-width: 140px; padding: 8px; border: 1px solid #ccd8cd; border-radius: 3px; }
 .audit-table { overflow-x: auto; }
 .audit-table table { width: 100%; border-collapse: collapse; font-size: 13px; }

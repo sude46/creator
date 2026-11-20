@@ -17,10 +17,9 @@ colors:
   ink-pine: "#182522"
   deep-ink: "#233630"
   moss: "#40544a"
-  mist-grey: "#748277"
-  muted-text: "#657166"
-  mist-grey-light: "#87918a"
-  mist-grey-mid: "#7c8680"
+  mist-grey: "#58655c"
+  mist-grey-light: "#667267"
+  mist-grey-mid: "#616e64"
   hairline: "#d9ddd5"
   hairline-soft: "#e5e8e2"
   control-border: "#ccd8cd"
@@ -170,10 +169,9 @@ components:
 - **墨绿黑 Ink Pine** (#182522): 正文与标题。全站不用纯黑。
 - **深墨绿 Deep Ink** (#233630): 表单输入值、强调正文。
 - **苔绿 Secondary Moss** (#40544a): 次级文字、次要按钮文字、表格说明。
-- **雾松灰 Mist Grey** (#748277): 说明文字、字段标签、统计单位。
-- **可读雾松 Muted Text** (#657166): 首页与公共卡片上 12–13px 的说明、时间与元信息；4.6:1 on #f4f3ed。其余页面待迁移。
-- **雾松浅 Grey Light** (#87918a): 时间戳、卡片编号、极小注脚。
-- **雾松中 Grey Mid** (#7c8680): `.muted` 段落、空状态正文。
+- **雾松灰 Mist Grey** (#58655c): 说明文字、字段标签、统计单位；5.5:1 on #f4f3ed。
+- **雾松浅 Grey Light** (#667267): 时间戳、卡片编号、极小注脚；4.5:1 on #f4f3ed。
+- **雾松中 Grey Mid** (#616e64): `.muted` 段落、空状态正文；4.8:1 on #f4f3ed。
 - **发丝边框 Hairline** (#d9ddd5): 面板/卡片外框、表格横线、区块分隔。
 - **发丝浅 Hairline Soft** (#e5e8e2): 卡片内部横线、历史条目分隔。
 - **控件边框 Control Border** (#ccd8cd): 输入框、下拉、文本域、胶囊筛选的描边。
@@ -256,7 +254,7 @@ components:
 - **Default:** 白底 + 苔绿字 + #d9ddd5 描边，用于刷新、翻页、取消、次级动作。
 - **Danger:** 错误朱底 + 白字，仅用于删除、驳回、移除。
 - **Disabled / Loading:** 禁用用 #f5f7f3 底 + 雾松灰字；加载保留宽度并显示原生 spinner，不用骨架替换按钮。
-- **Element Plus 映射:** 全站只注册 `ElButton`、`ElInput`、`ElAlert`、`ElTag`。主色通过 `--el-color-primary` 映射到松绿及其 3/5/7/9 混色，禁止出现 Element 默认蓝。
+- **Element Plus 映射:** 全站只注册 `ElButton`、`ElInput`、`ElAlert`、`ElTag`。主色通过 `--el-color-primary` 映射到松绿及其 3/5/7/9 混色；控件圆角统一 3px、标签 2px、占位文字用雾松浅；标签的 info/success/warning/danger 四色已替换为达标的浅底深字，禁止出现 Element 默认蓝与低对比标签。
 
 ### Chips
 - **Style:** 999px 胶囊，白底、#ccd8cd 描边、12px / 600 苔绿字，内边距 5–6px 12–14px（发现页搜索框内为 8px 10px 8px 18px）。

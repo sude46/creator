@@ -178,7 +178,7 @@ onBeforeUnmount(() => { stopped = true; activeRequest?.abort(); ElMessageBox.clo
 
 <style scoped>
 .category-table { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+table { width: 100%; min-width: 620px; border-collapse: collapse; text-align: left; font-size: 14px; }
 caption { text-align: left; padding-bottom: 14px; color: #59665f; }
 th, td { padding: 14px 10px; border-bottom: 1px solid #d9ddd5; }
 td:first-child { overflow-wrap: anywhere; min-width: 110px; }

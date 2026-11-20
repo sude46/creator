@@ -75,7 +75,7 @@ onBeforeUnmount(() => { stopped = true; activeRequest?.abort() })
 .author-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .author-copy h1 { font-size: 30px; margin: 4px 0 8px; }
 .author-bio { max-width: 640px; margin: 0 0 10px; color: var(--color-secondary); line-height: 1.7; white-space: pre-wrap; }
-.author-link { display: inline-block; margin-top: 6px; font-size: 13px; color: var(--color-accent); overflow-wrap: anywhere; }
+.author-link { display: inline-block; margin-top: 6px; font-size: 13px; color: var(--color-accent-text); overflow-wrap: anywhere; }
 .author-actions { flex-wrap: wrap; justify-content: flex-end; }
 @media (max-width: 700px) { .author-hero { grid-template-columns: 1fr; } .author-actions { justify-content: flex-start; } }
 </style>
