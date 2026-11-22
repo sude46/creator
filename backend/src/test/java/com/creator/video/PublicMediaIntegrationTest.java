@@ -218,6 +218,12 @@ class PublicMediaIntegrationTest {
         assertEquals(0, listing("' OR 1=1 --").total());
         assertEquals(2, listing("").total());
         database.update("UPDATE video SET published_at='2026-01-01 00:00:00' WHERE id IN (?,?)", first, second);
+        database.update("UPDATE video SET description='unique-search-needle' WHERE id=?", first);
+        assertEquals(first, listing("unique-search-needle").items().getFirst().id());
+        assertEquals(1, listing("unique-search-needle").total());
+        assertEquals(2, publicVideos.list(new VideoSearch("", null, null, "media_author"), new PageRequest(1, 20)).total());
+        assertEquals(0, publicVideos.list(new VideoSearch("", null, null, "missing-author"), new PageRequest(1, 20)).total());
+        assertEquals(ErrorCode.INVALID_REQUEST, failure(() -> new VideoSearch("", null, null, "a".repeat(33))));
         assertEquals(second, publicVideos.list(new VideoSearch("", null), new PageRequest(1, 1)).items().getFirst().id());
         assertEquals(first, publicVideos.list(new VideoSearch("", null), new PageRequest(2, 1)).items().getFirst().id());
         assertEquals(0, publicVideos.list(new VideoSearch("", categoryId + 10000), new PageRequest(1, 20)).total());

@@ -23,6 +23,12 @@
 .public-search input::placeholder{color:var(--color-muted);opacity:1}
 .public-search .search-submit{flex:none;height:36px;padding:0 20px}
 
+.author-filter { display: flex; align-items: center; gap: 10px; margin: -12px 0 18px; }
+.author-filter label { font-size: 12px; color: var(--color-muted-text); flex: none; }
+.author-filter input { width: min(280px, 100%); border: 1px solid var(--color-control-border); border-radius: 999px; background: var(--color-surface); color: var(--color-text); padding: 7px 13px; font: inherit; font-size: 13px; }
+.author-filter input:focus { outline: 2px solid var(--color-focus); outline-offset: 1px; }
+@media (max-width: 520px) { .author-filter { flex-wrap: wrap; } .author-filter input { flex: 1; } }
+
 /* ---------- 筛选 ---------- */
 .filter-deck{display:grid;gap:10px;margin:0 0 30px}
 .filter-row{display:flex;align-items:center;gap:12px;min-width:0}

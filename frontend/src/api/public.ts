@@ -13,10 +13,11 @@ export type TagCount = { name: string; uses: number }
 export type Favorite = { videoId: string; createdAt: string; available: boolean; video: PublicVideo | null }
 function read<Result>(path: string, signal: AbortSignal) { return request<Result>(path, { signal: AbortSignal.any([signal, AbortSignal.timeout(30000)]) }) }
 export const publicApi = {
-  list: (title: string, categoryId: string, tag: string, sort: string, page: number, signal: AbortSignal) => {
+  list: (title: string, categoryId: string, tag: string, author: string, sort: string, page: number, signal: AbortSignal) => {
     const query = new URLSearchParams({ title, page: String(page), size: '12', sort })
     if (categoryId) query.set('categoryId', categoryId)
     if (tag) query.set('tag', tag)
+    if (author) query.set('author', author)
     return read<Page<PublicVideo>>(`/videos?${query}`, signal)
   },
   tags: (signal: AbortSignal) => read<{ items: TagCount[] }>('/tags?limit=20', signal),

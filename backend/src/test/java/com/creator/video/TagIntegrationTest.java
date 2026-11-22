@@ -83,6 +83,7 @@ class TagIntegrationTest {
         reviews.decide(admin, id, 2, 1, new ReviewDecision(ReviewDecision.Outcome.APPROVED, ""));
         assertEquals(1, publicVideos.list(new VideoSearch("", null, "后端"), new PageRequest(1, 20)).total());
         assertEquals(1, publicVideos.list(new VideoSearch("", null, "#spring"), new PageRequest(1, 20)).total());
+        assertEquals(1, publicVideos.list(new VideoSearch("后端", null), new PageRequest(1, 20)).total());
         assertEquals(1, publicVideos.list(new VideoSearch("", categoryId, "后端"), new PageRequest(1, 20)).total());
         assertEquals(0, publicVideos.list(new VideoSearch("", null, "前端"), new PageRequest(1, 20)).total());
         assertEquals(List.of(new TagCount("Spring", 1), new TagCount("后端", 1)), tagService.popular(20));

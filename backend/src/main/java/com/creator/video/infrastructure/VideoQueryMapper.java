@@ -26,7 +26,12 @@ public interface VideoQueryMapper {
             + " + 4 * (SELECT COUNT(*) FROM video_favorite favorite WHERE favorite.video_id = v.id)"
             + " + 5 * (SELECT COUNT(*) FROM video_comment comment WHERE comment.video_id = v.id AND comment.status = 'ACTIVE')"
             + " - 2 * TIMESTAMPDIFF(HOUR, v.published_at, CURRENT_TIMESTAMP))";
-    String FILTER = "<if test='title != null'> AND v.title LIKE #{pattern} ESCAPE '!'</if>"
+    String FILTER = "<if test='title != null'> AND (v.title LIKE #{pattern} ESCAPE '!'"
+            + " OR v.description LIKE #{pattern} ESCAPE '!'"
+            + " OR EXISTS (SELECT 1 FROM video_tag_item search_item JOIN video_tag search_tag ON search_tag.id = search_item.tag_id"
+            + " WHERE search_item.video_id = v.id AND search_tag.name LIKE #{pattern} ESCAPE '!'))</if>"
+            + "<if test='authorPattern != null'> AND (owner.username LIKE #{authorPattern} ESCAPE '!'"
+            + " OR profile.display_name LIKE #{authorPattern} ESCAPE '!')</if>"
             + "<if test='categoryId != null'> AND v.category_id = #{categoryId}</if>"
             + "<if test='tag != null'> AND EXISTS (SELECT 1 FROM video_tag_item tag_item"
             + " JOIN video_tag tag ON tag.id = tag_item.tag_id WHERE tag_item.video_id = v.id AND tag.name_key = #{tag})</if>";
@@ -34,24 +39,24 @@ public interface VideoQueryMapper {
     @Select("<script>SELECT " + COLUMNS + FROM + " WHERE " + PUBLIC + FILTER
             + " ORDER BY v.published_at DESC, v.id DESC LIMIT #{limit} OFFSET #{offset}</script>")
     List<PublicVideo> findPage(@Param("title") String title, @Param("pattern") String pattern,
-            @Param("categoryId") Long categoryId, @Param("tag") String tag,
+            @Param("categoryId") Long categoryId, @Param("tag") String tag, @Param("authorPattern") String authorPattern,
             @Param("limit") int limit, @Param("offset") int offset);
 
     @Select("<script>SELECT " + COLUMNS + FROM + " WHERE " + PUBLIC + FILTER
             + " ORDER BY v.view_count DESC, v.published_at DESC, v.id DESC LIMIT #{limit} OFFSET #{offset}</script>")
     List<PublicVideo> findPopularPage(@Param("title") String title, @Param("pattern") String pattern,
-            @Param("categoryId") Long categoryId, @Param("tag") String tag,
+            @Param("categoryId") Long categoryId, @Param("tag") String tag, @Param("authorPattern") String authorPattern,
             @Param("limit") int limit, @Param("offset") int offset);
 
     @Select("<script>SELECT " + COLUMNS + FROM + " WHERE " + PUBLIC + FILTER
             + " ORDER BY " + SCORE + " DESC, v.published_at DESC, v.id DESC LIMIT #{limit} OFFSET #{offset}</script>")
     List<PublicVideo> findRecommendedPage(@Param("title") String title, @Param("pattern") String pattern,
-            @Param("categoryId") Long categoryId, @Param("tag") String tag,
+            @Param("categoryId") Long categoryId, @Param("tag") String tag, @Param("authorPattern") String authorPattern,
             @Param("limit") int limit, @Param("offset") int offset);
 
     @Select("<script>SELECT COUNT(*)" + FROM + " WHERE " + PUBLIC + FILTER + "</script>")
     long count(@Param("title") String title, @Param("pattern") String pattern, @Param("categoryId") Long categoryId,
-            @Param("tag") String tag);
+            @Param("tag") String tag, @Param("authorPattern") String authorPattern);
 
     @Select("SELECT " + COLUMNS + FROM + " WHERE " + PUBLIC + " AND v.id = #{videoId}")
     PublicVideo findPublic(long videoId);
@@ -63,14 +68,15 @@ public interface VideoQueryMapper {
 
     @Select("<script>SELECT " + COLUMNS + FROM + " WHERE " + PUBLIC + " AND v.id = #{videoId}" + FILTER + "</script>")
     PublicVideo findPublicInSearch(@Param("videoId") long videoId, @Param("title") String title,
-            @Param("pattern") String pattern, @Param("categoryId") Long categoryId, @Param("tag") String tag);
+            @Param("pattern") String pattern, @Param("categoryId") Long categoryId, @Param("tag") String tag,
+            @Param("authorPattern") String authorPattern);
 
     @Select("<script>SELECT * FROM (SELECT " + COLUMNS + FROM + " WHERE " + PUBLIC + FILTER
             + " AND (v.published_at &gt; #{publishedAt} OR (v.published_at = #{publishedAt} AND v.id &gt; #{videoId}))"
             + " ORDER BY v.published_at ASC, v.id ASC LIMIT #{limit}) newer"
             + " ORDER BY newer.published_at DESC, newer.id DESC</script>")
     List<PublicVideo> findNewer(@Param("title") String title, @Param("pattern") String pattern,
-            @Param("categoryId") Long categoryId, @Param("tag") String tag,
+            @Param("categoryId") Long categoryId, @Param("tag") String tag, @Param("authorPattern") String authorPattern,
             @Param("publishedAt") java.time.LocalDateTime publishedAt,
             @Param("videoId") long videoId, @Param("limit") int limit);
 
@@ -78,7 +84,7 @@ public interface VideoQueryMapper {
             + " AND (v.published_at &lt; #{publishedAt} OR (v.published_at = #{publishedAt} AND v.id &lt; #{videoId}))"
             + " ORDER BY v.published_at DESC, v.id DESC LIMIT #{limit}</script>")
     List<PublicVideo> findOlder(@Param("title") String title, @Param("pattern") String pattern,
-            @Param("categoryId") Long categoryId, @Param("tag") String tag,
+            @Param("categoryId") Long categoryId, @Param("tag") String tag, @Param("authorPattern") String authorPattern,
             @Param("publishedAt") java.time.LocalDateTime publishedAt,
             @Param("videoId") long videoId, @Param("limit") int limit);
 

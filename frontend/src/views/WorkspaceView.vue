@@ -13,6 +13,7 @@ const explain = useStudioError()
 const title = ref('')
 const category = ref('')
 const tag = ref('')
+const author = ref('')
 const sort = ref('latest')
 const categories = ref<{ id: string; name: string }[]>([])
 const tags = ref<TagCount[]>([])
@@ -71,22 +72,24 @@ async function load() {
   const queryTitle = typeof route.query.title === 'string' ? route.query.title : ''
   const queryCategory = typeof route.query.category === 'string' ? route.query.category : ''
   const queryTag = typeof route.query.tag === 'string' ? route.query.tag : ''
+  const queryAuthor = typeof route.query.author === 'string' ? route.query.author : ''
   const querySort = typeof route.query.sort === 'string' ? route.query.sort : 'latest'
   const queryPage = Number(route.query.page ?? 1)
   title.value = queryTitle
   category.value = queryCategory
   tag.value = queryTag
+  author.value = queryAuthor
   sort.value = querySort === 'popular' || querySort === 'recommended' ? querySort : 'latest'
   if (queryTitle.length > 120 || !Number.isInteger(queryPage) || queryPage < 1 || queryPage > 1000
       || (queryCategory && !/^[1-9]\d{0,18}$/.test(queryCategory))
-      || queryTag.length > 20 || !['latest', 'popular', 'recommended'].includes(querySort)) {
-    error.value = '搜索词最长 120 字，标签最长 20 字，分类无效或页码不在 1～1000 之间。'
+      || queryTag.length > 20 || queryAuthor.length > 32 || !['latest', 'popular', 'recommended'].includes(querySort)) {
+    error.value = '搜索词最长 120 字，标签最长 20 字，作者最长 32 字，分类无效或页码不在 1～1000 之间。'
     loading.value = false
     return
   }
   page.value = queryPage
   try {
-    const result = await publicApi.list(queryTitle, queryCategory, queryTag, sort.value, queryPage, controller.signal)
+    const result = await publicApi.list(queryTitle, queryCategory, queryTag, queryAuthor, sort.value, queryPage, controller.signal)
     if (controller.signal.aborted) return
     videos.value = result.items
     total.value = result.total
@@ -99,6 +102,7 @@ function navigate(next = 1, nextCategory = category.value, nextTag = tag.value, 
   if (title.value.trim()) query.title = title.value.trim()
   if (nextCategory) query.category = nextCategory
   if (nextTag) query.tag = nextTag
+  if (author.value.trim()) query.author = author.value.trim()
   if (nextSort !== 'latest') query.sort = nextSort
   if (next > 1) query.page = String(next)
   void router.push({ path: '/', query })
@@ -106,6 +110,7 @@ function navigate(next = 1, nextCategory = category.value, nextTag = tag.value, 
 
 function clearFilters() {
   title.value = ''
+  author.value = ''
   navigate(1, '', '', 'latest')
 }
 
@@ -136,9 +141,14 @@ onBeforeUnmount(() => { stopped = true; activeRequest?.abort(); categoryRequest?
     <form class="public-search" role="search" @submit.prevent="navigate()">
       <label class="sr-only" for="video-search">按标题找作品</label>
       <svg class="search-icon" viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="9" cy="9" r="5.25" /><path d="m13 13 3.5 3.5" stroke-linecap="round" /></svg>
-      <input id="video-search" v-model="title" type="search" maxlength="120" placeholder="按标题搜索作品" />
+      <input id="video-search" v-model="title" type="search" maxlength="120" placeholder="按标题、简介或标签搜索作品" />
       <el-button class="search-submit" type="primary" native-type="submit">搜索</el-button>
     </form>
+    <div class="author-filter">
+      <label for="author-search">作者</label>
+      <input id="author-search" v-model="author" type="search" maxlength="32" placeholder="按用户名或昵称筛选" @keyup.enter="navigate()" />
+      <el-button v-if="author" size="small" @click="author = ''; navigate()">清除</el-button>
+    </div>
 
     <div class="filter-deck">
       <div class="filter-row" role="group" aria-label="按分类筛选">

@@ -161,7 +161,7 @@ async function loadMore() {
   try {
     const page = mode.value === 'following'
       ? await publicApi.following(next, controller.signal)
-      : await publicApi.list('', category.value, '', mode.value === 'recommended' ? 'recommended' : 'latest', next, controller.signal)
+      : await publicApi.list('', category.value, '', '', mode.value === 'recommended' ? 'recommended' : 'latest', next, controller.signal)
     if (stopped || controller.signal.aborted) return
     const known = new Set(items.value.map(item => item.id))
     const appended = page.items.filter(item => !known.has(item.id))
@@ -206,7 +206,7 @@ async function loadFeed(nextCategory = category.value, followingMode = false, re
       feedTotal.value = page.total
       hasMore.value = page.items.length < page.total
     } else {
-      const page = await publicApi.list('', nextCategory, '', recommendedMode ? 'recommended' : 'latest', 1, controller.signal)
+      const page = await publicApi.list('', nextCategory, '', '', recommendedMode ? 'recommended' : 'latest', 1, controller.signal)
       if (stopped || controller.signal.aborted) return
       items.value = page.items
       feedTotal.value = page.total
