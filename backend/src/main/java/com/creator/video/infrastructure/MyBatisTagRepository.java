@@ -2,6 +2,7 @@ package com.creator.video.infrastructure;
 
 import com.creator.video.domain.*;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Repository;
 
@@ -20,6 +21,16 @@ public class MyBatisTagRepository implements TagRepository {
             mapper.insertItem(videoId, tagId);
         }
     }
+
+    public List<TagAdmin> adminList() { return mapper.adminList(); }
+    public Optional<TagAdmin> find(long id) { return Optional.ofNullable(mapper.findAdmin(id)); }
+    public boolean rename(long id, String name, String key) { return mapper.rename(id, name, key) == 1; }
+    public void merge(long sourceId, long targetId) {
+        mapper.moveItems(sourceId, targetId);
+        mapper.deleteTagItems(sourceId);
+        mapper.deleteTag(sourceId);
+    }
+    public boolean delete(long id) { return mapper.deleteTag(id) == 1; }
 
     private long tagId(String name) {
         String key = VideoTags.key(name);

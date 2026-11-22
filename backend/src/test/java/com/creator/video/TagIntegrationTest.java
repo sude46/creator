@@ -96,6 +96,35 @@ class TagIntegrationTest {
     }
 
     @Test
+    void adminsRenameMergeAndDeleteTagsWithUsageGuards() {
+        long first = ready("tag admin one");
+        long second = ready("tag admin two");
+        tags.replace(first, List.of("旧标签", "保留"));
+        tags.replace(second, List.of("旧标签", "独立"));
+        var listed = tagService.adminList(admin);
+        long oldId = listed.stream().filter(tag -> tag.name().equals("旧标签")).findFirst().orElseThrow().id();
+        long keepId = listed.stream().filter(tag -> tag.name().equals("保留")).findFirst().orElseThrow().id();
+        long independentId = listed.stream().filter(tag -> tag.name().equals("独立")).findFirst().orElseThrow().id();
+        assertEquals(2, listed.stream().filter(tag -> tag.name().equals("旧标签")).findFirst().orElseThrow().uses());
+
+        assertEquals("新标签", tagService.rename(admin, keepId, " 新标签 ").name());
+        assertEquals(List.of("新标签", "旧标签"), tags.tags(first));
+        assertEquals(ErrorCode.TAG_NAME_TAKEN, failure(() -> { tagService.rename(admin, keepId, "旧标签"); }));
+
+        tagService.merge(admin, oldId, keepId);
+        assertEquals(List.of("新标签"), tags.tags(first));
+        assertEquals(List.of("新标签", "独立"), tags.tags(second));
+        assertTrue(tagService.adminList(admin).stream().noneMatch(tag -> tag.name().equals("旧标签")));
+
+        assertEquals(ErrorCode.TAG_IN_USE, failure(() -> tagService.delete(admin, independentId)));
+        var reviewer = new Actor(admin.id(), admin.username(), Role.ADMIN, AdminScope.REVIEWER);
+        assertEquals(ErrorCode.FORBIDDEN, failure(() -> tagService.adminList(reviewer)));
+        tags.replace(second, List.of("新标签"));
+        tagService.delete(admin, independentId);
+        assertTrue(tagService.adminList(admin).stream().noneMatch(tag -> tag.name().equals("独立")));
+    }
+
+    @Test
     void tagValidationRejectsDuplicatesLimitsAndUnsafeCharacters() {
         assertEquals(ErrorCode.INVALID_TAG, failure(() -> new VideoMetadata("t", "", categoryId,
                 List.of("one", "two", "three", "four", "five", "six"))));
@@ -126,6 +155,6 @@ class TagIntegrationTest {
         database.update("INSERT INTO processing_task (video_id,state) VALUES (?,'SUCCEEDED')", id);
         return id;
     }
-    private ErrorCode failure(java.util.concurrent.Callable<?> operation) { return assertThrows(BusinessException.class, operation::call).getCode(); }
+    private ErrorCode failure(org.junit.jupiter.api.function.Executable operation) { return assertThrows(BusinessException.class, operation).getCode(); }
     private Actor actor(String name) { var account = accounts.findSummary(name).orElseThrow(); return new Actor(account.id(), name, account.role()); }
 }

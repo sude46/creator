@@ -27,6 +27,8 @@ public enum ErrorCode {
     INVALID_FOLDER_NAME("收藏夹名称需为 1～30 位且不能包含控制字符"),
     FOLDER_NAME_TAKEN("收藏夹名称已存在"),
     FOLDER_LIMIT_REACHED("收藏夹数量已达上限"),
+    TAG_NAME_TAKEN("标签名称已存在"),
+    TAG_IN_USE("标签仍被作品使用，不能删除"),
     INVALID_TAG("标签最多 5 个，每个 1～20 个字符，不能重复或包含逗号和控制字符"),
     INVALID_REQUEST_KEY("创建请求键必须为标准 UUID"),
     REQUEST_KEY_CONFLICT("该请求键已用于不同的创建内容"),

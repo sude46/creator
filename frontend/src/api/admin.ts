@@ -6,6 +6,7 @@ export type Decision = 'APPROVED' | 'REJECTED'
 export type BatchReviewResult = { results: { videoId: string; ok: boolean; code: string | null; message: string }[]; succeeded: number; failed: number }
 export type AdminModerationRecord = { id: string; actorId: string; action: string; reason: string; createdAt: string }
 export type AdminUser = { id: string; username: string; role: 'USER' | 'ADMIN'; status: 'ACTIVE' | 'DISABLED'; adminScope: 'SUPER_ADMIN' | 'REVIEWER' | 'MODERATOR' | null }
+export type AdminTag = { id: string; name: string; uses: number }
 export type ContentReport = { id: string; reporterId: string; reporterName: string; targetType: 'VIDEO' | 'COMMENT'; targetId: string; reason: string; status: 'OPEN' | 'DISMISSED' | 'REMOVED'; resolverId: string | null; resolutionReason: string | null; createdAt: string; resolvedAt: string | null }
 export type AuditRecord = { id: string; actorId: string; action: string; targetType: string; targetId: string; reason: string | null; requestId: string | null; createdAt: string }
 export type AdminOverview = { pendingReviews: string; failedProcessing: string; todayUsers: string; todayDecisions: string; recentDecisions: { id: string; videoId: string; reviewerId: string; outcome: 'APPROVED' | 'REJECTED'; reason: string; title: string; createdAt: string }[] }
@@ -24,6 +25,10 @@ export const adminApi = {
     for (const [key, value] of Object.entries(filters)) if (value) query.set(key, value)
     window.location.assign(`/api/admin/audit/export?${query}`)
   },
+  tags: (signal: AbortSignal) => boundedRead<AdminTag[]>('/admin/tags', signal),
+  renameTag: (tag: AdminTag, name: string) => request<AdminTag>(`/admin/tags/${tag.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) }),
+  mergeTag: (tag: AdminTag, targetId: string) => request<void>(`/admin/tags/${tag.id}/merge`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ targetId }) }),
+  deleteTag: (tag: AdminTag) => request<void>(`/admin/tags/${tag.id}`, { method: 'DELETE' }),
   reports: (status: string, page: number, signal: AbortSignal) => boundedRead<Page<ContentReport>>(`/admin/reports?status=${status}&page=${page}&size=20`, signal),
   resolveReport: (report: ContentReport, action: 'DISMISS' | 'REMOVE', reason: string) => request<void>(`/admin/reports/${report.id}/resolve`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, reason }) }),
   users: (page: number, signal: AbortSignal) => boundedRead<Page<AdminUser>>(`/admin/users?page=${page}&size=20`, signal),
