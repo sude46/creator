@@ -70,6 +70,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/videos/following").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/videos", "/api/videos/*", "/api/videos/*/tags",
                         "/api/tags", "/api/categories").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/videos/*/media").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated());
         http.requestCache(cache -> cache.disable());

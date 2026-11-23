@@ -11,7 +11,8 @@ public class MediaController {
     private final MediaAuthorizationService media;
     public MediaController(MediaAuthorizationService media) { this.media = media; }
     @PostMapping("/api/videos/{id}/media")
-    public ResponseEntity<MediaSigner.SignedMedia> publicMedia(@RequestAttribute("currentActor") Actor actor, @PathVariable long id,
+    public ResponseEntity<MediaSigner.SignedMedia> publicMedia(
+            @RequestAttribute(value = "currentActor", required = false) Actor actor, @PathVariable long id,
             @RequestParam MediaKind kind) {
         return grant(actor, id, MediaPurpose.PUBLIC_PLAY, kind, null, null, false);
     }

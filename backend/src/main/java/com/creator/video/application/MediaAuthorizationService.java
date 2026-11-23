@@ -24,15 +24,16 @@ public class MediaAuthorizationService {
 
     public MediaSigner.SignedMedia authorize(Actor actor, long videoId, MediaPurpose purpose, MediaKind kind, Long version,
             Long round, boolean attachment) {
-        if (actor == null) throw new BusinessException(ErrorCode.UNAUTHENTICATED);
         if (purpose == null || kind == null) throw new BusinessException(ErrorCode.INVALID_REQUEST);
-        var active = accounts.current(actor.username());
-        if (!active.equals(actor)) throw new BusinessException(ErrorCode.SESSION_INVALID);
+        if (actor == null && purpose != MediaPurpose.PUBLIC_PLAY) throw new BusinessException(ErrorCode.UNAUTHENTICATED);
+        if (actor != null && !accounts.current(actor.username()).equals(actor)) {
+            throw new BusinessException(ErrorCode.SESSION_INVALID);
+        }
         if (purpose == MediaPurpose.REVIEW_PREVIEW || purpose == MediaPurpose.REVIEW_DOWNLOAD) {
             if (!actor.canReview() && !actor.canModerate()) throw new BusinessException(ErrorCode.FORBIDDEN);
             if (version == null || version < 0 || round == null || round < 1) throw new BusinessException(ErrorCode.INVALID_REQUEST);
         }
-        var target = videos.media(videoId, actor.id(), purpose, kind, version, round)
+        var target = videos.media(videoId, actor == null ? 0L : actor.id(), purpose, kind, version, round)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         var signer = signers.getIfAvailable();
         if (signer == null) throw new BusinessException(ErrorCode.SERVICE_UNAVAILABLE);

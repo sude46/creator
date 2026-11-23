@@ -338,6 +338,15 @@ class PublicMediaIntegrationTest {
     }
 
     @Test
+    void anonymousCanSignPublicMediaButNotPrivatePurposes() throws Exception {
+        long id = published("anon-sign");
+        mvc.perform(post("/api/videos/{id}/media", id).with(csrf()).param("kind", "COVER"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.expiresAt").exists());
+        mvc.perform(post("/api/creator/videos/{id}/preview", id).with(csrf()).param("kind", "SOURCE"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void ownerAndReviewerCanDownloadWithoutOpeningPublicAccess() throws Exception {
         long readyId = ready(author, "download ready");
         mvc.perform(post("/api/creator/videos/{id}/download", readyId).session(login(author)).with(csrf())
