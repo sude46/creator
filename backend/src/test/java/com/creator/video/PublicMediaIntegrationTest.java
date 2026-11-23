@@ -315,6 +315,8 @@ class PublicMediaIntegrationTest {
         mvc.perform(post("/api/videos/{id}/comments", id).with(csrf()).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"content\":\"anonymous\"}"))
                 .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/videos/{id}/view", id).with(csrf()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.viewCount").value(1));
         mvc.perform(get("/api/authors/{id}/profile", author.id())).andExpect(status().isOk())
                 .andExpect(jsonPath("$.self").value(false));
         mvc.perform(get("/api/authors/{id}/videos", author.id())).andExpect(status().isOk())
