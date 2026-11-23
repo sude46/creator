@@ -5,6 +5,7 @@ import { publicApi } from '../api/public'
 import type { PublicVideo } from '../api/public'
 import { cachedCover } from '../api/coverCache'
 import { useStudioError } from '../composables/useStudioError'
+import { auth } from '../stores/auth'
 
 const route = useRoute()
 const router = useRouter()
@@ -102,6 +103,7 @@ function setCurrent(index: number) {
 }
 
 async function loadFavorite() {
+  if (!auth.user.value) { favorited.value = undefined; return }
   const item = items.value[current.value]
   if (!item) return
   favoriteRequest?.abort()
@@ -114,7 +116,7 @@ async function loadFavorite() {
   } catch { if (!stopped && !controller.signal.aborted) favorited.value = undefined }
 }
 
-async function loadLike() { const item = items.value[current.value]; if (!item) return; liked.value = undefined; try { const r = await publicApi.likeState(item.id, new AbortController().signal); if (!stopped) liked.value = r.liked } catch { if (!stopped) liked.value = undefined } }
+async function loadLike() { if (!auth.user.value) { liked.value = undefined; return } const item = items.value[current.value]; if (!item) return; liked.value = undefined; try { const r = await publicApi.likeState(item.id, new AbortController().signal); if (!stopped) liked.value = r.liked } catch { if (!stopped) liked.value = undefined } }
 async function toggleLike() { const item = items.value[current.value]; if (!item || liked.value === undefined || likeBusy.value) return; const add = !liked.value; likeBusy.value = true; try { await publicApi.like(item.id, add); if (!stopped) { liked.value = add; items.value[current.value] = { ...item, likeCount: Math.max(0, item.likeCount + (add ? 1 : -1)) } } } catch { /* best effort */ } finally { if (!stopped) likeBusy.value = false } }
 async function toggleFavorite() {
   const item = items.value[current.value]
@@ -243,7 +245,7 @@ onBeforeUnmount(() => {
   <main class="feed-shell">
     <header class="feed-top">
       <RouterLink class="feed-brand" to="/">帧间</RouterLink>
-      <nav class="feed-tabs" aria-label="分类"><button :class="{ active: following }" @click="loadFeed('', true)">关注</button><button :class="{ active: recommended }" @click="loadFeed('', false, true)">推荐</button><button :class="{ active: !following && !recommended && !category }" @click="loadFeed('', false)">全部</button><button v-for="item in categories" :key="item.id" :class="{ active: !following && !recommended && category === item.id }" @click="loadFeed(item.id)">{{ item.name }}</button></nav>
+      <nav class="feed-tabs" aria-label="分类"><button v-if="auth.user.value" :class="{ active: following }" @click="loadFeed('', true)">关注</button><button :class="{ active: recommended }" @click="loadFeed('', false, true)">推荐</button><button :class="{ active: !following && !recommended && !category }" @click="loadFeed('', false)">全部</button><button v-for="item in categories" :key="item.id" :class="{ active: !following && !recommended && category === item.id }" @click="loadFeed(item.id)">{{ item.name }}</button></nav>
       <div class="feed-actions"><RouterLink class="feed-action" to="/favorites" aria-label="我的收藏">♡</RouterLink><RouterLink class="feed-action feed-publish" to="/studio" aria-label="发布作品">＋</RouterLink><RouterLink class="feed-action feed-grid-link" to="/" aria-label="切换到网格">▦</RouterLink></div>
     </header>
     <p v-if="notice" class="feed-notice" role="status">{{ notice }}</p>

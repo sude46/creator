@@ -30,20 +30,22 @@ public class CommentService {
     }
     @Transactional(readOnly = true)
     public PageResult<Comment> list(Actor actor, long videoId, String sort, PageRequest page) {
-        active(actor); videos.findPublic(videoId).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        if (actor != null) active(actor);
+        videos.findPublic(videoId).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         String order = sort == null ? "latest" : sort.trim().toLowerCase();
         if (!(order.equals("latest") || order.equals("oldest") || order.equals("hot"))) {
             throw new BusinessException(ErrorCode.INVALID_REQUEST);
         }
-        return new PageResult<>(comments.page(videoId, actor.id(), order, page), comments.count(videoId),
-                page.page(), page.size());
+        return new PageResult<>(comments.page(videoId, actor == null ? 0 : actor.id(), order, page),
+                comments.count(videoId), page.page(), page.size());
     }
     @Transactional(readOnly = true)
     public PageResult<Comment> replies(Actor actor, long parentId, PageRequest page) {
-        active(actor);
+        if (actor != null) active(actor);
         var parent = comments.find(parentId).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         videos.findPublic(parent.videoId()).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-        return new PageResult<>(comments.replies(parentId, actor.id(), page), comments.replyCount(parentId), page.page(), page.size());
+        return new PageResult<>(comments.replies(parentId, actor == null ? 0 : actor.id(), page),
+                comments.replyCount(parentId), page.page(), page.size());
     }
     @Transactional(timeout = 5)
     public Comment add(Actor actor, long videoId, String content) { return add(actor, videoId, content, null); }

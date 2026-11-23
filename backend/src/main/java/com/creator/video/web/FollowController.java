@@ -14,7 +14,8 @@ public class FollowController {
     public FollowController(FollowService follows) { this.follows = follows; }
 
     @GetMapping("/api/authors/{id}/profile")
-    public FollowService.Profile profile(@RequestAttribute("currentActor") Actor actor, @PathVariable long id) {
+    public FollowService.Profile profile(@RequestAttribute(value = "currentActor", required = false) Actor actor,
+            @PathVariable long id) {
         return follows.profile(actor, id);
     }
     @GetMapping("/api/authors/{id}/followers")

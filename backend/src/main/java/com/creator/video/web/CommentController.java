@@ -19,7 +19,8 @@ public class CommentController {
     public CommentController(CommentService comments) { this.comments = comments; }
 
     @GetMapping("/api/videos/{videoId}/comments")
-    public PageResult<CommentView> list(@RequestAttribute("currentActor") Actor actor, @PathVariable long videoId,
+    public PageResult<CommentView> list(@RequestAttribute(value = "currentActor", required = false) Actor actor,
+            @PathVariable long videoId,
             @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "latest") String sort) {
         var result = comments.list(actor, videoId, sort, new PageRequest(page, size));
@@ -27,7 +28,8 @@ public class CommentController {
     }
 
     @GetMapping("/api/comments/{id}/replies")
-    public PageResult<CommentView> replies(@RequestAttribute("currentActor") Actor actor, @PathVariable long id,
+    public PageResult<CommentView> replies(@RequestAttribute(value = "currentActor", required = false) Actor actor,
+            @PathVariable long id,
             @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "50") int size) {
         var result = comments.replies(actor, id, new PageRequest(page, size));
         return new PageResult<>(result.items().stream().map(CommentView::from).toList(), result.total(), result.page(), result.size());

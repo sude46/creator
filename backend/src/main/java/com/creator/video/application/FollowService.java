@@ -25,13 +25,15 @@ public class FollowService {
 
     @Transactional(readOnly = true)
     public Profile profile(Actor actor, long authorId) {
-        active(actor);
+        if (actor != null) active(actor);
         String username = follows.activeUsername(authorId);
         if (username == null) throw new BusinessException(ErrorCode.NOT_FOUND);
+        long viewerId = actor == null ? 0 : actor.id();
         var details = profiles.summary(authorId);
         return new Profile(authorId, username, details.displayName(), details.bio(), details.website(), details.hasAvatar(),
                 details.version(), follows.followerCount(authorId), follows.followingCount(authorId),
-                authorId != actor.id() && follows.exists(actor.id(), authorId), authorId == actor.id());
+                viewerId != 0 && authorId != viewerId && follows.exists(viewerId, authorId),
+                viewerId != 0 && authorId == viewerId);
     }
 
     @Transactional(readOnly = true)

@@ -310,6 +310,15 @@ class PublicMediaIntegrationTest {
     void httpQueriesRequireLoginAndReturnOnlyPublicProjectionWithStringIds() throws Exception {
         long id = published("http");
         mvc.perform(get("/api/videos")).andExpect(status().isOk());
+        mvc.perform(get("/api/videos/{id}/comments", id)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(0));
+        mvc.perform(post("/api/videos/{id}/comments", id).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"content\":\"anonymous\"}"))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/authors/{id}/profile", author.id())).andExpect(status().isOk())
+                .andExpect(jsonPath("$.self").value(false));
+        mvc.perform(get("/api/authors/{id}/videos", author.id())).andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(1));
         var session = login(other);
         var response = mvc.perform(get("/api/videos/{id}", id).session(session)).andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(Long.toString(id))).andExpect(jsonPath("$.authorId").isString())

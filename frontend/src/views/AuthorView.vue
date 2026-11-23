@@ -6,6 +6,7 @@ import PublicVideoCard from '../components/PublicVideoCard.vue'
 import { publicApi } from '../api/public'
 import type { AuthorProfile, PublicCollection, PublicVideo } from '../api/public'
 import { useStudioError } from '../composables/useStudioError'
+import { auth } from '../stores/auth'
 
 const route = useRoute()
 const explain = useStudioError()
@@ -56,7 +57,7 @@ onBeforeUnmount(() => { stopped = true; activeRequest?.abort() })
         <p class="muted author-stats">公开作品 · {{ total }} 部<span v-if="profile"> · <RouterLink :to="`/authors/${id}/followers`">{{ profile.followerCount }} 关注者</RouterLink> · <RouterLink :to="`/authors/${id}/following`">{{ profile.followingCount }} 关注中</RouterLink></span></p>
         <a v-if="profile?.website" class="author-link" :href="profile.website" target="_blank" rel="noopener noreferrer nofollow">{{ profile.website }}</a>
       </div>
-      <div class="inline-actions author-actions"><template v-if="profile?.self"><RouterLink class="create-link" to="/settings/profile">编辑资料</RouterLink></template><el-button v-else-if="profile" :loading="followBusy" @click="toggleFollow">{{ profile.following ? '已关注' : '关注' }}</el-button><RouterLink class="create-link" to="/">返回发现</RouterLink></div>
+      <div class="inline-actions author-actions"><template v-if="profile?.self"><RouterLink class="create-link" to="/settings/profile">编辑资料</RouterLink></template><el-button v-else-if="profile && auth.user.value" :loading="followBusy" @click="toggleFollow">{{ profile.following ? '已关注' : '关注' }}</el-button><RouterLink class="create-link" to="/">返回发现</RouterLink></div>
     </div>
     <el-alert v-if="error" :title="error" type="error" :closable="false" role="alert" />
     <section v-if="collections.length" class="studio-panel"><div class="section-heading"><h2>合集</h2></div><div class="inline-actions"><RouterLink v-for="collection in collections" :key="collection.id" class="create-link" :to="`/collections/${collection.id}`">{{ collection.title }} · {{ collection.itemCount }}</RouterLink></div></section>
