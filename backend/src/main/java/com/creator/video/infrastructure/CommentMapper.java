@@ -13,9 +13,13 @@ public interface CommentMapper {
             + " c.created_at";
     String FROM = " FROM video_comment c JOIN user_account owner ON owner.id = c.user_id";
 
-    @Select("SELECT " + COLUMNS + FROM + " WHERE c.video_id = #{videoId} AND c.status = 'ACTIVE'"
-            + " AND c.parent_id IS NULL ORDER BY c.id DESC LIMIT #{limit} OFFSET #{offset}")
-    List<Comment> page(@Param("videoId") long videoId, @Param("actorId") long actorId,
+    @Select("<script>SELECT " + COLUMNS + FROM + " WHERE c.video_id = #{videoId} AND c.status = 'ACTIVE'"
+            + " AND c.parent_id IS NULL"
+            + "<choose><when test=\"sort == 'oldest'\"> ORDER BY c.id ASC</when>"
+            + "<when test=\"sort == 'hot'\"> ORDER BY like_count DESC, c.id DESC</when>"
+            + "<otherwise> ORDER BY c.id DESC</otherwise></choose>"
+            + " LIMIT #{limit} OFFSET #{offset}</script>")
+    List<Comment> page(@Param("videoId") long videoId, @Param("actorId") long actorId, @Param("sort") String sort,
             @Param("limit") int limit, @Param("offset") int offset);
 
     @Select("SELECT COUNT(*) FROM video_comment WHERE video_id = #{videoId} AND status = 'ACTIVE' AND parent_id IS NULL")

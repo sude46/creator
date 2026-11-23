@@ -20,8 +20,9 @@ public class CommentController {
 
     @GetMapping("/api/videos/{videoId}/comments")
     public PageResult<CommentView> list(@RequestAttribute("currentActor") Actor actor, @PathVariable long videoId,
-            @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size) {
-        var result = comments.list(actor, videoId, new PageRequest(page, size));
+            @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "latest") String sort) {
+        var result = comments.list(actor, videoId, sort, new PageRequest(page, size));
         return new PageResult<>(result.items().stream().map(CommentView::from).toList(), result.total(), result.page(), result.size());
     }
 

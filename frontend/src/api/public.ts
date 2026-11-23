@@ -44,7 +44,7 @@ export const publicApi = {
   favoriteState: (id: string, signal: AbortSignal) => read<{ favorited: boolean }>(`/favorites/${id}`, signal),
   favorite: (id: string, add: boolean) => request<void>(`/favorites/${id}`, { method: add ? 'PUT' : 'DELETE' }),
   like: (id: string, add: boolean) => request<void>(`/videos/${id}/like`, { method: add ? 'PUT' : 'DELETE' }),
-  comments: (videoId: string, page: number, signal: AbortSignal) => read<Page<Comment>>(`/videos/${videoId}/comments?page=${page}&size=10`, signal),
+  comments: (videoId: string, page: number, sort: string, signal: AbortSignal) => read<Page<Comment>>(`/videos/${videoId}/comments?page=${page}&size=10&sort=${sort}`, signal),
   addComment: (videoId: string, content: string, parentId?: string) => request<Comment>(`/videos/${videoId}/comments`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content, parentId }) }),
   replies: (commentId: string, signal: AbortSignal) => read<Page<Comment>>(`/comments/${commentId}/replies?page=1&size=50`, signal),
   likeComment: (commentId: string, add: boolean) => request<void>(`/comments/${commentId}/like`, { method: add ? 'PUT' : 'DELETE' }),

@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface CommentRepository {
-    List<Comment> page(long videoId, long actorId, PageRequest page);
+    List<Comment> page(long videoId, long actorId, String sort, PageRequest page);
     long count(long videoId);
     List<Comment> replies(long parentId, long actorId, PageRequest page);
     long replyCount(long parentId);

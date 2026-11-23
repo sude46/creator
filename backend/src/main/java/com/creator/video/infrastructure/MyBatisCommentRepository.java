@@ -12,8 +12,8 @@ import org.springframework.stereotype.Repository;
 public class MyBatisCommentRepository implements CommentRepository {
     private final CommentMapper mapper;
     public MyBatisCommentRepository(CommentMapper mapper) { this.mapper = mapper; }
-    public List<Comment> page(long videoId, long actorId, PageRequest page) {
-        return mapper.page(videoId, actorId, page.size(), page.offset());
+    public List<Comment> page(long videoId, long actorId, String sort, PageRequest page) {
+        return mapper.page(videoId, actorId, sort, page.size(), page.offset());
     }
     public long count(long videoId) { return mapper.count(videoId); }
     public List<Comment> replies(long parentId, long actorId, PageRequest page) {

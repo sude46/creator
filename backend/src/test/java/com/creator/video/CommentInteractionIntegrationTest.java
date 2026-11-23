@@ -93,6 +93,21 @@ class CommentInteractionIntegrationTest {
     }
 
     @Test
+    void commentOrderingSupportsOldestAndMostLiked() {
+        long video = published("排序评论");
+        var first = comments.add(author, video, "最早");
+        var second = comments.add(other, video, "第二");
+        var third = comments.add(author, video, "第三");
+        comments.like(other, second.id());
+        assertEquals(List.of(first.id(), second.id(), third.id()), comments.list(author, video, "oldest",
+                new PageRequest(1, 10)).items().stream().map(Comment::id).toList());
+        assertEquals(List.of(second.id(), third.id(), first.id()), comments.list(author, video, "hot",
+                new PageRequest(1, 10)).items().stream().map(Comment::id).toList());
+        assertEquals(ErrorCode.INVALID_REQUEST, failure(() -> comments.list(author, video, "random",
+                new PageRequest(1, 10))));
+    }
+
+    @Test
     void likesAreIdempotentAndScopedToPublicVideos() {
         long video = published("like target");
         var comment = comments.add(author, video, "点赞我");

@@ -25,8 +25,17 @@ public class CommentService {
     }
     @Transactional(readOnly = true)
     public PageResult<Comment> list(Actor actor, long videoId, PageRequest page) {
+        return list(actor, videoId, "latest", page);
+    }
+    @Transactional(readOnly = true)
+    public PageResult<Comment> list(Actor actor, long videoId, String sort, PageRequest page) {
         active(actor); videos.findPublic(videoId).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-        return new PageResult<>(comments.page(videoId, actor.id(), page), comments.count(videoId), page.page(), page.size());
+        String order = sort == null ? "latest" : sort.trim().toLowerCase();
+        if (!(order.equals("latest") || order.equals("oldest") || order.equals("hot"))) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+        return new PageResult<>(comments.page(videoId, actor.id(), order, page), comments.count(videoId),
+                page.page(), page.size());
     }
     @Transactional(readOnly = true)
     public PageResult<Comment> replies(Actor actor, long parentId, PageRequest page) {
