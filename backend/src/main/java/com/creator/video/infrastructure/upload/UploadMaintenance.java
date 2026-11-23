@@ -36,6 +36,7 @@ public class UploadMaintenance {
                     if (claim.isPresent()) {
                         storage.delete(claim.get().objectKey());
                         transactions.finishCleanup(id);
+                        staging.discardUpload(id);
                     }
                 } catch (RuntimeException exception) {
                     LOGGER.warn("Upload object cleanup failed [attemptId={}, failure={}]; lease expiry permits retry",

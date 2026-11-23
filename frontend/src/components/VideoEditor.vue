@@ -19,6 +19,7 @@ const loading = ref(false)
 const busy = ref(false)
 const uploading = ref(false)
 const uploadPercent = ref<number>()
+const resumeBytes = ref(0)
 const uncertain = ref(false)
 const error = ref('')
 const categoryError = ref('')
@@ -75,11 +76,13 @@ async function uploadDraft(draft: Draft) {
   if (!file.value) return
   const controller = new AbortController()
   uploadRequest = controller
-  const deadline = setTimeout(() => controller.abort(), 180000)
+  const deadline = setTimeout(() => controller.abort(), 900000)
   uploading.value = true
   uploadPercent.value = 0
+  resumeBytes.value = 0
   try {
-    await creatorApi.upload(draft, file.value, controller.signal, value => { uploadPercent.value = value })
+    await creatorApi.upload(draft, file.value, controller.signal, value => { uploadPercent.value = value },
+      value => { resumeBytes.value = value })
   } finally {
     clearTimeout(deadline)
     uploading.value = false
@@ -183,6 +186,7 @@ onBeforeUnmount(() => { categoryRequest?.abort(); uploadRequest?.abort() })
         </template>
       </fieldset>
       <progress v-if="uploading" class="upload-progress" :value="uploadPercent ?? 0" max="100" aria-label="上传进度"></progress>
+      <p v-if="uploading && resumeBytes > 0" class="muted" role="status">已从断点继续，服务端已有 {{ (resumeBytes / 1024 / 1024).toFixed(2) }} MiB，无需从头上传。</p>
       <div class="inline-actions">
         <el-button type="primary" native-type="submit" :loading="busy || uploading" :disabled="uncertain">{{ primaryLabel }}</el-button>
         <el-button v-if="creating && !createdDraft" :disabled="busy" @click="saveDraftOnly">仅保存草稿</el-button>

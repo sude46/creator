@@ -82,6 +82,7 @@ creator:
     user-quota-bytes: ${UPLOAD_USER_QUOTA_BYTES:1073741824}
     max-pending: ${UPLOAD_MAX_PENDING:5}
     attempt-seconds: ${UPLOAD_ATTEMPT_SECONDS:900}
+    chunk-bytes: ${UPLOAD_CHUNK_BYTES:8388608}
   storage:
     provider: ${STORAGE_PROVIDER:minio}
     endpoint: ${STORAGE_ENDPOINT:}

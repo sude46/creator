@@ -23,6 +23,7 @@ const editing = ref(false)
 const editorBusy = ref(false)
 const uploading = ref(false)
 const uploadPercent = ref<number>()
+const resumeBytes = ref(0)
 const uploadUnknown = ref(false)
 const file = ref<File>()
 const fileInput = ref<HTMLInputElement>()
@@ -186,14 +187,16 @@ async function upload() {
   busy.value = true
   uploading.value = true
   uploadPercent.value = 0
+  resumeBytes.value = 0
   uploadUnknown.value = true
   error.value = ''
   notice.value = ''
   const controller = new AbortController()
   uploadRequest = controller
-  const deadline = setTimeout(() => controller.abort(), 180000)
+  const deadline = setTimeout(() => controller.abort(), 900000)
   try {
-    await creatorApi.upload(video.value, file.value, controller.signal, value => { uploadPercent.value = value })
+    await creatorApi.upload(video.value, file.value, controller.signal, value => { uploadPercent.value = value },
+      value => { resumeBytes.value = value })
     if (stopped) return
     uploadUnknown.value = false
     file.value = undefined
@@ -352,6 +355,7 @@ onBeforeUnmount(() => {
         <div class="inline-actions"><el-button type="primary" :loading="uploading" :disabled="!file || blocked || uploadUnknown" @click="upload">上传视频</el-button><el-button v-if="uploading" @click="uploadRequest?.abort()">停止上传并核对状态</el-button><el-button v-if="uploadUnknown && !uploading" :disabled="blocked" @click="confirmUpload">查询上传结果</el-button></div>
         <progress v-if="uploading" class="upload-progress" :value="uploadPercent ?? 0" max="100" aria-label="上传进度"></progress>
         <p v-if="uploading" role="status" class="muted">正在上传 {{ uploadPercent ?? 0 }}%，请保持页面打开。完成后会核对作品状态。</p>
+        <p v-if="uploading && resumeBytes > 0" class="muted" role="status">已从断点继续，服务端已有 {{ (resumeBytes / 1024 / 1024).toFixed(2) }} MiB。</p>
       </section>
       <section v-if="preview || previewError" class="studio-panel">
         <h2>本人预览</h2><el-alert v-if="previewError" :title="previewError" type="error" :closable="false" role="alert" />

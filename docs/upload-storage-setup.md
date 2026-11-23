@@ -2,7 +2,7 @@
 
 ## 当前范围
 
-后端支持单文件源视频上传、私有对象写入、事务绑定和失败补偿。只接收 MP4 请求体并检查 ftyp 主品牌 isom、iso2、mp41、mp42、avc1；这不是完整媒体校验。编码白名单、音轨、时长、分辨率和封面生成已由独立 [Worker](processing-worker-setup.md) 接入；[公开查询与媒体授权](public-media-api.md) 另有权限和发布状态检查，不能绕过审核直接播放源对象。
+后端支持单文件与分片源视频上传、私有对象写入、事务绑定和失败补偿。只接收 MP4 请求体并检查 ftyp 主品牌 isom、iso2、mp41、mp42、avc1；这不是完整媒体校验。编码白名单、音轨、时长、分辨率和封面生成已由独立 [Worker](processing-worker-setup.md) 接入；[公开查询与媒体授权](public-media-api.md) 另有权限和发布状态检查，不能绕过审核直接播放源对象。
 
 上传事务创建真实的 PENDING processing_task，可靠 RabbitMQ 调度器和消费 Worker 已接入，均需按配置启用。投递成功不表示处理成功。已绑定源文件的作品退出草稿入口，通过 [作者作品接口](creator-video-api.md) 查询状态和有界手动重试；READY 作品通过 [审核接口](video-review-api.md) 编辑、提交和重审。
 
@@ -96,12 +96,18 @@ cos:DeleteObject
 
 | 请求 | 输入与行为 |
 | --- | --- |
-| `PUT /api/creator/videos/{id}/source` | Cookie Session、`Content-Type: video/mp4`、真实 CSRF header、`X-Video-Version`；body 为文件二进制 |
+| `PUT /api/creator/videos/{id}/source` | 兼容旧客户端的单次上传；Cookie Session、`Content-Type: video/mp4`、真实 CSRF header、`X-Video-Version`；body 为文件二进制 |
+| `POST /api/creator/videos/{id}/source/uploads` | 创建或复用分片上传会话；JSON `{"size":文件字节数,"fingerprint":文件指纹}`、`X-Video-Version`；返回 uploadId、chunkSize、已上传分片和到期时间 |
+| `PUT /api/creator/videos/{id}/source/uploads/{uploadId}/chunks/{index}` | 上传单个分片；`Content-Type: application/octet-stream`，Content-Length 必须等于该分片应有长度；重复上传同一分片幂等 |
+| `GET /api/creator/videos/{id}/source/uploads/{uploadId}` | 查询会话已上传分片、已接收字节和到期时间，用于断点恢复 |
+| `POST /api/creator/videos/{id}/source/uploads/{uploadId}/complete` | 全部分片到齐后组装、校验 MP4 头、写入私有对象并事务绑定源文件 |
 | `GET /api/creator/videos/{id}/upload` | 当前登录账号查询自己的作品上传状态 |
 
 响应示例：`{"videoId":"123","version":1,"sourceUploaded":true,"processingStatus":"PENDING"}`。不接收客户端对象键、ownerId、路径、文件名或任务状态，不返回桶名或 URL。200 表示源文件已绑定并留下待处理任务，不能解释为已通过媒体检测或审核。
 
-浏览器在创建草稿后先取得 `/api/auth/csrf` 的 headerName/token，再以 File 作为 body，明确设置 video/mp4 和当前版本，不能发送 FormData。上传响应丢失或 503 时先 GET 查询状态；sourceUploaded=true 时不要重传，后端重复上传返回 SOURCE_ALREADY_BOUND（409）。只有确认未绑定且仍可上传时再用最新版本发起新上传，不做无界自动重试。
+浏览器在创建草稿后先取得 `/api/auth/csrf` 的 headerName/token。分片流程先创建会话，再按 `chunkSize` 切分文件，逐片发送 `application/octet-stream`，每片失败最多重试 3 次并重新查询会话确认是否已落库；全部到齐后调用 complete。同一作品存在未过期且文件大小、客户端指纹都相同的会话时会直接复用，因此页面内失败重试或重新选择同一文件可以跳过已上传分片。指纹由文件名、字节数和最后修改时间经 FNV-1a 得到，不是完整内容哈希；改名或修改时间变化会创建新会话，避免把不同文件的分片混在一起。旧单次 PUT 仍保留，但新前端默认走分片。
+
+上传响应丢失或 503 时先 GET 查询状态；sourceUploaded=true 时不要重传，后端重复上传返回 SOURCE_ALREADY_BOUND（409）。只有确认未绑定且仍可上传时再用最新版本发起新上传，不做无界自动重试。分片会话默认 900 秒过期，过期后返回 UPLOAD_TIMEOUT，未完成分片由维护任务删除；跨页面刷新后需要重新选择同一文件，前端不把视频写入 IndexedDB。
 
 缺身份/账号失效返回 401，缺少或错误 CSRF 返回 403，他人作品返回 404，过期版本/配额返回 409，并发或未清理凭据过多返回 429，文件过大 413，格式错误 400，不支持的请求类型 415，读取截止时间 408，存储/数据库/磁盘故障 503。客户端断流可能已无法收到响应；应以状态查询为准。
 
@@ -118,6 +124,7 @@ cos:DeleteObject
 | `UPLOAD_USER_QUOTA_BYTES` | 1073741824 | 已绑定源文件的逻辑配额，默认每账号 1 GiB |
 | `UPLOAD_MAX_PENDING` | 5 | 每账号待处理源文件及未回收上传凭据各自的数量上限，范围 1～20 |
 | `UPLOAD_ATTEMPT_SECONDS` | 900 | 上传凭据宽限期；须至少为接收预算 + 240 秒 |
+| `UPLOAD_CHUNK_BYTES` | 8388608 | 分片大小，范围 256 B～64 MiB；单文件分片数不超过 4096 |
 | `STORAGE_OPERATION_SECONDS` | 60 | 单次存储操作的整体 HTTP 预算，范围 5～120 秒 |
 | `STORAGE_INCOMPLETE_UPLOAD_CLEANUP` | MINIO_DEFAULT | `MINIO_DEFAULT` 依赖 MinIO 服务端过期分片清理；`BUCKET_LIFECYCLE` 强制校验 S3 生命周期规则 |
 

@@ -12,7 +12,12 @@ public interface UploadRepository {
     long pendingCount(long ownerId);
     long activeAttempts(long ownerId);
     void insertAttempt(UploadAttempt attempt);
+    Optional<UploadAttempt> findAttempt(String id);
+    Optional<UploadAttempt> findActiveAttempt(long ownerId, long videoId, LocalDateTime now);
     Optional<UploadAttempt> lockAttempt(String id);
+    List<UploadChunk> chunks(String attemptId);
+    void insertChunk(String attemptId, int index, int size);
+    void deleteChunks(String attemptId);
     void bind(UploadAttempt attempt, long size, long version);
     boolean hasReference(String objectKey);
     List<String> expiredAttempts(LocalDateTime now, int limit);

@@ -28,7 +28,22 @@ public class MyBatisUploadRepository implements UploadRepository {
     @Override
     public void insertAttempt(UploadAttempt attempt) { mapper.insertAttempt(attempt); }
     @Override
+    public Optional<UploadAttempt> findAttempt(String id) { return Optional.ofNullable(mapper.findAttempt(id)); }
+    @Override
+    public Optional<UploadAttempt> findActiveAttempt(long ownerId, long videoId, LocalDateTime now) {
+        return Optional.ofNullable(mapper.findActiveAttempt(ownerId, videoId, now));
+    }
+    @Override
     public Optional<UploadAttempt> lockAttempt(String id) { return Optional.ofNullable(mapper.lockAttempt(id)); }
+    @Override
+    public List<UploadChunk> chunks(String attemptId) { return mapper.chunks(attemptId); }
+    @Override
+    public void insertChunk(String attemptId, int index, int size) {
+        mapper.insertChunk(attemptId, index, size);
+        mapper.addReceivedBytes(attemptId, size);
+    }
+    @Override
+    public void deleteChunks(String attemptId) { mapper.deleteChunks(attemptId); }
     @Override
     public void bind(UploadAttempt attempt, long size, long version) {
         mapper.insertAsset(attempt.videoId(), attempt.objectKey(), size);
