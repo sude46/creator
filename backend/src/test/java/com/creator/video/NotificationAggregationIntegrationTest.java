@@ -112,6 +112,23 @@ class NotificationAggregationIntegrationTest {
                 "SELECT aggregate_key FROM notification WHERE user_id=? AND type='COMMENT'", String.class, author.id()));
     }
 
+    @Test
+    void commentMentionsNotifyOnlyNewActiveUsersAndRespectReplyRecipients() {
+        long video = published("mention video");
+        comments.add(other, video, "感谢 @agg_author @agg_third @agg_third @missing_user @agg_other");
+        var mentioned = notifications.list(third, false, "MENTION", new PageRequest(1, 20));
+        assertEquals(1, mentioned.total());
+        assertEquals("agg_other 在评论中提到了你", mentioned.items().getFirst().title());
+        assertEquals(0, notifications.list(author, false, "MENTION", new PageRequest(1, 20)).total());
+        assertEquals(0, notifications.list(other, false, "MENTION", new PageRequest(1, 20)).total());
+        assertEquals(1, notifications.list(author, false, "COMMENT", new PageRequest(1, 20)).total());
+
+        var root = comments.add(other, video, "根评论");
+        comments.add(third, video, "@agg_other 回复你", root.id());
+        assertEquals(1, notifications.list(other, false, "COMMENT", new PageRequest(1, 20)).total());
+        assertEquals(0, notifications.list(other, false, "MENTION", new PageRequest(1, 20)).total());
+    }
+
     private long published(String title) {
         long id = drafts.create(author, UUID.randomUUID().toString(), new VideoMetadata(title, "description", categoryId)).id();
         database.update("INSERT INTO media_asset (video_id,kind,object_key,size_bytes) VALUES (?,'SOURCE',?,64)", id, "sources/" + UUID.randomUUID() + ".mp4");
