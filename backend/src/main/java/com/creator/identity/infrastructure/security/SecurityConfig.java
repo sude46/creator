@@ -71,7 +71,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/search/suggestions", "/api/videos", "/api/videos/*", "/api/videos/*/tags",
                         "/api/videos/*/comments", "/api/comments/*/replies", "/api/tags", "/api/categories",
                         "/api/collections/*", "/api/authors/*/collections", "/api/authors/*/videos",
-                        "/api/authors/*/profile", "/api/authors/*/avatar", "/api/videos/*/hls/**").permitAll()
+                        "/api/authors/*/profile", "/api/authors/*/avatar", "/api/videos/*/hls/**",
+                        "/api/videos/*/subtitle.vtt").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/videos/*/media", "/api/videos/*/view").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated());

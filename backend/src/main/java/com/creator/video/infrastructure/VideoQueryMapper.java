@@ -21,7 +21,8 @@ public interface VideoQueryMapper {
             + " ORDER BY cover.id DESC LIMIT 1) AS cover_key, v.view_count,"
             + " (SELECT COUNT(*) FROM video_favorite favorite WHERE favorite.video_id = v.id) AS favorite_count,"
             + " (SELECT COUNT(*) FROM video_like liked WHERE liked.video_id = v.id) AS like_count,"
-            + " EXISTS(SELECT 1 FROM video_hls hls WHERE hls.video_id = v.id) AS has_hls";
+            + " EXISTS(SELECT 1 FROM video_hls hls WHERE hls.video_id = v.id) AS has_hls,"
+            + " EXISTS(SELECT 1 FROM video_subtitle subtitle WHERE subtitle.video_id = v.id) AS has_subtitle";
     String SCORE = "(v.view_count"
             + " + 3 * (SELECT COUNT(*) FROM video_like liked WHERE liked.video_id = v.id)"
             + " + 4 * (SELECT COUNT(*) FROM video_favorite favorite WHERE favorite.video_id = v.id)"

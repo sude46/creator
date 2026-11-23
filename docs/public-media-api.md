@@ -10,6 +10,10 @@
 | `GET /api/videos/{id}` | 当前公开详情，不可见返回 404 |
 | `GET /api/videos/{id}/hls/master.m3u8` | 公开作品的 HLS master playlist；无 HLS 返回 404 |
 | `GET /api/videos/{id}/hls/{rendition}/index.m3u8` | 指定档位的 media playlist，分片改写为短期签名地址 |
+| `GET /api/videos/{id}/subtitle.vtt` | 公开作品的单条中文字幕；不存在或不可见返回 404 |
+| `PUT /api/creator/videos/{id}/subtitle` | 作者上传或替换 WEBVTT，`Content-Type: text/vtt`，最大 512 KiB |
+| `GET /api/creator/videos/{id}/subtitle` | 作者查询字幕是否存在、大小和更新时间 |
+| `DELETE /api/creator/videos/{id}/subtitle` | 作者删除字幕 |
 | `POST /api/videos/{id}/media?kind=SOURCE` | 公开作品源视频；`kind=COVER` 为封面 |
 | `POST /api/creator/videos/{id}/preview?kind=SOURCE` | 作者本人预览已处理完成的作品，可选 COVER |
 | `POST /api/admin/reviews/{id}/preview?kind=SOURCE&version=3&reviewRound=2` | 管理员预览当前待审轮次，可选 COVER，禁止自审 |
@@ -25,6 +29,12 @@ Worker 仅在源文件通过 FFprobe 校验后生成 HLS。当前按源高度选
 公开播放先请求 master，再请求 media playlist。media playlist 中的相对 `.ts` 文件名逐行替换为 COS/MinIO 原生签名 GET 地址，TTL 由 `MEDIA_HLS_LINK_SECONDS` 控制，默认 900 秒，须覆盖最长 10 分钟视频。master/media playlist 不缓存且只对当前已发布作品返回；作品下架、封禁、删除、审核撤回后不再生成新的 playlist 或分片签名。分片 URL 一旦签发，在 TTL 内不能被立即撤销。
 
 前端优先使用 HLS：浏览器原生支持时直接播放 master；Firefox/Chrome 使用 hls.js；hls.js 发生 fatal 错误或浏览器不支持时回退到 `POST /api/videos/{id}/media?kind=SOURCE` 的 MP4 链接。HLS 生成失败或历史 READY 作品没有 HLS 时，`hasHls=false`，直接使用 MP4。当前未做历史作品回填、字幕、DRM、清晰度手动切换和码率策略调优。
+
+## 字幕
+
+每个作品最多一条中文字幕，格式为 WEBVTT，最大 512 KiB。服务端按严格 UTF-8 解码，要求内容以 `WEBVTT` 开头，拒绝 NUL/控制字符以及 `<script`、`<iframe`、`<object`、`<embed`、`<style`、`javascript:` 等常见注入片段；这不是完整的 WebVTT 解析器或浏览器安全沙箱。字幕正文存 `video_subtitle` 的 `MEDIUMBLOB`，作者上传、替换、删除均要求当前会话和作品所有权，并写审计日志。
+
+公开播放器只在作品当前可见且存在字幕时返回内容，响应为 `text/vtt;charset=UTF-8` 且不缓存。作品下架、封禁、删除或审核撤回后，字幕接口返回 404；已加载到浏览器中的字幕文本不能被服务端撤回。当前不支持多语言、SRT 转换、自动生成、字幕编辑或独立字幕资产存储。
 
 ## 可见性与并发边界
 

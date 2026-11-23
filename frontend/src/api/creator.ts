@@ -19,6 +19,7 @@ export type CreatorVideo = Draft & {
 export type ReviewRecord = { id: string; reviewRound: number; outcome: string; reason: string; title: string; createdAt: string }
 export type ModerationRecord = { id: string; action: string; reason: string; createdAt: string }
 export type UploadState = { videoId: string; version: number; sourceUploaded: boolean; processingStatus: string }
+export type SubtitleState = { exists: boolean; sizeBytes: number; updatedAt: string | null }
 export type UploadSession = { uploadId: string; videoId: string; size: number; chunkSize: number; uploaded: number[]; receivedBytes: number; expiresAt: string }
 export type SignedMedia = { url: string; expiresAt: string }
 export type CreatorAnalytics = { videoCount: number; views: number; likes: number; favorites: number; comments: number; followers: number; from: string; to: string; daily: { date: string; views: number }[]; topVideos: { id: string; title: string; views: number; likes: number; favorites: number; comments: number }[] }
@@ -135,6 +136,22 @@ const read = <Result>(path: string, signal?: AbortSignal) => request<Result>(pat
   signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(30000)]) : undefined,
 })
 
+async function uploadSubtitleRequest(video: UploadTarget, file: File): Promise<SubtitleState> {
+  const csrf = await csrfHeader()
+  let response: Response
+  try {
+    response = await fetch(`/api/creator/videos/${video.id}/subtitle`, {
+      method: 'PUT', credentials: 'same-origin', body: file,
+      headers: { 'Content-Type': 'text/vtt', [csrf.headerName]: csrf.token },
+    })
+  } catch { throw new ApiFailure(0, '无法连接字幕服务，请稍后重试') }
+  if (!response.ok) {
+    if (response.status === 403) clearCsrf()
+    const body = await response.json().catch(() => ({} as { message?: string; code?: string }))
+    throw new ApiFailure(response.status, body.message || '字幕上传失败', body.code)
+  }
+  return response.json() as Promise<SubtitleState>
+}
 export const creatorApi = {
   list: (page: number, signal?: AbortSignal) => read<Page<CreatorVideo>>(`/creator/videos?page=${page}&size=10`, signal),
   get: (id: string, signal?: AbortSignal) => read<CreatorVideo>(`/creator/videos/${id}`, signal),
@@ -147,6 +164,9 @@ export const creatorApi = {
   upload: (video: UploadTarget, file: File, signal: AbortSignal, onProgress?: (percent: number) => void,
     onResume?: (receivedBytes: number) => void) => uploadWithProgress(video, file, signal, onProgress, onResume),
   uploadState: (id: string) => read<UploadState>(`/creator/videos/${id}/upload`),
+  subtitleState: (id: string, signal?: AbortSignal) => read<SubtitleState>(`/creator/videos/${id}/subtitle`, signal),
+  uploadSubtitle: (video: UploadTarget, file: File) => uploadSubtitleRequest(video, file),
+  removeSubtitle: (id: string) => request<void>(`/creator/videos/${id}/subtitle`, { method: 'DELETE' }),
   reviews: (id: string, page: number, signal?: AbortSignal) => read<Page<ReviewRecord>>(`/creator/videos/${id}/reviews?page=${page}&size=10`, signal),
   moderation: (id: string, page: number, signal?: AbortSignal) => read<Page<ModerationRecord>>(`/creator/videos/${id}/moderation-history?page=${page}&size=10`, signal),
   preview: (id: string) => request<SignedMedia>(`/creator/videos/${id}/preview?kind=SOURCE`, { method: 'POST' }),

@@ -62,6 +62,7 @@ class PublicMediaIntegrationTest {
         signer.fail = false;
         database.update("DELETE FROM operation_log");
         database.update("DELETE FROM review_record");
+        database.update("DELETE FROM video_subtitle");
         database.update("DELETE FROM video_hls_segment");
         database.update("DELETE FROM video_hls");
         database.update("DELETE FROM processing_task");
@@ -419,6 +420,43 @@ class PublicMediaIntegrationTest {
         mvc.perform(get("/api/videos/{id}/hls/1080p/index.m3u8", id)).andExpect(status().isNotFound());
         database.update("UPDATE video SET publication_status='OFFLINE' WHERE id=?", id);
         mvc.perform(get("/api/videos/{id}/hls/master.m3u8", id)).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void ownerCanReplaceAndDeleteWebVttAndPublicPlaybackExposesIt() throws Exception {
+        long id = published("subtitle video");
+        var session = login(author);
+        byte[] vtt = "WEBVTT\n\n00:00.000 --> 00:02.000\n你好，帧间。\n".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        mvc.perform(put("/api/creator/videos/{id}/subtitle", id).session(session).with(csrf().asHeader())
+                        .contentType("text/vtt").content(vtt))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.exists").value(true))
+                .andExpect(jsonPath("$.sizeBytes").value(vtt.length));
+        mvc.perform(get("/api/creator/videos/{id}/subtitle", id).session(session))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.exists").value(true));
+        mvc.perform(get("/api/videos/{id}/subtitle.vtt", id))
+                .andExpect(status().isOk()).andExpect(content().bytes(vtt))
+                .andExpect(content().contentTypeCompatibleWith("text/vtt"));
+        mvc.perform(get("/api/videos/{id}", id)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.hasSubtitle").value(true));
+
+        mvc.perform(put("/api/creator/videos/{id}/subtitle", id).session(login(other)).with(csrf().asHeader())
+                        .contentType("text/vtt").content(vtt))
+                .andExpect(status().isNotFound());
+        mvc.perform(put("/api/creator/videos/{id}/subtitle", id).session(session).with(csrf().asHeader())
+                        .contentType("text/vtt").content("not a subtitle"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(put("/api/creator/videos/{id}/subtitle", id).session(session).with(csrf().asHeader())
+                        .contentType("text/vtt").content("WEBVTT\n\n<script>alert(1)</script>"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(put("/api/creator/videos/{id}/subtitle", id).session(session).with(csrf().asHeader())
+                        .contentType("text/vtt").content(new byte[524289]))
+                .andExpect(status().isPayloadTooLarge());
+
+        mvc.perform(delete("/api/creator/videos/{id}/subtitle", id).session(session).with(csrf().asHeader()))
+                .andExpect(status().isNoContent());
+        mvc.perform(get("/api/videos/{id}/subtitle.vtt", id)).andExpect(status().isNotFound());
+        mvc.perform(get("/api/videos/{id}", id)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.hasSubtitle").value(false));
     }
 
     private long published(String title) {

@@ -4,7 +4,7 @@ import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vu
 import { creatorApi, formatTime } from '../api/creator'
 import { appealApi } from '../api/appeals'
 import type { Appeal } from '../api/appeals'
-import type { Collection, CreatorCommand, CreatorVideo, ModerationRecord, ReviewRecord, SignedMedia } from '../api/creator'
+import type { Collection, CreatorCommand, CreatorVideo, ModerationRecord, ReviewRecord, SignedMedia, SubtitleState } from '../api/creator'
 import { ApiFailure } from '../api/http'
 import { validateVideoFile } from '../api/uploadFile'
 import { creatorStatus } from '../api/videoStatus'
@@ -42,6 +42,11 @@ const deleteBusy = ref(false)
 const previewError = ref('')
 const reviews = ref<ReviewRecord[]>([])
 const moderation = ref<ModerationRecord[]>([])
+const subtitle = ref<SubtitleState>()
+const subtitleFile = ref<File>()
+const subtitleInput = ref<HTMLInputElement>()
+const subtitleBusy = ref(false)
+const subtitleError = ref('')
 const historyPage = ref(1)
 const historyTotal = ref(0)
 const moderationPage = ref(1)
@@ -85,6 +90,7 @@ async function load(manual = true) {
     if (current.version !== video.value?.version || current.moderationBlocked) { preview.value = undefined; previewError.value = '' }
     video.value = current
     void loadAppeals()
+    void loadSubtitle()
     needsRefresh.value = false
     error.value = ''
     refreshFailures = 0
@@ -158,6 +164,43 @@ async function command(action: CreatorCommand) {
     if (failure instanceof ApiFailure && failure.status === 409) error.value += '。请刷新状态后再操作。'
     else error.value += '。请先刷新状态确认结果，不要连续重复提交。'
   } finally { busy.value = false; schedule() }
+}
+async function loadSubtitle() {
+  try { subtitle.value = await creatorApi.subtitleState(id) }
+  catch { /* subtitle is optional for drafts and new videos */ }
+}
+function chooseSubtitle(event: Event) {
+  subtitleFile.value = undefined
+  const selected = (event.target as HTMLInputElement).files?.[0]
+  if (!selected) return
+  if (!selected.name.toLowerCase().endsWith('.vtt')) { subtitleError.value = '请选择 .vtt 字幕文件。'; return }
+  if (selected.size === 0 || selected.size > 524288) { subtitleError.value = '字幕需大于 0 且不超过 512 KiB。'; return }
+  subtitleFile.value = selected
+  subtitleError.value = ''
+}
+async function uploadSubtitle() {
+  if (!video.value || !subtitleFile.value || subtitleBusy.value) return
+  subtitleBusy.value = true
+  subtitleError.value = ''
+  try {
+    subtitle.value = await creatorApi.uploadSubtitle(video.value, subtitleFile.value)
+    subtitleFile.value = undefined
+    if (subtitleInput.value) subtitleInput.value.value = ''
+    notice.value = '字幕已保存，公开播放器会显示中文字幕轨道。'
+  } catch (failure) { subtitleError.value = explain(failure) }
+  finally { subtitleBusy.value = false }
+}
+async function removeSubtitle() {
+  if (!video.value || subtitleBusy.value) return
+  if (!window.confirm('删除后公开播放器不再显示字幕。确认删除？')) return
+  subtitleBusy.value = true
+  subtitleError.value = ''
+  try {
+    await creatorApi.removeSubtitle(video.value.id)
+    subtitle.value = { exists: false, sizeBytes: 0, updatedAt: null }
+    notice.value = '字幕已删除。'
+  } catch (failure) { subtitleError.value = explain(failure) }
+  finally { subtitleBusy.value = false }
 }
 function focusUpload() {
   uploadPanel.value?.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -346,6 +389,19 @@ onBeforeUnmount(() => {
           <div class="inline-actions"><el-button type="primary" :loading="appealBusy" :disabled="!appealText.trim()" @click="submitAppeal">提交申诉</el-button></div>
         </template>
         <p v-else-if="openAppeal" class="muted">已有待处理申诉，请等待管理员处理。</p>
+      </section>
+      <section class="studio-panel">
+        <h2>字幕</h2>
+        <p class="muted">上传 WEBVTT（.vtt）字幕，最大 512 KiB。公开播放器会显示“中文”字幕轨道；替换会立即生效。</p>
+        <el-alert v-if="subtitleError" :title="subtitleError" type="error" :closable="false" role="alert" />
+        <p v-if="subtitle?.exists" class="muted">当前字幕 {{ (subtitle.sizeBytes / 1024).toFixed(1) }} KiB · 更新于 {{ formatTime(subtitle.updatedAt) }}</p>
+        <label class="file-picker" for="subtitle-file">选择字幕文件</label>
+        <input id="subtitle-file" ref="subtitleInput" type="file" accept=".vtt,text/vtt" :disabled="subtitleBusy" @change="chooseSubtitle" />
+        <p v-if="subtitleFile" class="muted">{{ subtitleFile.name }} · {{ (subtitleFile.size / 1024).toFixed(1) }} KiB</p>
+        <div class="inline-actions">
+          <el-button type="primary" :loading="subtitleBusy" :disabled="!subtitleFile" @click="uploadSubtitle">{{ subtitle?.exists ? '替换字幕' : '上传字幕' }}</el-button>
+          <el-button v-if="subtitle?.exists" :disabled="subtitleBusy" @click="removeSubtitle">删除字幕</el-button>
+        </div>
       </section>
       <VideoEditor v-if="editing" :key="video.id" :video="video" @saved="saved" @cancel="editing = false; load()" @busy="editorBusy = $event" />
       <section v-if="draft && !editing" ref="uploadPanel" class="studio-panel">
