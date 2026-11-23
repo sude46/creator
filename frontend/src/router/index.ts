@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { auth } from '../stores/auth'
+import { safeRedirect } from './redirect'
 import AuthView from '../views/AuthView.vue'
 import WorkspaceView from '../views/WorkspaceView.vue'
 
@@ -8,7 +9,7 @@ export const router = createRouter({
   routes: [
     { path: '/login', component: AuthView, meta: { guest: true } },
     { path: '/register', component: AuthView, meta: { guest: true } },
-    { path: '/', component: WorkspaceView },
+    { path: '/', component: WorkspaceView, meta: { public: true } },
     { path: '/studio', component: () => import('../views/CreatorCenterView.vue') },
     { path: '/studio/analytics', component: () => import('../views/CreatorAnalyticsView.vue') },
     { path: '/studio/collections', component: () => import('../views/CollectionsView.vue') },
@@ -44,9 +45,9 @@ router.beforeEach(async (to) => {
   try {
     await auth.load()
   } catch {
-    if (!to.meta.guest) return '/login'
+    if (!to.meta.guest && !to.meta.public) return { path: '/login', query: { redirect: to.fullPath } }
   }
-  if (!to.meta.guest && !auth.user.value) return '/login'
+  if (!to.meta.guest && !to.meta.public && !auth.user.value) return { path: '/login', query: { redirect: to.fullPath } }
   if ((to.path === '/admin' || to.path.startsWith('/admin/')) && auth.user.value?.role !== 'ADMIN') return { path: '/', query: { denied: 'admin' } }
-  if (to.meta.guest && auth.user.value) return '/'
+  if (to.meta.guest && auth.user.value) return safeRedirect(to.query.redirect) ?? '/'
 })

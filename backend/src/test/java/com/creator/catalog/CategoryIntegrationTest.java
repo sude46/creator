@@ -110,7 +110,7 @@ class CategoryIntegrationTest {
     void roleAndCsrfBoundariesApplyToEveryManagementEndpoint() throws Exception {
         registerUser.execute("catalog_user", "SafePassword123");
         var session = login("catalog_user");
-        mvc.perform(get("/api/categories")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/categories")).andExpect(status().isOk());
         mvc.perform(get("/api/categories").session(session)).andExpect(status().isOk());
         mvc.perform(get("/api/admin/categories").session(session)).andExpect(status().isForbidden());
         mvc.perform(post("/api/admin/categories").session(session).with(csrf())

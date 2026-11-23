@@ -2,6 +2,7 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { auth } from '../stores/auth'
+import { safeRedirect } from '../router/redirect'
 
 const route = useRoute()
 const router = useRouter()
@@ -11,6 +12,12 @@ const busy = ref(false)
 const error = ref('')
 const success = ref('')
 const routeNotice = computed(() => route.query.changed === '1' ? '密码已修改，请用新密码登录。' : '')
+const expired = computed(() => route.query.expired === '1')
+const redirect = computed(() => safeRedirect(route.query.redirect))
+const switchTarget = computed(() => ({
+  path: registering.value ? '/login' : '/register',
+  query: redirect.value ? { redirect: redirect.value } : {},
+}))
 
 watch(() => route.path, () => {
   error.value = ''
@@ -30,11 +37,11 @@ async function submit() {
   try {
     if (registering.value) {
       await auth.register(form.username, form.password)
-      await router.push('/login')
+      await router.push({ path: '/login', query: redirect.value ? { redirect: redirect.value } : {} })
       success.value = '注册成功，请登录你的账号'
     } else {
       await auth.login(form.username, form.password)
-      await router.push('/')
+      await router.push(redirect.value ?? '/')
     }
   } catch (failure) {
     error.value = failure instanceof Error ? failure.message : '操作失败，请重试'
@@ -61,6 +68,7 @@ async function submit() {
         <p class="eyebrow">{{ registering ? '开始你的创作旅程' : '欢迎回来' }}</p>
         <h2>{{ registering ? '创建账号' : '登录帧间' }}</h2>
         <p class="muted">{{ registering ? '注册后即可使用平台，管理自己的作品。' : '登录后继续创作与发现。' }}</p>
+        <el-alert v-if="expired" title="登录已过期，请重新登录。" type="warning" :closable="false" role="status" />
         <el-alert v-if="routeNotice" :title="routeNotice" type="success" :closable="false" role="status" />
         <el-alert v-if="error" :title="error" type="error" show-icon :closable="false" role="alert" />
         <el-alert v-if="success" :title="success" type="success" show-icon :closable="false" role="status" />
@@ -77,7 +85,7 @@ async function submit() {
           </template>
           <el-button class="submit-button" type="primary" native-type="submit" :loading="busy">{{ registering ? '创建账号' : '登 录' }}</el-button>
         </form>
-        <p class="auth-switch">{{ registering ? '已经有账号？' : '还没有账号？' }} <RouterLink :to="registering ? '/login' : '/register'">{{ registering ? '去登录' : '立即注册' }}</RouterLink></p>
+        <p class="auth-switch">{{ registering ? '已经有账号？' : '还没有账号？' }} <RouterLink :to="switchTarget">{{ registering ? '去登录' : '立即注册' }}</RouterLink></p>
       </div>
     </section>
   </main>

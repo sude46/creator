@@ -32,6 +32,7 @@ export async function request<Result>(path: string, options: RequestInit = {}): 
     throw new ApiFailure(0, '无法连接服务，请检查网络或稍后重试')
   }
   if (!response.ok) {
+    if (response.status === 401) window.dispatchEvent(new Event('creator:unauthorized'))
     const body = await response.json().catch(() => ({}))
     if (response.status === 403) clearCsrf()
     const fields = Object.values(body.fieldErrors ?? {}).filter((value): value is string => typeof value === 'string')

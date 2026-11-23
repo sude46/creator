@@ -67,6 +67,9 @@ public class SecurityConfig {
         http.authorizeHttpRequests(authorize -> authorize
                 .requestMatchers(HttpMethod.GET, "/api/auth/csrf").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/videos/following").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/videos", "/api/videos/*", "/api/videos/*/tags",
+                        "/api/tags", "/api/categories").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated());
         http.requestCache(cache -> cache.disable());
