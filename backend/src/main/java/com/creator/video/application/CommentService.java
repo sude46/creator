@@ -61,7 +61,7 @@ public class CommentService {
         long id = comments.insert(videoId, actor.id(), rootId, clean);
         Comment parentComment = parent;
         Long recipient = parentComment == null ? video.ownerId() : parentComment.userId();
-        if (recipient != actor.id()) {
+        if (!recipient.equals(actor.id())) {
             String link = "/videos/" + videoId;
             if (parentComment == null) {
                 notifications.ifAvailable(service -> service.comment(recipient, actor.username(), videoId));
