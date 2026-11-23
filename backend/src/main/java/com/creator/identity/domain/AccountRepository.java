@@ -34,4 +34,8 @@ public interface AccountRepository {
     default boolean updateAdminScope(long id, Role role, AdminScope adminScope) {
         throw new UnsupportedOperationException();
     }
+
+    default boolean updatePassword(long id, String passwordHash) {
+        throw new UnsupportedOperationException();
+    }
 }

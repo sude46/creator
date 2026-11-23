@@ -60,6 +60,20 @@ function isSuper(user: AdminUser) { return user.role === 'ADMIN' && (!user.admin
 function roleLabel(user: AdminUser) { return user.role !== 'ADMIN' ? '普通用户' : user.adminScope === 'REVIEWER' ? '审核员' : user.adminScope === 'MODERATOR' ? '内容管理员' : '超级管理员' }
 function scopeValue(user: AdminUser) { return scopeDraft.value[user.id] ?? user.adminScope ?? 'NONE' }
 function setScope(user: AdminUser, event: Event) { scopeDraft.value = { ...scopeDraft.value, [user.id]: (event.target as HTMLSelectElement).value } }
+async function resetPassword(user: AdminUser) {
+  if (busy.value || loading.value || isSuper(user)) return
+  const password = window.prompt(`为 ${user.username} 设置新密码（10～64 位，含字母和数字）`)?.trim() ?? ''
+  if (!password) return
+  busy.value = true
+  error.value = ''
+  notice.value = ''
+  try {
+    await adminApi.resetPassword(user, password)
+    if (stopped) return
+    notice.value = `已重置 ${user.username} 的密码。`
+  } catch (failure) { if (!stopped) error.value = explain(failure) }
+  finally { if (!stopped) busy.value = false }
+}
 async function saveScope(user: AdminUser) {
   if (busy.value || loading.value || isSuper(user)) return
   busy.value = true
@@ -132,7 +146,7 @@ onBeforeUnmount(() => { stopped = true; activeRequest?.abort() })
                 </div>
               </td>
               <td>{{ user.status === 'ACTIVE' ? '启用' : '禁用' }}</td>
-              <td><span v-if="isSuper(user)" class="muted">不可修改</span><el-button v-else :disabled="busy" @click="toggle(user)">{{ user.status === 'ACTIVE' ? '禁用' : '启用' }}</el-button></td>
+              <td><span v-if="isSuper(user)" class="muted">不可修改</span><div v-else class="inline-actions"><el-button size="small" :disabled="busy" @click="resetPassword(user)">重置密码</el-button><el-button type="danger" size="small" :disabled="busy" @click="toggle(user)">{{ user.status === 'ACTIVE' ? '禁用' : '启用' }}</el-button></div></td>
             </tr>
           </tbody>
         </table>

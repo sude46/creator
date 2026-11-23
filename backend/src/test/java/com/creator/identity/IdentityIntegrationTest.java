@@ -37,6 +37,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
@@ -390,6 +391,36 @@ class IdentityIntegrationTest {
         }
     }
 
+    @Test
+    void usersCanChangeTheirPasswordAndSuperAdminCanResetIt() throws Exception {
+        register("password_user");
+        var session = login("password_user");
+        mvc.perform(put("/api/me/password").session(session).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"currentPassword\":\"wrong-password\",\"newPassword\":\"NewPassword12345\"}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("INVALID_PASSWORD"));
+        mvc.perform(put("/api/me/password").session(session).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"currentPassword\":\"SafePassword123\",\"newPassword\":\"short1\"}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("WEAK_PASSWORD"));
+        mvc.perform(put("/api/me/password").session(session).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"currentPassword\":\"SafePassword123\",\"newPassword\":\"NewPassword12345\"}"))
+                .andExpect(status().isNoContent());
+        mvc.perform(post("/api/auth/login").with(csrf()).param("username", "password_user")
+                        .param("password", "SafePassword123"))
+                .andExpect(status().isUnauthorized());
+        loginWith("password_user", "NewPassword12345");
+
+        bootstrapAdmin.execute("password_admin", "SafePassword123");
+        var adminSession = login("password_admin");
+        long targetId = accounts.findSummary("password_user").orElseThrow().id();
+        mvc.perform(put("/api/admin/users/" + targetId + "/password").session(adminSession).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"newPassword\":\"ResetPassword123\"}"))
+                .andExpect(status().isNoContent());
+        mvc.perform(post("/api/auth/login").with(csrf()).param("username", "password_user")
+                        .param("password", "NewPassword12345"))
+                .andExpect(status().isUnauthorized());
+        loginWith("password_user", "ResetPassword123");
+    }
+
     private void register(String username) throws Exception {
         mvc.perform(post("/api/auth/register").with(csrf()).contentType(MediaType.APPLICATION_JSON)
                 .content(json.writeValueAsString(new RegisterRequest(username, "SafePassword123"))))
@@ -397,8 +428,12 @@ class IdentityIntegrationTest {
     }
 
     private MockHttpSession login(String username) throws Exception {
+        return loginWith(username, "SafePassword123");
+    }
+
+    private MockHttpSession loginWith(String username, String password) throws Exception {
         var result = mvc.perform(post("/api/auth/login").with(csrf()).param("username", username)
-                .param("password", "SafePassword123")).andExpect(status().isOk()).andReturn();
+                .param("password", password)).andExpect(status().isOk()).andReturn();
         return (MockHttpSession) result.getRequest().getSession(false);
     }
 }

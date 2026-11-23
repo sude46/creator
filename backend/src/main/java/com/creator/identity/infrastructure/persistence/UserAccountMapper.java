@@ -39,4 +39,10 @@ public interface UserAccountMapper extends BaseMapper<UserAccountRow> {
             WHERE id = #{id} AND status <> 'DELETED'
             """)
     int updateAdminScope(@Param("id") long id, @Param("role") String role, @Param("adminScope") String adminScope);
+
+    @Update("""
+            UPDATE user_account SET password_hash = #{passwordHash}, updated_at = CURRENT_TIMESTAMP(6)
+            WHERE id = #{id} AND status <> 'DELETED'
+            """)
+    int updatePassword(@Param("id") long id, @Param("passwordHash") String passwordHash);
 }

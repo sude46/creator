@@ -35,6 +35,9 @@ export const adminApi = {
   createUser: (username: string, password: string) => request<AdminUser>('/admin/users', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }),
   }),
+  resetPassword: (user: AdminUser, newPassword: string) => request<void>(`/admin/users/${user.id}/password`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ newPassword }),
+  }),
   setAdminScope: (user: AdminUser, adminScope: 'NONE' | 'REVIEWER' | 'MODERATOR') => request<AdminUser>(`/admin/users/${user.id}/admin-scope`, {
     method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ adminScope }),
   }),

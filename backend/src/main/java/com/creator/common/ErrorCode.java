@@ -2,6 +2,8 @@ package com.creator.common;
 
 public enum ErrorCode {
     INVALID_USERNAME("用户名应为 3～32 位字母、数字或下划线"),
+    INVALID_PASSWORD("当前密码不正确"),
+    PASSWORD_UNCHANGED("新密码不能与当前密码相同"),
     WEAK_PASSWORD("密码需包含字母和数字，长度 10～64 位，UTF-8 编码不超过 72 字节"),
     USERNAME_TAKEN("该用户名已被使用"),
     ADMIN_BOOTSTRAP_CONFLICT("初始化管理员的用户名已被占用，或管理员账号不可用"),

@@ -10,6 +10,7 @@ const form = reactive({ username: '', password: '', confirm: '' })
 const busy = ref(false)
 const error = ref('')
 const success = ref('')
+const routeNotice = computed(() => route.query.changed === '1' ? '密码已修改，请用新密码登录。' : '')
 
 watch(() => route.path, () => {
   error.value = ''
@@ -60,6 +61,7 @@ async function submit() {
         <p class="eyebrow">{{ registering ? '开始你的创作旅程' : '欢迎回来' }}</p>
         <h2>{{ registering ? '创建账号' : '登录帧间' }}</h2>
         <p class="muted">{{ registering ? '注册后即可使用平台，管理自己的作品。' : '登录后继续创作与发现。' }}</p>
+        <el-alert v-if="routeNotice" :title="routeNotice" type="success" :closable="false" role="status" />
         <el-alert v-if="error" :title="error" type="error" show-icon :closable="false" role="alert" />
         <el-alert v-if="success" :title="success" type="success" show-icon :closable="false" role="status" />
         <form @submit.prevent="submit">

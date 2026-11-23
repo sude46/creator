@@ -16,9 +16,11 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/admin/users")
 public class AdminUserController {
     private final AdminUserService users;
+    private final com.creator.identity.application.PasswordService passwords;
 
-    public AdminUserController(AdminUserService users) {
+    public AdminUserController(AdminUserService users, com.creator.identity.application.PasswordService passwords) {
         this.users = users;
+        this.passwords = passwords;
     }
 
     @GetMapping
@@ -49,6 +51,15 @@ public class AdminUserController {
     }
 
     public record AdminScopeRequest(@NotBlank @Size(max = 16) String adminScope) { }
+
+    @PutMapping("/{id}/password")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void resetPassword(@RequestAttribute("currentActor") Actor actor, @PathVariable long id,
+            @Valid @RequestBody PasswordResetRequest request) {
+        passwords.reset(actor, id, request.newPassword());
+    }
+
+    public record PasswordResetRequest(@NotBlank @Size(max = 64) String newPassword) { }
 
     public record CreateUserRequest(@NotBlank @Size(max = 32) String username,
             @NotBlank @Size(max = 64) String password) { }

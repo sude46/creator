@@ -67,6 +67,11 @@ public class MyBatisAccountRepository implements AccountRepository {
     }
 
     @Override
+    public boolean updatePassword(long id, String passwordHash) {
+        return mapper.updatePassword(id, passwordHash) == 1;
+    }
+
+    @Override
     public AccountSummary insert(String username, String passwordHash, Role role, AdminScope adminScope) {
         var row = new UserAccountRow();
         row.setUsername(username);
