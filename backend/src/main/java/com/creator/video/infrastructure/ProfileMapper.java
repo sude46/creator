@@ -28,6 +28,15 @@ public interface ProfileMapper {
             + " updated_at = CURRENT_TIMESTAMP(6) WHERE user_id = #{userId}")
     int clearAvatar(long userId);
 
+    @Select("SELECT a.id, a.username, p.display_name, (p.avatar IS NOT NULL) AS has_avatar,"
+            + " COALESCE(p.version, 0) AS profile_version"
+            + " FROM user_account a LEFT JOIN user_profile p ON p.user_id = a.id"
+            + " WHERE a.status = 'ACTIVE' AND (a.username LIKE #{pattern} ESCAPE '!'"
+            + " OR p.display_name LIKE #{pattern} ESCAPE '!')"
+            + " ORDER BY a.username LIMIT #{limit}")
+    java.util.List<com.creator.video.domain.SearchSuggestions.AuthorSuggestion> suggestAuthors(
+            @Param("pattern") String pattern, @Param("limit") int limit);
+
     @Select("SELECT avatar AS data, avatar_content_type AS content_type FROM user_profile"
             + " WHERE user_id = #{userId} AND avatar IS NOT NULL")
     ProfileAvatar avatar(long userId);

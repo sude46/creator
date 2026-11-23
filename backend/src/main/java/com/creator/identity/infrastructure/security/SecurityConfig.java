@@ -68,7 +68,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/auth/csrf").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/videos/following").authenticated()
-                .requestMatchers(HttpMethod.GET, "/api/videos", "/api/videos/*", "/api/videos/*/tags",
+                .requestMatchers(HttpMethod.GET, "/api/search/suggestions", "/api/videos", "/api/videos/*", "/api/videos/*/tags",
                         "/api/videos/*/comments", "/api/comments/*/replies", "/api/tags", "/api/categories",
                         "/api/collections/*", "/api/authors/*/collections", "/api/authors/*/videos",
                         "/api/authors/*/profile", "/api/authors/*/avatar").permitAll()

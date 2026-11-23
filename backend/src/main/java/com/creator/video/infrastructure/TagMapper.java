@@ -29,6 +29,12 @@ public interface TagMapper {
 
     @Select("SELECT tag.name AS name, COUNT(*) AS uses FROM video_tag tag"
             + " JOIN video_tag_item item ON item.tag_id = tag.id" + PUBLIC_USES
+            + " AND tag.name LIKE #{pattern} ESCAPE '!'"
+            + " GROUP BY tag.id, tag.name ORDER BY uses DESC, tag.name LIMIT #{limit}")
+    List<TagCount> suggest(@Param("pattern") String pattern, @Param("limit") int limit);
+
+    @Select("SELECT tag.name AS name, COUNT(*) AS uses FROM video_tag tag"
+            + " JOIN video_tag_item item ON item.tag_id = tag.id" + PUBLIC_USES
             + " GROUP BY tag.id, tag.name ORDER BY uses DESC, tag.name LIMIT #{limit}")
     List<TagCount> popular(int limit);
 

@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import WorkspaceShell from '../components/WorkspaceShell.vue'
 import PublicVideoCard from '../components/PublicVideoCard.vue'
 import { publicApi } from '../api/public'
-import type { PublicVideo, TagCount } from '../api/public'
+import type { PublicVideo, SearchSuggestions, TagCount } from '../api/public'
 import { useStudioError } from '../composables/useStudioError'
 
 const route = useRoute()
@@ -17,6 +17,12 @@ const author = ref('')
 const sort = ref('latest')
 const categories = ref<{ id: string; name: string }[]>([])
 const tags = ref<TagCount[]>([])
+const suggestions = ref<SearchSuggestions>()
+const suggestOpen = ref(false)
+const suggestLoading = ref(false)
+let suggestTimer: ReturnType<typeof setTimeout> | undefined
+let suggestRequest: AbortController | undefined
+let searchFocused = false
 const videos = ref<PublicVideo[]>([])
 const page = ref(1)
 const total = ref(0)
@@ -114,9 +120,47 @@ function clearFilters() {
   navigate(1, '', '', 'latest')
 }
 
+function hasSuggestions(value?: SearchSuggestions) {
+  return !!value && (value.videos.length > 0 || value.tags.length > 0 || value.authors.length > 0)
+}
+async function loadSuggestions(query: string) {
+  suggestRequest?.abort()
+  const controller = new AbortController()
+  suggestRequest = controller
+  suggestLoading.value = true
+  try {
+    const result = await publicApi.suggestions(query, controller.signal)
+    if (!stopped && !controller.signal.aborted && searchFocused && title.value.trim() === query) {
+      suggestions.value = result
+      suggestOpen.value = hasSuggestions(result)
+    }
+  } catch { if (!stopped && !controller.signal.aborted) { suggestions.value = undefined; suggestOpen.value = false } }
+  finally { if (!stopped && !controller.signal.aborted) suggestLoading.value = false }
+}
+function onSearchFocus() {
+  searchFocused = true
+  if (title.value.trim()) void loadSuggestions(title.value.trim())
+}
+function onSearchBlur() {
+  setTimeout(() => { searchFocused = false; suggestOpen.value = false }, 160)
+}
+function submitSearch() {
+  suggestOpen.value = false
+  navigate()
+}
+function pickVideo(item: { id: string }) { suggestOpen.value = false; void router.push(`/videos/${item.id}`) }
+function pickTag(item: TagCount) { title.value = ''; suggestOpen.value = false; navigate(1, category.value, item.name, sort.value) }
+function pickAuthor(item: { username: string }) { title.value = ''; suggestOpen.value = false; author.value = item.username; navigate() }
+watch(title, value => {
+  clearTimeout(suggestTimer)
+  if (!searchFocused) return
+  const query = value.trim()
+  if (!query) { suggestions.value = undefined; suggestOpen.value = false; return }
+  suggestTimer = setTimeout(() => void loadSuggestions(query), 250)
+})
 watch(() => route.fullPath, load, { immediate: true })
 onMounted(() => { void loadCategories(); void loadTags() })
-onBeforeUnmount(() => { stopped = true; activeRequest?.abort(); categoryRequest?.abort(); tagRequest?.abort() })
+onBeforeUnmount(() => { stopped = true; clearTimeout(suggestTimer); activeRequest?.abort(); suggestRequest?.abort(); categoryRequest?.abort(); tagRequest?.abort() })
 </script>
 
 <template>
@@ -138,12 +182,20 @@ onBeforeUnmount(() => { stopped = true; activeRequest?.abort(); categoryRequest?
       </div>
     </section>
 
-    <form class="public-search" role="search" @submit.prevent="navigate()">
-      <label class="sr-only" for="video-search">按标题找作品</label>
-      <svg class="search-icon" viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="9" cy="9" r="5.25" /><path d="m13 13 3.5 3.5" stroke-linecap="round" /></svg>
-      <input id="video-search" v-model="title" type="search" maxlength="120" placeholder="按标题、简介或标签搜索作品" />
-      <el-button class="search-submit" type="primary" native-type="submit">搜索</el-button>
-    </form>
+    <div class="search-shell">
+      <form class="public-search" role="search" @submit.prevent="submitSearch">
+        <label class="sr-only" for="video-search">按标题找作品</label>
+        <svg class="search-icon" viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="9" cy="9" r="5.25" /><path d="m13 13 3.5 3.5" stroke-linecap="round" /></svg>
+        <input id="video-search" v-model="title" type="search" maxlength="120" placeholder="按标题、简介或标签搜索作品" autocomplete="off" @focus="onSearchFocus" @blur="onSearchBlur" @keydown.esc="suggestOpen = false" />
+        <el-button class="search-submit" type="primary" native-type="submit">搜索</el-button>
+      </form>
+      <div v-if="suggestOpen && suggestions" class="search-suggestions" role="listbox" aria-label="搜索建议">
+        <div v-if="suggestions.videos.length" class="suggestion-group"><span>作品</span><button v-for="item in suggestions.videos" :key="`video-${item.id}`" type="button" role="option" @mousedown.prevent @click="pickVideo(item)">{{ item.title }}</button></div>
+        <div v-if="suggestions.tags.length" class="suggestion-group"><span>标签</span><button v-for="item in suggestions.tags" :key="`tag-${item.name}`" type="button" role="option" @mousedown.prevent @click="pickTag(item)">#{{ item.name }} <small>{{ item.uses }}</small></button></div>
+        <div v-if="suggestions.authors.length" class="suggestion-group"><span>作者</span><button v-for="item in suggestions.authors" :key="`author-${item.id}`" type="button" role="option" @mousedown.prevent @click="pickAuthor(item)">{{ item.displayName || item.username }} <small>@{{ item.username }}</small></button></div>
+        <p v-if="suggestLoading" class="suggestion-loading">正在查找…</p>
+      </div>
+    </div>
     <div class="author-filter">
       <label for="author-search">作者</label>
       <input id="author-search" v-model="author" type="search" maxlength="32" placeholder="按用户名或昵称筛选" @keyup.enter="navigate()" />

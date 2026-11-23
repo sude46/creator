@@ -6,6 +6,7 @@ import java.util.Optional;
 public interface TagRepository {
     List<String> tags(long videoId);
     List<TagCount> popular(int limit);
+    List<TagCount> suggest(String pattern, int limit);
     void replace(long videoId, List<String> tags);
     List<TagAdmin> adminList();
     Optional<TagAdmin> find(long id);

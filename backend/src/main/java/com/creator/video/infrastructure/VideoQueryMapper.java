@@ -58,6 +58,14 @@ public interface VideoQueryMapper {
     long count(@Param("title") String title, @Param("pattern") String pattern, @Param("categoryId") Long categoryId,
             @Param("tag") String tag, @Param("authorPattern") String authorPattern);
 
+    @Select("SELECT v.id, v.title FROM video v JOIN user_account owner ON owner.id = v.owner_id"
+            + " JOIN video_category category ON category.id = v.category_id"
+            + " LEFT JOIN user_profile profile ON profile.user_id = owner.id"
+            + " WHERE " + PUBLIC + " AND v.title LIKE #{pattern} ESCAPE '!'"
+            + " ORDER BY v.published_at DESC, v.id DESC LIMIT #{limit}")
+    java.util.List<com.creator.video.domain.SearchSuggestions.VideoSuggestion> suggestVideos(
+            @Param("pattern") String pattern, @Param("limit") int limit);
+
     @Select("SELECT " + COLUMNS + FROM + " WHERE " + PUBLIC + " AND v.id = #{videoId}")
     PublicVideo findPublic(long videoId);
 

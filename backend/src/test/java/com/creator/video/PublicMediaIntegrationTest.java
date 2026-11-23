@@ -321,6 +321,14 @@ class PublicMediaIntegrationTest {
                 .andExpect(jsonPath("$.self").value(false));
         mvc.perform(get("/api/authors/{id}/videos", author.id())).andExpect(status().isOk())
                 .andExpect(jsonPath("$.total").value(1));
+        mvc.perform(get("/api/search/suggestions").param("q", "http"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.videos[0].title").value("http"));
+        mvc.perform(get("/api/search/suggestions").param("q", "media_author"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.authors[0].username").value("media_author"));
+        mvc.perform(get("/api/search/suggestions")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.videos.length()").value(0));
+        mvc.perform(get("/api/search/suggestions").param("q", "a".repeat(51)))
+                .andExpect(status().isBadRequest());
         var session = login(other);
         var response = mvc.perform(get("/api/videos/{id}", id).session(session)).andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(Long.toString(id))).andExpect(jsonPath("$.authorId").isString())

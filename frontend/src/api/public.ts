@@ -9,6 +9,7 @@ export type PublicCollection = { id: string; ownerId: string; ownerName: string;
 export type AnchorPage = { items: PublicVideo[]; anchorIndex: number | null; hasBefore: boolean; hasAfter: boolean }
 export type FavoriteFolder = { id: string; name: string; version: number; itemCount: number; createdAt: string }
 export type HistoryEntry = { videoId: string; viewedAt: string; available: boolean; video: PublicVideo | null }
+export type SearchSuggestions = { videos: { id: string; title: string }[]; tags: TagCount[]; authors: { id: string; username: string; displayName: string | null; hasAvatar: boolean; profileVersion: number }[] }
 export type TagCount = { name: string; uses: number }
 export type Favorite = { videoId: string; createdAt: string; available: boolean; video: PublicVideo | null }
 function read<Result>(path: string, signal: AbortSignal) { return request<Result>(path, { signal: AbortSignal.any([signal, AbortSignal.timeout(30000)]) }) }
@@ -21,6 +22,7 @@ export const publicApi = {
     return read<Page<PublicVideo>>(`/videos?${query}`, signal)
   },
   tags: (signal: AbortSignal) => read<{ items: TagCount[] }>('/tags?limit=20', signal),
+  suggestions: (query: string, signal: AbortSignal) => read<SearchSuggestions>(`/search/suggestions?q=${encodeURIComponent(query)}`, signal),
   videoTags: (id: string, signal: AbortSignal) => read<{ tags: string[] }>(`/videos/${id}/tags`, signal),
   categories: (signal: AbortSignal) => read<Page<{ id: string; name: string; enabled: boolean }>>('/categories?page=1&size=50', signal),
   anchor: (anchorId: string, categoryId: string, before: number, after: number, signal: AbortSignal) => {

@@ -13,6 +13,7 @@ public class MyBatisTagRepository implements TagRepository {
 
     public List<String> tags(long videoId) { return mapper.names(videoId); }
     public List<TagCount> popular(int limit) { return mapper.popular(limit); }
+    public List<TagCount> suggest(String pattern, int limit) { return mapper.suggest(pattern, limit); }
 
     public void replace(long videoId, List<String> tags) {
         mapper.deleteItems(videoId);
