@@ -42,6 +42,7 @@ public class MyBatisVideoQueryRepository implements VideoQueryRepository {
     public Optional<MediaTarget> media(long videoId, long actorId, MediaPurpose purpose, MediaKind kind, Long version, Long round) {
         return Optional.ofNullable(mapper.media(videoId, actorId, purpose, kind, version, round));
     }
+    public List<HlsPlaylist> hls(long videoId) { return mapper.hls(videoId); }
     public AnchoredVideos anchor(VideoSearch search, PublicVideo anchor, int before, int after) {
         var newer = mapper.findNewer(search.title(), search.pattern(), search.categoryId(), search.tag(), search.authorPattern(), anchor.publishedAt(), anchor.id(), before + 1);
         var older = mapper.findOlder(search.title(), search.pattern(), search.categoryId(), search.tag(), search.authorPattern(), anchor.publishedAt(), anchor.id(), after + 1);

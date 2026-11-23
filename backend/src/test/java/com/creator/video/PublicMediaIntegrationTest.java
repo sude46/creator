@@ -62,6 +62,8 @@ class PublicMediaIntegrationTest {
         signer.fail = false;
         database.update("DELETE FROM operation_log");
         database.update("DELETE FROM review_record");
+        database.update("DELETE FROM video_hls_segment");
+        database.update("DELETE FROM video_hls");
         database.update("DELETE FROM processing_task");
         database.update("DELETE FROM upload_attempt");
         database.update("UPDATE video SET source_asset_id=NULL");
@@ -393,6 +395,32 @@ class PublicMediaIntegrationTest {
         assertEquals(ErrorCode.NOT_FOUND, failure(() -> publicVideos.get(id)));
         for (var kind : MediaKind.values()) assertEquals(ErrorCode.NOT_FOUND, failure(() -> grant(other, id, MediaPurpose.PUBLIC_PLAY, kind)));
     }
+    @Test
+    void hlsMasterAndPlaylistArePublicAndRewriteSegmentsWithSignedUrls() throws Exception {
+        long id = published("hls public");
+        String base = "videos/" + id + "/1/hls/720p";
+        database.update("INSERT INTO video_hls (video_id,rendition,bandwidth,width,height,base_key,playlist_key,playlist)"
+                + " VALUES (?,?,?,?,?,?,?,?)", id, "720p", 2500, 1280, 720, base, base + "/index.m3u8",
+                "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:4\n#EXTINF:3.0,\nseg-00000.ts\n#EXT-X-ENDLIST\n");
+        String master = mvc.perform(get("/api/videos/{id}/hls/master.m3u8", id))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith("application/vnd.apple.mpegurl"))
+                .andReturn().getResponse().getContentAsString();
+        assertTrue(master.contains("RESOLUTION=1280x720"));
+        assertTrue(master.contains("/api/videos/" + id + "/hls/720p/index.m3u8"));
+        String playlist = mvc.perform(get("/api/videos/{id}/hls/720p/index.m3u8", id))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertTrue(playlist.contains("https://media.example.test/signed"));
+        assertFalse(playlist.lines().anyMatch(line -> line.equals("seg-00000.ts")));
+        mvc.perform(get("/api/videos/{id}", id)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.hasHls").value(true));
+        assertEquals(1, signer.calls.size());
+
+        mvc.perform(get("/api/videos/{id}/hls/1080p/index.m3u8", id)).andExpect(status().isNotFound());
+        database.update("UPDATE video SET publication_status='OFFLINE' WHERE id=?", id);
+        mvc.perform(get("/api/videos/{id}/hls/master.m3u8", id)).andExpect(status().isNotFound());
+    }
+
     private long published(String title) {
         long id = ready(author, title);
         reviews.submit(author, id, 0);
@@ -428,5 +456,8 @@ class PublicMediaIntegrationTest {
     @TestConfiguration
     static class Fixtures {
         @Bean RecordingSigner recordingSigner() { return new RecordingSigner(); }
+        @Bean com.creator.video.infrastructure.media.MediaProperties mediaProperties() {
+            return new com.creator.video.infrastructure.media.MediaProperties("https://media.example.test", "test-region", 60, 300, 900);
+        }
     }
 }

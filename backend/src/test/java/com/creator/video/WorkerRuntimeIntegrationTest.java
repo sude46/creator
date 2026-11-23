@@ -130,6 +130,7 @@ class WorkerRuntimeIntegrationTest {
     static class FixtureStorage implements ProcessingStorage {
         volatile byte[] source;
         final Map<String, byte[]> covers = new ConcurrentHashMap<>();
+        final Map<String, byte[]> hls = new ConcurrentHashMap<>();
         public void verify() { }
         public void download(String key, Path target, long expected, long deadline) {
             assertFalse(TransactionSynchronizationManager.isActualTransactionActive());
@@ -140,7 +141,11 @@ class WorkerRuntimeIntegrationTest {
             assertFalse(TransactionSynchronizationManager.isActualTransactionActive());
             try { covers.put(key, Files.readAllBytes(file)); } catch (Exception exception) { throw new RuntimeException(exception); }
         }
-        public void delete(String key) { covers.remove(key); }
+        public void uploadHls(String key, Path file, long bytes, String contentType, long deadline) {
+            assertFalse(TransactionSynchronizationManager.isActualTransactionActive());
+            try { hls.put(key, Files.readAllBytes(file)); } catch (Exception exception) { throw new RuntimeException(exception); }
+        }
+        public void delete(String key) { covers.remove(key); hls.remove(key); }
     }
     @TestConfiguration
     static class Fixtures {

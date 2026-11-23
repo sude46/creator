@@ -41,10 +41,21 @@ public interface ExecutionMapper extends ExecutionRepository {
             @Param("failure") String failure, @Param("retryAt") LocalDateTime retryAt);
 
     @Override
-    default void bind(ExecutionClaim claim, MediaMetadata metadata, long coverBytes) {
+    default void bind(ExecutionClaim claim, MediaMetadata metadata, long coverBytes, List<HlsVariant> hls) {
         insertCover(claim, coverBytes);
+        for (var variant : hls) {
+            insertHls(claim.videoId(), variant);
+            for (String key : variant.segmentKeys()) insertHlsSegment(claim.videoId(), key);
+        }
         ready(claim.videoId(), metadata);
     }
+
+    @Insert("INSERT INTO video_hls (video_id,rendition,bandwidth,width,height,base_key,playlist_key,playlist)"
+            + " VALUES (#{videoId},#{variant.name},#{variant.bandwidth},#{variant.width},#{variant.height},#{variant.baseKey},#{variant.playlistKey},#{variant.playlist})")
+    void insertHls(@Param("videoId") long videoId, @Param("variant") HlsVariant variant);
+
+    @Insert("INSERT INTO video_hls_segment (video_id,object_key) VALUES (#{videoId},#{key})")
+    void insertHlsSegment(@Param("videoId") long videoId, @Param("key") String key);
 
     @Insert("INSERT INTO media_asset (video_id, kind, object_key, size_bytes) VALUES (#{claim.videoId}, 'COVER', #{claim.coverKey}, #{bytes})")
     void insertCover(@Param("claim") ExecutionClaim claim, @Param("bytes") long bytes);

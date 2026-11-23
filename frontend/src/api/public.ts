@@ -1,7 +1,7 @@
 import { request } from './http'
 import type { Page, SignedMedia } from './creator'
 
-export type PublicVideo = { id: string; authorId: string; authorName: string; categoryId: string; categoryName: string; title: string; description: string; durationMillis: number; width: number; height: number; publishedAt: string; hasCover: boolean; coverKey: string | null; viewCount: number; favoriteCount: number; likeCount: number }
+export type PublicVideo = { id: string; authorId: string; authorName: string; categoryId: string; categoryName: string; title: string; description: string; durationMillis: number; width: number; height: number; publishedAt: string; hasCover: boolean; coverKey: string | null; viewCount: number; favoriteCount: number; likeCount: number; hasHls: boolean }
 export type Comment = { id: string; videoId: string; userId: string; username: string; content: string; parentId: string | null; likeCount: number; liked: boolean; replyCount: number; createdAt: string }
 export type AuthorCard = { id: string; username: string; displayName: string | null; bio: string; hasAvatar: boolean; profileVersion: number; followerCount: number; following: boolean }
 export type AuthorProfile = { id: string; username: string; displayName: string | null; bio: string; website: string; hasAvatar: boolean; profileVersion: number; followerCount: number; followingCount: number; following: boolean; self: boolean }

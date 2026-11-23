@@ -28,7 +28,13 @@ public interface VideoDeletionMapper {
             """)
     int claim(@Param("id") long id, @Param("now") LocalDateTime now, @Param("leaseUntil") LocalDateTime leaseUntil);
 
-    @Select("SELECT object_key FROM media_asset WHERE video_id = #{videoId} ORDER BY id")
+    @Select("""
+            SELECT object_key FROM media_asset WHERE video_id = #{videoId}
+            UNION ALL
+            SELECT object_key FROM video_hls_segment WHERE video_id = #{videoId}
+            UNION ALL
+            SELECT playlist_key FROM video_hls WHERE video_id = #{videoId}
+            """)
     List<String> objectKeys(long videoId);
 
     @Update("UPDATE video SET source_asset_id = NULL WHERE id = #{videoId}")
@@ -36,6 +42,12 @@ public interface VideoDeletionMapper {
 
     @Delete("DELETE FROM media_asset WHERE video_id = #{videoId}")
     void deleteAssets(long videoId);
+
+    @Delete("DELETE FROM video_hls_segment WHERE video_id = #{videoId}")
+    void deleteHlsSegments(long videoId);
+
+    @Delete("DELETE FROM video_hls WHERE video_id = #{videoId}")
+    void deleteHls(long videoId);
 
     @Update("""
             UPDATE video_deletion SET state = 'DONE', last_error = NULL, updated_at = CURRENT_TIMESTAMP(6)

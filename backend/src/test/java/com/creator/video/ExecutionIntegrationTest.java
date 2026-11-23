@@ -288,6 +288,10 @@ class ExecutionIntegrationTest {
             try { objects.put(key, Files.readAllBytes(file)); } catch (Exception exception) { throw new RuntimeException(exception); }
             afterPut.run();
         }
+        public void uploadHls(String key, Path file, long bytes, String contentType, long deadline) {
+            assertFalse(TransactionSynchronizationManager.isActualTransactionActive());
+            try { objects.put(key, Files.readAllBytes(file)); } catch (Exception exception) { throw new RuntimeException(exception); }
+        }
         public void delete(String key) {
             assertFalse(TransactionSynchronizationManager.isActualTransactionActive());
             if (failDelete) throw new IllegalStateException("injected storage failure");

@@ -20,7 +20,8 @@ public interface VideoQueryMapper {
             + " (SELECT cover.object_key FROM media_asset cover WHERE cover.video_id = v.id AND cover.kind = 'COVER'"
             + " ORDER BY cover.id DESC LIMIT 1) AS cover_key, v.view_count,"
             + " (SELECT COUNT(*) FROM video_favorite favorite WHERE favorite.video_id = v.id) AS favorite_count,"
-            + " (SELECT COUNT(*) FROM video_like liked WHERE liked.video_id = v.id) AS like_count";
+            + " (SELECT COUNT(*) FROM video_like liked WHERE liked.video_id = v.id) AS like_count,"
+            + " EXISTS(SELECT 1 FROM video_hls hls WHERE hls.video_id = v.id) AS has_hls";
     String SCORE = "(v.view_count"
             + " + 3 * (SELECT COUNT(*) FROM video_like liked WHERE liked.video_id = v.id)"
             + " + 4 * (SELECT COUNT(*) FROM video_favorite favorite WHERE favorite.video_id = v.id)"
@@ -68,6 +69,9 @@ public interface VideoQueryMapper {
 
     @Select("SELECT " + COLUMNS + FROM + " WHERE " + PUBLIC + " AND v.id = #{videoId}")
     PublicVideo findPublic(long videoId);
+
+    @Select("SELECT rendition, bandwidth, width, height, base_key, playlist_key, playlist FROM video_hls WHERE video_id = #{videoId} ORDER BY bandwidth DESC")
+    java.util.List<com.creator.video.domain.HlsPlaylist> hls(long videoId);
 
     @Update("UPDATE video SET view_count = view_count + 1 WHERE id = #{videoId}"
             + " AND processing_status = 'READY' AND review_status = 'APPROVED' AND publication_status = 'PUBLISHED'"

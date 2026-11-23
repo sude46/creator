@@ -43,6 +43,65 @@ public class FfmpegMediaProcessor implements MediaProcessor {
     }
 
     @Override
+    public ProcessedMedia processWithHls(Path source, Path cover, Path hlsDirectory, long deadlineNanos) {
+        var metadata = process(source, cover, deadlineNanos);
+        return new ProcessedMedia(metadata, hls(source, hlsDirectory, metadata, deadlineNanos));
+    }
+
+    private List<ProcessedMedia.HlsVariant> hls(Path source, Path hlsDirectory, MediaMetadata metadata, long deadlineNanos) {
+        try {
+            Files.createDirectories(hlsDirectory);
+            var variants = new ArrayList<ProcessedMedia.HlsVariant>();
+            for (var rendition : ladder(metadata.width(), metadata.height())) {
+                var directory = hlsDirectory.resolve(rendition.name);
+                Files.createDirectories(directory);
+                var command = List.of(ffmpeg.toString(), "-hide_banner", "-v", "error", "-nostdin", "-y",
+                        "-protocol_whitelist", "file", "-format_whitelist", "mov", "-enable_drefs", "0",
+                        "-use_absolute_path", "0", "-threads", "1", "-i", source.toAbsolutePath().toString(),
+                        "-map", "0:v:0", "-map", "0:a:0?", "-vf",
+                        "scale=" + rendition.width + ":" + rendition.height + ":flags=lanczos",
+                        "-c:v", "libx264", "-preset", "veryfast", "-profile:v", "main", "-pix_fmt", "yuv420p",
+                        "-crf", "23", "-maxrate", rendition.bitrate + "k", "-bufsize", (rendition.bitrate * 2) + "k",
+                        "-g", "48", "-keyint_min", "48", "-sc_threshold", "0",
+                        "-c:a", "aac", "-b:a", "128k", "-ac", "2", "-ar", "48000",
+                        "-f", "hls", "-hls_time", "4", "-hls_playlist_type", "vod",
+                        "-hls_flags", "independent_segments",
+                        "-hls_segment_filename", directory.resolve("seg-%05d.ts").toString(),
+                        directory.resolve("index.m3u8").toString());
+                var result = processes.run(command, source.getParent(), deadlineNanos);
+                if (result.exitCode() != 0) throw new ProcessingException(ProcessingFailure.PROCESS_FAILED);
+                var playlist = directory.resolve("index.m3u8");
+                if (!Files.isRegularFile(playlist) || Files.size(playlist) < 32) {
+                    throw new ProcessingException(ProcessingFailure.PROCESS_FAILED);
+                }
+                variants.add(new ProcessedMedia.HlsVariant(rendition.name, rendition.bitrate,
+                        rendition.width, rendition.height, Files.readString(playlist, java.nio.charset.StandardCharsets.UTF_8)));
+            }
+            return variants;
+        } catch (ProcessingException exception) { throw exception; }
+        catch (Exception exception) { throw new ProcessingException(ProcessingFailure.PROCESS_FAILED); }
+    }
+
+    private List<Rendition> ladder(int width, int height) {
+        var renditions = new ArrayList<Rendition>();
+        int[] heights = {1080, 720, 480, 360};
+        int[] bitrates = {4500, 2500, 1200, 700};
+        for (int index = 0; index < heights.length && renditions.size() < 3; index++) {
+            if (height >= heights[index]) renditions.add(rendition(width, height, heights[index], bitrates[index]));
+        }
+        if (renditions.isEmpty()) renditions.add(rendition(width, height, Math.max(2, (height / 2) * 2), 700));
+        return renditions;
+    }
+
+    private Rendition rendition(int sourceWidth, int sourceHeight, int targetHeight, int bitrate) {
+        int height = Math.max(2, (targetHeight / 2) * 2);
+        int width = Math.max(2, ((int) Math.round((double) sourceWidth * height / sourceHeight) / 2) * 2);
+        return new Rendition(height + "p", width, height, bitrate);
+    }
+
+    private record Rendition(String name, int width, int height, int bitrate) { }
+
+    @Override
     public MediaMetadata process(Path source, Path cover, long deadlineNanos) {
         var probeCommand = new ArrayList<>(List.of(probe.toString(), "-v", "error", "-protocol_whitelist", "file",
                 "-format_whitelist", "mov", "-enable_drefs", "0", "-use_absolute_path", "0", "-threads", "1",

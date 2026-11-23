@@ -14,4 +14,8 @@ public interface MediaSigner {
     default SignedMedia sign(MediaTarget target, MediaKind kind, boolean attachment) {
         return sign(target, kind);
     }
+
+    default SignedMedia signHlsSegment(MediaTarget target, int seconds) {
+        return sign(target, MediaKind.SOURCE);
+    }
 }

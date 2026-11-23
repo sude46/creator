@@ -39,6 +39,8 @@ public class MyBatisDeletionRepository implements DeletionRepository {
         mapper.done(id);
         mapper.clearSource(videoId);
         mapper.deleteAssets(videoId);
+        mapper.deleteHlsSegments(videoId);
+        mapper.deleteHls(videoId);
     }
 
     @Override

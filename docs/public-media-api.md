@@ -2,12 +2,14 @@
 
 ## 范围与接口
 
-当前所有 API 沿用 Session 登录，包括首页和公开作品查询。“公开”表示平台登录用户可见。媒体链接签发使用 POST 并校验 CSRF；客户端不能指定对象键、桶、播放用途或有效期。
+公开作品查询、详情、公开评论和 HLS playlist 允许匿名访问；“公开”表示已发布作品。媒体链接签发使用 POST 并校验 CSRF；客户端不能指定对象键、桶、播放用途或有效期。
 
 | 接口 | 行为 |
 | --- | --- |
 | `GET /api/videos?title=&categoryId=&page=1&size=20` | 已发布作品列表，标题包含匹配，可按分类过滤 |
 | `GET /api/videos/{id}` | 当前公开详情，不可见返回 404 |
+| `GET /api/videos/{id}/hls/master.m3u8` | 公开作品的 HLS master playlist；无 HLS 返回 404 |
+| `GET /api/videos/{id}/hls/{rendition}/index.m3u8` | 指定档位的 media playlist，分片改写为短期签名地址 |
 | `POST /api/videos/{id}/media?kind=SOURCE` | 公开作品源视频；`kind=COVER` 为封面 |
 | `POST /api/creator/videos/{id}/preview?kind=SOURCE` | 作者本人预览已处理完成的作品，可选 COVER |
 | `POST /api/admin/reviews/{id}/preview?kind=SOURCE&version=3&reviewRound=2` | 管理员预览当前待审轮次，可选 COVER，禁止自审 |
@@ -15,6 +17,14 @@
 列表返回 `{items,total,page,size}`，作品投影包含 id、authorId、authorName、categoryId、categoryName、title、description、durationMillis、width、height、publishedAt。ID 为字符串；publishedAt 使用现有 UTC 时间约定。响应不含审核原因、执行令牌、源对象键或存储凭据。
 
 标题去首尾空白后最多 120 个 Java 字符，不接受控制字符及非法 UTF-8；空标题不筛选。`%`、`_`、`!` 按字面匹配，所有输入参数化绑定。categoryId 为正整数；分页默认 20、最多 50 条，最多 1000 页。按 publishedAt、id 倒序稳定排序。标题包含匹配为首版小规模 LIKE，实现不等于已有全文索引或大规模性能结论。
+
+## HLS 播放
+
+Worker 仅在源文件通过 FFprobe 校验后生成 HLS。当前按源高度选择最多三档（1080p/720p/480p/360p 中不超过源分辨率的档位，源文件更小时保留源高度），每档使用独立 H.264/AAC 转码，4 秒分片、VOD playlist。生成的 `index.m3u8` 和 `*.ts` 写入私有对象的 `videos/{videoId}/{generation}/hls/{rendition}/` 前缀，`video_hls` 保存档位、带宽、宽高、对象前缀和 playlist 文本，`video_hls_segment` 保存分片键用于删除回收。
+
+公开播放先请求 master，再请求 media playlist。media playlist 中的相对 `.ts` 文件名逐行替换为 COS/MinIO 原生签名 GET 地址，TTL 由 `MEDIA_HLS_LINK_SECONDS` 控制，默认 900 秒，须覆盖最长 10 分钟视频。master/media playlist 不缓存且只对当前已发布作品返回；作品下架、封禁、删除、审核撤回后不再生成新的 playlist 或分片签名。分片 URL 一旦签发，在 TTL 内不能被立即撤销。
+
+前端优先使用 HLS：浏览器原生支持时直接播放 master；Firefox/Chrome 使用 hls.js；hls.js 发生 fatal 错误或浏览器不支持时回退到 `POST /api/videos/{id}/media?kind=SOURCE` 的 MP4 链接。HLS 生成失败或历史 READY 作品没有 HLS 时，`hasHls=false`，直接使用 MP4。当前未做历史作品回填、字幕、DRM、清晰度手动切换和码率策略调优。
 
 ## 可见性与并发边界
 
@@ -40,6 +50,7 @@
 | MEDIA_PUBLIC_ENDPOINT | 空 | 浏览器可达的 HTTP(S) origin，例如 `https://media.example.com` |
 | STORAGE_REGION | us-east-1 | 必须与存储端一致，显式指定以避免签名时查询地域 |
 | MEDIA_LINK_SECONDS | 60 | 范围 15～120 秒 |
+| MEDIA_HLS_LINK_SECONDS | 900 | 范围 60～3600 秒，覆盖最长视频播放 |
 | STORAGE_ENDPOINT | 空 | 后端可达的存储 API 端点，用于启动检查及存储操作 |
 | STORAGE_ACCESS_KEY / STORAGE_SECRET_KEY | 空 | 专用应用账号，不能提交真实值 |
 | STORAGE_BUCKET | creator-private | 与上传、Worker 指向同一个私有桶 |

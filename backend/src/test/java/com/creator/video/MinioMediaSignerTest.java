@@ -16,7 +16,7 @@ class MinioMediaSignerTest {
     @Test
     void presignUsesBrowserEndpointRegionShortExpiryAndSignedResponseHeadersWithoutNetwork() {
         var storage = storage();
-        var properties = new MediaProperties("https://media.example.invalid:9443", "test-region", 60, 300);
+        var properties = new MediaProperties("https://media.example.invalid:9443", "test-region", 60, 300, 900);
         var clock = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC);
         var signer = new MinioMediaSigner(storage, properties, clock);
         var grant = signer.sign(new MediaTarget("sources/private file.mp4", 100), MediaKind.SOURCE);
@@ -48,7 +48,7 @@ class MinioMediaSignerTest {
     void publicEndpointCannotContainCredentialsPrefixOrQuery() {
         for (String endpoint : List.of("https://name:password@example.test", "https://example.test/prefix", "https://example.test?token=1",
                 "file:///tmp/object", "https://example.test#fragment")) {
-            assertThrows(IllegalArgumentException.class, () -> new MinioMediaSigner(storage(), new MediaProperties(endpoint, "us-east-1", 60, 300), Clock.systemUTC()));
+            assertThrows(IllegalArgumentException.class, () -> new MinioMediaSigner(storage(), new MediaProperties(endpoint, "us-east-1", 60, 300, 900), Clock.systemUTC()));
         }
     }
 

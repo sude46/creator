@@ -39,14 +39,23 @@ public class MinioMediaSigner implements MediaSigner {
     @Override
     public SignedMedia sign(MediaTarget target, MediaKind kind, boolean attachment) {
         int seconds = kind == MediaKind.COVER ? properties.coverLinkSeconds() : properties.linkSeconds();
-        Instant expires = clock.instant().plusSeconds(seconds);
         String disposition = attachment
                 ? "attachment; filename=\"" + (kind == MediaKind.SOURCE ? "video.mp4" : "cover.jpg") + "\""
                 : "inline";
+        return signObject(target.objectKey(), kind.contentType(), disposition, seconds);
+    }
+
+    @Override
+    public SignedMedia signHlsSegment(MediaTarget target, int seconds) {
+        return signObject(target.objectKey(), "video/mp2t", "inline", seconds);
+    }
+
+    private SignedMedia signObject(String objectKey, String contentType, String disposition, int seconds) {
+        Instant expires = clock.instant().plusSeconds(seconds);
         try {
             String url = client.getPresignedObjectUrl(GetPresignedObjectUrlArgs.builder().method(Method.GET)
-                    .bucket(storage.bucket()).object(target.objectKey()).expiry(seconds)
-                    .extraQueryParams(Map.of("response-content-type", kind.contentType(),
+                    .bucket(storage.bucket()).object(objectKey).expiry(seconds)
+                    .extraQueryParams(Map.of("response-content-type", contentType,
                             "response-content-disposition", disposition,
                             "response-cache-control", "private, no-store")).build());
             return new SignedMedia(url, expires);

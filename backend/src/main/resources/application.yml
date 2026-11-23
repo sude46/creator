@@ -60,6 +60,7 @@ creator:
     region: ${STORAGE_REGION:us-east-1}
     link-seconds: ${MEDIA_LINK_SECONDS:60}
     cover-link-seconds: ${MEDIA_COVER_LINK_SECONDS:300}
+    hls-link-seconds: ${MEDIA_HLS_LINK_SECONDS:900}
   processing:
     dispatch:
       enabled: ${PROCESSING_DISPATCH_ENABLED:false}

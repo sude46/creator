@@ -42,7 +42,7 @@ class CosStorageIntegrationTest {
                 assertEquals(Files.size(source), Files.size(downloaded));
             }
             var signer = new CosMediaSigner(storage,
-                    new MediaProperties(publicEndpoint, region, 60, 300), Clock.systemUTC());
+                    new MediaProperties(publicEndpoint, region, 60, 300, 900), Clock.systemUTC());
             var signed = signer.sign(new MediaTarget(key, Files.size(source)), MediaKind.SOURCE);
             assertEquals(bucket + ".cos." + region + ".myqcloud.com", URI.create(signed.url()).getHost());
             HttpClient http = HttpClient.newHttpClient();

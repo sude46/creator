@@ -209,6 +209,23 @@ public class CosObjectStorage implements ObjectStorage, ProcessingStorage, AutoC
         }
     }
 
+    @Override
+    public void uploadHls(String key, Path file, long bytes, String contentType, long deadlineNanos) {
+        ProcessingWorker.requireTime(deadlineNanos);
+        if (bytes < 1 || bytes > 10485760
+                || !(contentType.equals("video/mp2t") || contentType.equals("application/vnd.apple.mpegurl"))) {
+            throw new ProcessingException(ProcessingFailure.PROCESS_FAILED);
+        }
+        try {
+            var request = new PutObjectRequest(properties.bucket(), key, file.toFile())
+                    .withMetadata(metadata(contentType, bytes));
+            request.setEnableResumableUpload(false);
+            client.putObject(request);
+        } catch (Exception exception) {
+            throw new ProcessingException(ProcessingFailure.STORAGE_UNAVAILABLE);
+        }
+    }
+
     private ObjectMetadata metadata(String contentType, long length) {
         var metadata = new ObjectMetadata();
         metadata.setContentType(contentType);

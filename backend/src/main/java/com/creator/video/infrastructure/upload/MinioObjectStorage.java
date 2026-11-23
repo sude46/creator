@@ -128,6 +128,20 @@ public class MinioObjectStorage implements ObjectStorage, ProcessingStorage, Aut
         } catch (Exception exception) { throw new ProcessingException(ProcessingFailure.STORAGE_UNAVAILABLE); }
     }
 
+    @Override
+    public void uploadHls(String key, Path file, long bytes, String contentType, long deadlineNanos) {
+        ProcessingWorker.requireTime(deadlineNanos);
+        if (bytes < 1 || bytes > 10485760
+                || !(contentType.equals("video/mp2t") || contentType.equals("application/vnd.apple.mpegurl"))) {
+            throw new ProcessingException(ProcessingFailure.PROCESS_FAILED);
+        }
+        try (var input = Files.newInputStream(file)) {
+            client(deadlineNanos).putObject(PutObjectArgs.builder().bucket(properties.bucket()).object(key)
+                    .stream(input, bytes, 5L * 1024 * 1024).contentType(contentType).build());
+        } catch (ProcessingException exception) { throw exception; }
+        catch (Exception exception) { throw new ProcessingException(ProcessingFailure.STORAGE_UNAVAILABLE); }
+    }
+
     private MinioClient client() { return client(Long.MAX_VALUE); }
 
     private MinioClient client(long overallDeadline) {

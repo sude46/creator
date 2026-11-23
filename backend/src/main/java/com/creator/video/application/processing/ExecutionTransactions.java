@@ -46,6 +46,10 @@ public class ExecutionTransactions {
 
     @Transactional(timeout = 5)
     public boolean succeed(ExecutionClaim claim, MediaMetadata metadata, long coverBytes) {
+        return succeed(claim, metadata, coverBytes, java.util.List.of());
+    }
+
+    public boolean succeed(ExecutionClaim claim, MediaMetadata metadata, long coverBytes, java.util.List<com.creator.video.domain.HlsVariant> hls) {
         var video = repository.lockVideo(claim.videoId());
         var task = repository.lockTask(claim.taskId());
         var now = now();
@@ -54,7 +58,7 @@ public class ExecutionTransactions {
         if (output == null || output.taskId() != claim.taskId() || !output.objectKey().equals(claim.coverKey())
                 || !output.state().equals("STAGING") || !output.expiresAt().isAfter(now)) return false;
         if (coverBytes < 1 || coverBytes > 1048576) throw new IllegalArgumentException("Invalid cover size");
-        repository.bind(claim, metadata, coverBytes);
+        repository.bind(claim, metadata, coverBytes, hls);
         repository.finishTask(task.id(), "SUCCEEDED", null, now);
         repository.outputState(claim.executionToken(), "BOUND", now);
         return true;

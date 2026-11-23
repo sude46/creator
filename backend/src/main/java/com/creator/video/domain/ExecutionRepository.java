@@ -18,7 +18,7 @@ public interface ExecutionRepository {
     void createOutput(ExecutionClaim claim, LocalDateTime expiresAt);
     void videoState(long videoId, String state);
     void finishTask(long taskId, String state, String failure, LocalDateTime retryAt);
-    void bind(ExecutionClaim claim, MediaMetadata metadata, long coverBytes);
+    void bind(ExecutionClaim claim, MediaMetadata metadata, long coverBytes, List<HlsVariant> hls);
     List<ProcessingMessage> recoverable(LocalDateTime now, int limit);
     List<Output> expiredOutputs(LocalDateTime now, int limit);
     Output lockOutput(String token);

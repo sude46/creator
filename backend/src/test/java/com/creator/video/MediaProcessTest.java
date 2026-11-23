@@ -77,6 +77,30 @@ class MediaProcessTest {
 
     @Test
     @EnabledIfEnvironmentVariable(named = "CREATOR_FFMPEG_IT_DIR", matches = ".+")
+    void actualFfmpegProducesHlsPlaylistAndSegments() throws Exception {
+        var bin = Path.of(System.getenv("CREATOR_FFMPEG_IT_DIR"));
+        var ffmpeg = bin.resolve(nativeName("ffmpeg"));
+        var processor = new FfmpegMediaProcessor(properties(bin.resolve(nativeName("ffprobe")).toString(), ffmpeg.toString()),
+                new ObjectMapper(), new BoundedMediaProcess());
+        var source = directory.resolve("source.mp4");
+        generate(ffmpeg, source, "libx264");
+        var hls = directory.resolve("hls");
+        var processed = processor.processWithHls(source, directory.resolve("cover.jpg"), hls,
+                System.nanoTime() + TimeUnit.SECONDS.toNanos(30));
+        assertEquals(1, processed.variants().size());
+        var variant = processed.variants().getFirst();
+        assertEquals("240p", variant.name());
+        assertEquals(320, variant.width());
+        assertEquals(240, variant.height());
+        assertTrue(variant.playlist().contains("#EXTM3U"));
+        assertTrue(variant.playlist().lines().anyMatch(line -> line.endsWith(".ts")));
+        try (var files = Files.list(hls.resolve(variant.name()))) {
+            assertTrue(files.anyMatch(path -> path.getFileName().toString().endsWith(".ts")));
+        }
+    }
+
+    @Test
+    @EnabledIfEnvironmentVariable(named = "CREATOR_FFMPEG_IT_DIR", matches = ".+")
     void metadataRejectsExternalStreamTypesInvalidDimensionsAndExcessiveDuration() throws Exception {
         var bin = Path.of(System.getenv("CREATOR_FFMPEG_IT_DIR"));
         var processor = new FfmpegMediaProcessor(properties(bin.resolve(nativeName("ffprobe")).toString(), bin.resolve(nativeName("ffmpeg")).toString()),
