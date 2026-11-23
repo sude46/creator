@@ -179,6 +179,9 @@ async function logout() {
 .account-register { border: 1px solid var(--color-border); color: var(--color-secondary); }
 .account-register:hover { border-color: var(--color-primary); background: var(--color-primary-soft); color: var(--color-primary); }
 .account-login:focus-visible, .account-register:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+@media (max-width: 380px) {
+  .brand span { display: none; }
+}
 @media (max-width: 760px) {
   .account-name, .account-chevron { display: none; }
   .account-trigger { padding: 3px; }
