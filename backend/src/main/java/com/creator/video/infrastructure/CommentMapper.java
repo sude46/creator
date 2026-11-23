@@ -1,6 +1,7 @@
 package com.creator.video.infrastructure;
 
 import com.creator.video.domain.Comment;
+import com.creator.video.domain.CommentAdmin;
 import java.util.List;
 import org.apache.ibatis.annotations.*;
 
@@ -35,6 +36,12 @@ public interface CommentMapper {
 
     @Select("SELECT " + COLUMNS + FROM + " WHERE c.id = #{id} AND c.status = 'ACTIVE'")
     Comment find(@Param("id") long id, @Param("actorId") long actorId);
+
+    @Select("SELECT id, video_id, user_id, content, parent_id, status FROM video_comment WHERE id = #{id}")
+    CommentAdmin findAny(long id);
+
+    @Update("UPDATE video_comment SET status = 'ACTIVE', updated_at = CURRENT_TIMESTAMP(6) WHERE id = #{id} AND status = 'DELETED'")
+    int restore(long id);
 
     @Insert("INSERT INTO video_comment (video_id, user_id, parent_id, content) VALUES (#{videoId}, #{userId}, #{parentId}, #{content})")
     void insert(@Param("videoId") long videoId, @Param("userId") long userId, @Param("parentId") Long parentId,

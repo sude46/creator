@@ -11,6 +11,8 @@ public interface CommentRepository {
     long replyCount(long parentId);
     Optional<Comment> find(long id);
     Optional<Comment> find(long id, long actorId);
+    Optional<CommentAdmin> findAny(long id);
+    boolean restore(long id);
     long insert(long videoId, long userId, Long parentId, String content);
     boolean delete(long id);
     void like(long commentId, long userId);

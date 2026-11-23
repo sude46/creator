@@ -2,6 +2,7 @@ package com.creator.video.infrastructure;
 
 import com.creator.common.PageRequest;
 import com.creator.video.domain.Comment;
+import com.creator.video.domain.CommentAdmin;
 import com.creator.video.domain.CommentRepository;
 import java.util.List;
 import java.util.Optional;
@@ -22,6 +23,8 @@ public class MyBatisCommentRepository implements CommentRepository {
     public long replyCount(long parentId) { return mapper.replyCount(parentId); }
     public Optional<Comment> find(long id) { return find(id, 0); }
     public Optional<Comment> find(long id, long actorId) { return Optional.ofNullable(mapper.find(id, actorId)); }
+    public Optional<CommentAdmin> findAny(long id) { return Optional.ofNullable(mapper.findAny(id)); }
+    public boolean restore(long id) { return mapper.restore(id) == 1; }
     public long insert(long videoId, long userId, Long parentId, String content) {
         mapper.insert(videoId, userId, parentId, content);
         return mapper.lastId();

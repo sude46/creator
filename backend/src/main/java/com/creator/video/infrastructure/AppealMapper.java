@@ -7,7 +7,9 @@ import org.apache.ibatis.annotations.*;
 @Mapper
 public interface AppealMapper {
     String COLS = "a.id, a.appellant_id, appellant.username AS appellant_name, a.target_type, a.target_id,"
-            + " (SELECT video.title FROM video WHERE video.id = a.target_id) AS target_title, a.reason,"
+            + " CASE a.target_type WHEN 'VIDEO' THEN (SELECT video.title FROM video WHERE video.id = a.target_id)"
+            + " WHEN 'COMMENT' THEN (SELECT SUBSTRING(comment.content, 1, 80) FROM video_comment comment WHERE comment.id = a.target_id)"
+            + " END AS target_title, a.reason,"
             + " a.status, a.resolver_id, a.resolution_reason, a.created_at, a.resolved_at";
     String FROM = " FROM content_appeal a JOIN user_account appellant ON appellant.id = a.appellant_id";
     String FILTER = " WHERE 1=1"

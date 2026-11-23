@@ -36,17 +36,17 @@ async function load(next = page.value) {
 
 async function resolve(appeal: Appeal, action: 'ACCEPT' | 'REJECT') {
   if (busy.value) return
-  const label = action === 'ACCEPT' ? '受理' : '驳回'
+  const label = action === 'ACCEPT' ? (appeal.targetType === 'VIDEO' ? '受理并解禁' : '受理并恢复评论') : '驳回'
   const reason = window.prompt(`${label}申诉原因（1～500 字）`)?.trim() ?? ''
   if (!reason) return
-  if (!window.confirm(`${label}这条申诉？${action === 'ACCEPT' ? '作品会解除封禁。' : '作品会保持封禁。'}`)) return
+  if (!window.confirm(`${label}这条申诉？${action === 'ACCEPT' ? (appeal.targetType === 'VIDEO' ? '作品会解除封禁。' : '评论会恢复显示。') : '原处理保持不变。'}`)) return
   busy.value = true
   error.value = ''
   notice.value = ''
   try {
     await appealApi.resolve(appeal.id, action, reason)
     if (stopped) return
-    notice.value = action === 'ACCEPT' ? '申诉已受理，作品已解禁。' : '申诉已驳回。'
+    notice.value = action === 'ACCEPT' ? (appeal.targetType === 'VIDEO' ? '申诉已受理，作品已解禁。' : '申诉已受理，评论已恢复。') : '申诉已驳回。'
     await load()
   } catch (failure) { if (!stopped) error.value = explain(failure) }
   finally { if (!stopped) busy.value = false }
@@ -66,10 +66,10 @@ onBeforeUnmount(() => { stopped = true; request?.abort() })
     <section class="studio-panel" :aria-busy="loading">
       <p v-if="loading" class="empty-state" role="status">正在读取申诉…</p>
       <article v-for="appeal in items" :key="appeal.id" class="history-item">
-        <div class="section-heading"><div><strong>作品 #{{ appeal.targetId }} · {{ appeal.targetTitle || '标题不可用' }}</strong><p class="muted">申诉人 {{ appeal.appellantName }} · {{ formatTime(appeal.createdAt) }}</p></div><el-tag :type="appeal.status === 'OPEN' ? 'warning' : appeal.status === 'ACCEPTED' ? 'success' : 'danger'">{{ appeal.status === 'OPEN' ? '待处理' : appeal.status === 'ACCEPTED' ? '已受理' : '已驳回' }}</el-tag></div>
+        <div class="section-heading"><div><strong>{{ appeal.targetType === 'VIDEO' ? '作品' : '评论' }} #{{ appeal.targetId }} · {{ appeal.targetTitle || '内容不可用' }}</strong><p class="muted">申诉人 {{ appeal.appellantName }} · {{ formatTime(appeal.createdAt) }}</p></div><el-tag :type="appeal.status === 'OPEN' ? 'warning' : appeal.status === 'ACCEPTED' ? 'success' : 'danger'">{{ appeal.status === 'OPEN' ? '待处理' : appeal.status === 'ACCEPTED' ? '已受理' : '已驳回' }}</el-tag></div>
         <p class="history-reason">{{ appeal.reason }}</p>
         <p v-if="appeal.resolutionReason" class="muted">处理说明：{{ appeal.resolutionReason }}</p>
-        <div v-if="appeal.status === 'OPEN'" class="inline-actions"><el-button type="primary" :loading="busy" @click="resolve(appeal, 'ACCEPT')">受理并解禁</el-button><el-button type="danger" :disabled="busy" @click="resolve(appeal, 'REJECT')">驳回申诉</el-button></div>
+        <div v-if="appeal.status === 'OPEN'" class="inline-actions"><el-button type="primary" :loading="busy" @click="resolve(appeal, 'ACCEPT')">{{ appeal.targetType === 'VIDEO' ? '受理并解禁' : '受理并恢复评论' }}</el-button><el-button type="danger" :disabled="busy" @click="resolve(appeal, 'REJECT')">驳回申诉</el-button></div>
       </article>
       <p v-if="!loading && !items.length" class="empty-state">当前筛选下没有申诉。</p>
       <div class="page-controls"><el-button :disabled="loading || busy || page <= 1" @click="load(page - 1)">上一页</el-button><span>第 {{ page }} 页</span><el-button :disabled="loading || busy || page * 20 >= total || page >= 1000" @click="load(page + 1)">下一页</el-button></div>

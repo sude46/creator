@@ -102,7 +102,7 @@ async function load(manual = true) {
 }
 async function loadAppeals() {
   try {
-    const result = await appealApi.mine(id, activeRequest?.signal)
+    const result = await appealApi.mine('VIDEO', id, activeRequest?.signal)
     if (!stopped && !activeRequest?.signal.aborted) appeals.value = result.items
   } catch { /* appeals are optional on the work detail */ }
 }
@@ -112,7 +112,7 @@ async function submitAppeal() {
   appealBusy.value = true
   appealError.value = ''
   try {
-    await appealApi.create(id, reason)
+    await appealApi.create('VIDEO', id, reason)
     if (stopped) return
     appealText.value = ''
     notice.value = '申诉已提交，等待管理员处理。'

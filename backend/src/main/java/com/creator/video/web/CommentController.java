@@ -40,6 +40,11 @@ public class CommentController {
         return CommentView.from(comments.add(actor, videoId, request.content(), request.parentId()));
     }
 
+    @GetMapping("/api/comments/{id}/appeal-context")
+    public CommentAppealContextView appealContext(@RequestAttribute("currentActor") Actor actor, @PathVariable long id) {
+        return CommentAppealContextView.from(comments.appealContext(actor, id));
+    }
+
     @DeleteMapping("/api/comments/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@RequestAttribute("currentActor") Actor actor, @PathVariable long id) { comments.delete(actor, id); }

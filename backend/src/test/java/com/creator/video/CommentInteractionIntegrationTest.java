@@ -23,6 +23,7 @@ class CommentInteractionIntegrationTest {
     @Autowired ReviewService reviews;
     @Autowired CommentService comments;
     @Autowired NotificationService notifications;
+    @Autowired AppealService appeals;
     @Autowired CategoryService categories;
     @Autowired RegisterUser registration;
     @Autowired BootstrapAdmin bootstrap;
@@ -90,6 +91,25 @@ class CommentInteractionIntegrationTest {
         comments.delete(author, top.id());
         assertEquals(0, comments.list(author, video, new PageRequest(1, 10)).total());
         assertEquals(ErrorCode.NOT_FOUND, failure(() -> comments.replies(author, top.id(), new PageRequest(1, 50))));
+    }
+
+    @Test
+    void moderatorDeletionNotifiesAndCommentAppealRestoresTheComment() {
+        long video = published("comment appeal");
+        var comment = comments.add(other, video, "等待申诉的评论");
+        comments.delete(admin, comment.id(), "包含违规内容");
+        assertEquals("等待申诉的评论", comments.appealContext(other, comment.id()).content());
+        assertEquals(ErrorCode.NOT_FOUND, failure(() -> comments.appealContext(author, comment.id())));
+        var notice = notifications.list(other, false, "MODERATION", new PageRequest(1, 20)).items().getFirst();
+        assertEquals("评论已被删除", notice.title());
+        assertTrue(notice.link().endsWith("/appeal"));
+
+        var appeal = appeals.create(other, "COMMENT", comment.id(), "请求恢复评论");
+        assertEquals("OPEN", appeal.status());
+        assertEquals(ErrorCode.APPEAL_ALREADY_OPEN, failure(() -> appeals.create(other, "COMMENT", comment.id(), "重复")));
+        appeals.resolve(admin, appeal.id(), "ACCEPT", "复核后恢复");
+        assertEquals(1, comments.list(author, video, new PageRequest(1, 10)).total());
+        assertEquals("申诉已受理", notifications.list(other, false, "APPEAL", new PageRequest(1, 20)).items().getFirst().title());
     }
 
     @Test

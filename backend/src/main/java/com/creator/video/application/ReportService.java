@@ -57,7 +57,7 @@ public class ReportService {
         String notificationLink = report.targetType().equals("VIDEO") ? "/videos/" + report.targetId()
                 : comments.find(report.targetId()).map(comment -> "/videos/" + comment.videoId()).orElse(null);
         if (cleanAction.equals("REMOVE")) {
-            if (report.targetType().equals("COMMENT")) commentService.delete(actor, report.targetId());
+            if (report.targetType().equals("COMMENT")) commentService.delete(actor, report.targetId(), reason);
             else {
                 var video = creatorVideos.findAny(report.targetId(), false).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
                 deletions.deleteByAdmin(actor, video.id(), video.version(), new ModerationReason(reason == null ? "举报处理" : reason));

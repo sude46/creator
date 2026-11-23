@@ -6,6 +6,7 @@ import com.creator.identity.application.AccountQueryService;
 import com.creator.identity.domain.Actor;
 import com.creator.identity.domain.Role;
 import com.creator.video.domain.Comment;
+import com.creator.video.domain.CommentAdmin;
 import com.creator.video.domain.CommentRepository;
 import com.creator.video.domain.VideoQueryRepository;
 import org.springframework.stereotype.Service;
@@ -73,12 +74,24 @@ public class CommentService {
         return comments.find(id, actor.id()).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
     }
     @Transactional(timeout = 5)
-    public void delete(Actor actor, long id) {
+    public void delete(Actor actor, long id) { delete(actor, id, null); }
+    @Transactional(timeout = 5)
+    public void delete(Actor actor, long id, String reason) {
         active(actor);
         var comment = comments.find(id).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         if (!actor.canModerate() && actor.id() != comment.userId()) throw new BusinessException(ErrorCode.FORBIDDEN);
         if (!comments.delete(id)) throw new BusinessException(ErrorCode.NOT_FOUND);
+        if (actor.id() != comment.userId()) {
+            notifications.ifAvailable(service -> service.moderation(comment.userId(), id, reason));
+        }
         audit.record(actor, "COMMENT_DELETED", "COMMENT", id);
+    }
+    @Transactional(readOnly = true)
+    public CommentAdmin appealContext(Actor actor, long id) {
+        active(actor);
+        var comment = comments.findAny(id).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        if (comment.userId() != actor.id()) throw new BusinessException(ErrorCode.NOT_FOUND);
+        return comment;
     }
     @Transactional(timeout = 5)
     public void like(Actor actor, long id) {

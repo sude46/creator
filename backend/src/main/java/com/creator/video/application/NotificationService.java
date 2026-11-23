@@ -41,9 +41,14 @@ public class NotificationService {
         String message = reason == null || reason.isBlank() ? "管理员已处理你的举报。" : reason;
         notifications.add(userId, "REPORT", removed ? "举报已处理：内容已删除" : "举报已处理：未发现违规", message, link);
     }
-    public void appealResolved(long userId, boolean accepted, long videoId, String reason) {
+    public void appealResolved(long userId, boolean accepted, String link, String reason) {
         notifications.add(userId, "APPEAL", accepted ? "申诉已受理" : "申诉已驳回",
-                reason == null ? "" : reason, "/studio/" + videoId);
+                reason == null ? "" : reason, link);
+    }
+    public void moderation(long userId, long commentId, String reason) {
+        notifications.add(userId, "MODERATION", "评论已被删除",
+                reason == null || reason.isBlank() ? "你可以在站内提交申诉。" : reason,
+                "/comments/" + commentId + "/appeal");
     }
     public void follow(long userId, String follower) {
         notifications.add(userId, "FOLLOW", follower + " 关注了你", "", "/authors/" + userId);
@@ -53,7 +58,8 @@ public class NotificationService {
         active(actor);
         String cleanType = type == null || type.isBlank() ? null : type.trim().toUpperCase();
         if (cleanType != null && !(cleanType.equals("REVIEW") || cleanType.equals("COMMENT")
-                || cleanType.equals("FOLLOW") || cleanType.equals("REPORT") || cleanType.equals("APPEAL"))) {
+                || cleanType.equals("FOLLOW") || cleanType.equals("REPORT") || cleanType.equals("APPEAL")
+                || cleanType.equals("MODERATION"))) {
             throw new BusinessException(ErrorCode.INVALID_REQUEST);
         }
         return new PageResult<>(notifications.page(actor.id(), unreadOnly, cleanType, page),
