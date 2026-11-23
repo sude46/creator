@@ -83,7 +83,7 @@ async function logout() {
       <nav class="workspace-nav" aria-label="主导航"><RouterLink to="/">发现</RouterLink><template v-if="user"><RouterLink to="/favorites">我的收藏</RouterLink><RouterLink to="/history">观看历史</RouterLink><RouterLink to="/studio">我的作品</RouterLink><RouterLink to="/studio/analytics">数据</RouterLink><RouterLink to="/studio/collections">我的合集</RouterLink><RouterLink to="/notifications" class="notification-link" :aria-label="unread ? `通知，${unread} 条未读` : '通知'">通知<span v-if="unread" class="nav-badge" aria-hidden="true">{{ unread > 99 ? '99+' : unread }}</span></RouterLink><RouterLink to="/settings/profile">个人资料</RouterLink><RouterLink to="/settings/security">账号安全</RouterLink><RouterLink v-if="user.role === 'ADMIN'" to="/admin">管理后台</RouterLink></template></nav>
       <div class="account-menu">
         <div v-if="user" ref="account" class="account">
-          <button type="button" class="account-trigger" :aria-expanded="menuOpen" aria-haspopup="menu" @click="toggleMenu">
+          <button type="button" class="account-trigger" :aria-label="`账号菜单，${displayName}`" :aria-expanded="menuOpen" aria-haspopup="menu" @click="toggleMenu">
             <span class="avatar" aria-hidden="true"><img v-if="avatarUrl" :src="avatarUrl" alt="" /><span v-else>{{ initial }}</span></span>
             <span class="account-name">{{ displayName }}</span>
             <svg class="account-chevron" viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m3 4.5 3 3 3-3" /></svg>
