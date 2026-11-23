@@ -5,11 +5,15 @@ import com.creator.common.ErrorCode;
 import com.creator.video.application.UploadAdmission;
 import com.creator.video.application.UploadProperties;
 import com.creator.video.application.UploadStaging;
+import com.creator.video.domain.UploadChunk;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -63,7 +67,35 @@ class UploadResourceTest {
         staging.discard(active.path());
     }
 
+    @Test
+    void stagedChunksAssembleInOrderAndStalePartsAreCleaned() throws Exception {
+        var staging = new UploadStaging(properties(0, 120));
+        String uploadId = "11111111-1111-1111-1111-111111111111";
+        byte[] content = UploadIntegrationTest.mp4(1024);
+        List<UploadChunk> chunks = new ArrayList<>();
+        for (int index = 0; index < 4; index++) {
+            byte[] part = Arrays.copyOfRange(content, index * 256, (index + 1) * 256);
+            var staged = staging.receiveChunk(new ByteArrayInputStream(part), part.length);
+            staging.storeChunk(uploadId, index, staged.path());
+            chunks.add(new UploadChunk(index, part.length));
+        }
+        var assembled = staging.assemble(uploadId, chunks, content.length);
+        assertArrayEquals(content, Files.readAllBytes(assembled.path()));
+        staging.discard(assembled.path());
+
+        Path stale = directory.resolve("upload-" + uploadId + "-0.part");
+        Files.setLastModifiedTime(stale, FileTime.from(Instant.now().minusSeconds(8000)));
+        staging.cleanAbandoned();
+        assertFalse(Files.exists(stale));
+        assertTrue(Files.exists(directory.resolve("upload-" + uploadId + "-1.part")));
+
+        assertEquals(ErrorCode.INVALID_MEDIA, assertThrows(BusinessException.class,
+                () -> staging.assemble(uploadId, chunks, content.length)).getCode());
+        staging.discardUpload(uploadId);
+        try (var files = Files.list(directory)) { assertEquals(0, files.count()); }
+    }
+
     private UploadProperties properties(long freeBytes, int receiveSeconds) {
-        return new UploadProperties(2, 1024, directory.toString(), freeBytes, receiveSeconds, 2048, 2, 900);
+        return new UploadProperties(2, 1024, directory.toString(), freeBytes, receiveSeconds, 2048, 2, 900, 256);
     }
 }

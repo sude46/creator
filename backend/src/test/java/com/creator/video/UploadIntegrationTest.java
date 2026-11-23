@@ -15,6 +15,7 @@ import com.creator.video.application.processing.TaskPublisher;
 import com.creator.video.application.deletion.VideoDeletionMaintenance;
 import com.creator.video.domain.*;
 import com.creator.video.infrastructure.upload.UploadMaintenance;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.ReadListener;
 import jakarta.servlet.ServletInputStream;
@@ -40,6 +41,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.List;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -67,7 +69,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {"server.address=127.0.0.1", "creator.upload.enabled=true", "creator.storage.provider=test",
-        "creator.upload.max-bytes=1024", "creator.upload.min-free-bytes=0", "creator.upload.user-quota-bytes=2048",
+        "creator.upload.max-bytes=1024", "creator.upload.chunk-bytes=256", "creator.upload.min-free-bytes=0", "creator.upload.user-quota-bytes=2048",
         "creator.upload.max-pending=2", "creator.upload.temp-directory=../.local/upload-test-temp",
         "creator.processing.dispatch.enabled=true", "creator.processing.dispatch.provider=test",
         "creator.processing.dispatch.scan-milliseconds=3600000",
@@ -286,6 +288,119 @@ class UploadIntegrationTest {
             assertTrue(json.readTree(response.body()).get("sourceUploaded").asBoolean());
         }
         assertEquals(1L, count("processing_task"));
+        assertTempEmpty();
+    }
+
+    @Test
+    void chunkedUploadResumesAcrossRequestsAndBindsOnlyWhenComplete() throws Exception {
+        long id = draft(author);
+        var session = login(author);
+        var started = startSession(session, id, 1024);
+        String uploadId = started.get("uploadId").asText();
+        assertEquals(256, started.get("chunkSize").asInt());
+        assertEquals(0, started.get("uploaded").size());
+
+        byte[] content = mp4(1024);
+        putChunk(session, id, uploadId, 0, Arrays.copyOfRange(content, 0, 256));
+        mvc.perform(get("/api/creator/videos/{id}/source/uploads/{uploadId}", id, uploadId).session(session))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.uploaded[0]").value(0))
+                .andExpect(jsonPath("$.receivedBytes").value(256));
+        putChunk(session, id, uploadId, 0, Arrays.copyOfRange(content, 0, 256));
+        assertEquals(256L, database.queryForObject(
+                "SELECT received_bytes FROM upload_attempt WHERE id = ?", Long.class, uploadId));
+        mvc.perform(post("/api/creator/videos/{id}/source/uploads/{uploadId}/complete", id, uploadId)
+                        .session(session).with(csrf().asHeader()).header("X-Video-Version", "0"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
+        assertEquals(0L, count("media_asset"));
+
+        for (int index = 1; index < 4; index++) {
+            putChunk(session, id, uploadId, index, Arrays.copyOfRange(content, index * 256, (index + 1) * 256));
+        }
+        mvc.perform(post("/api/creator/videos/{id}/source/uploads/{uploadId}/complete", id, uploadId)
+                        .session(session).with(csrf().asHeader()).header("X-Video-Version", "0"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.sourceUploaded").value(true))
+                .andExpect(jsonPath("$.version").value(1));
+        assertArrayEquals(content, storage.objects.values().iterator().next());
+        assertEquals(1L, count("media_asset"));
+        assertEquals(1L, count("processing_task"));
+        assertEquals("BOUND", database.queryForObject("SELECT state FROM upload_attempt WHERE id = ?", String.class, uploadId));
+        mvc.perform(post("/api/creator/videos/{id}/source/uploads/{uploadId}/complete", id, uploadId)
+                        .session(session).with(csrf().asHeader()).header("X-Video-Version", "0"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.sourceUploaded").value(true));
+        assertTempEmpty();
+    }
+
+    @Test
+    void chunkSessionsAreOwnerBoundVersionCheckedAndResumable() throws Exception {
+        long id = draft(author);
+        var session = login(author);
+        mvc.perform(post("/api/creator/videos/{id}/source/uploads", id).session(session).with(csrf().asHeader())
+                        .header("X-Video-Version", "0").contentType("application/json;charset=UTF-8")
+                        .content("{\"size\":1024,\"fingerprint\":\"fp-1024\"}"))
+                .andExpect(status().isOk());
+        var first = startSession(session, id, 1024);
+        var repeated = startSession(session, id, 1024);
+        assertEquals(first.get("uploadId").asText(), repeated.get("uploadId").asText());
+        mvc.perform(post("/api/creator/videos/{id}/source/uploads", id).session(login(other)).with(csrf().asHeader())
+                        .header("X-Video-Version", "0").contentType("application/json").content("{\"size\":1024}"))
+                .andExpect(status().isNotFound());
+        mvc.perform(post("/api/creator/videos/{id}/source/uploads", id).session(session).with(csrf().asHeader())
+                        .header("X-Video-Version", "9").contentType("application/json").content("{\"size\":1024}"))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("STALE_WRITE"));
+        mvc.perform(post("/api/creator/videos/{id}/source/uploads", id).session(session).with(csrf().asHeader())
+                        .header("X-Video-Version", "0").contentType("application/json").content("{\"size\":0,\"fingerprint\":\"fp-0\"}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("INVALID_MEDIA"));
+        mvc.perform(post("/api/creator/videos/{id}/source/uploads", id).session(session).with(csrf().asHeader())
+                        .header("X-Video-Version", "0").contentType("application/json").content("{\"size\":1025,\"fingerprint\":\"fp-1025\"}"))
+                .andExpect(status().isPayloadTooLarge()).andExpect(jsonPath("$.code").value("UPLOAD_TOO_LARGE"));
+
+        String uploadId = first.get("uploadId").asText();
+        putChunk(session, id, uploadId, 0, Arrays.copyOfRange(mp4(1024), 0, 256));
+        mvc.perform(put("/api/creator/videos/{id}/source/uploads/{uploadId}/chunks/1", id, uploadId)
+                        .session(session).with(csrf().asHeader()).contentType("application/octet-stream")
+                        .content(Arrays.copyOfRange(mp4(1024), 256, 511)))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("INVALID_MEDIA"));
+        mvc.perform(put("/api/creator/videos/{id}/source/uploads/{uploadId}/chunks/4", id, uploadId)
+                        .session(session).with(csrf().asHeader()).contentType("application/octet-stream")
+                        .content(Arrays.copyOfRange(mp4(1024), 0, 256)))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
+        mvc.perform(put("/api/creator/videos/{id}/source/uploads/{uploadId}/chunks/1", id, uploadId)
+                        .session(session).with(csrf().asHeader()).contentType("video/mp4")
+                        .content(Arrays.copyOfRange(mp4(1024), 256, 512)))
+                .andExpect(status().isUnsupportedMediaType());
+        mvc.perform(get("/api/creator/videos/{id}/source/uploads/{uploadId}", id, uploadId).session(login(other)))
+                .andExpect(status().isNotFound());
+        var changedFingerprint = startSession(session, id, 1024, "fp-other");
+        assertNotEquals(uploadId, changedFingerprint.get("uploadId").asText());
+        assertEquals("CLEANING", database.queryForObject(
+                "SELECT state FROM upload_attempt WHERE id = ?", String.class, uploadId));
+        maintenance.clean();
+        assertEquals("DELETED", database.queryForObject(
+                "SELECT state FROM upload_attempt WHERE id = ?", String.class, uploadId));
+
+        var changed = startSession(session, id, 768);
+        assertNotEquals(changedFingerprint.get("uploadId").asText(), changed.get("uploadId").asText());
+        assertEquals("CLEANING", database.queryForObject(
+                "SELECT state FROM upload_attempt WHERE id = ?", String.class, changedFingerprint.get("uploadId").asText()));
+        maintenance.clean();
+        assertTempEmpty();
+    }
+
+    @Test
+    void expiredChunkSessionIsRejectedAndCleanedWithItsStagedParts() throws Exception {
+        long id = draft(author);
+        var session = login(author);
+        var started = startSession(session, id, 1024);
+        String uploadId = started.get("uploadId").asText();
+        putChunk(session, id, uploadId, 0, Arrays.copyOfRange(mp4(1024), 0, 256));
+        expireAttempts();
+        mvc.perform(put("/api/creator/videos/{id}/source/uploads/{uploadId}/chunks/1", id, uploadId)
+                        .session(session).with(csrf().asHeader()).contentType("application/octet-stream")
+                        .content(Arrays.copyOfRange(mp4(1024), 256, 512)))
+                .andExpect(status().isRequestTimeout()).andExpect(jsonPath("$.code").value("UPLOAD_TIMEOUT"));
+        maintenance.clean();
+        assertEquals("DELETED", database.queryForObject(
+                "SELECT state FROM upload_attempt WHERE id = ?", String.class, uploadId));
         assertTempEmpty();
     }
 
@@ -568,6 +683,21 @@ class UploadIntegrationTest {
             }).map(executor::submit).toList();
             return List.of(calls.get(0).get(10, TimeUnit.SECONDS), calls.get(1).get(10, TimeUnit.SECONDS));
         } finally { storage.afterPut = () -> { }; }
+    }
+    private JsonNode startSession(MockHttpSession session, long videoId, long size) throws Exception {
+        return startSession(session, videoId, size, "fp-" + size);
+    }
+    private JsonNode startSession(MockHttpSession session, long videoId, long size, String fingerprint) throws Exception {
+        var response = mvc.perform(post("/api/creator/videos/{id}/source/uploads", videoId).session(session)
+                        .with(csrf().asHeader()).header("X-Video-Version", "0").contentType("application/json")
+                        .content("{\"size\":" + size + ",\"fingerprint\":\"" + fingerprint + "\"}"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        return json.readTree(response);
+    }
+    private void putChunk(MockHttpSession session, long videoId, String uploadId, int index, byte[] content) throws Exception {
+        mvc.perform(put("/api/creator/videos/{id}/source/uploads/{uploadId}/chunks/{index}", videoId, uploadId, index)
+                        .session(session).with(csrf().asHeader()).contentType("application/octet-stream").content(content))
+                .andExpect(status().isOk());
     }
     private long count(String table) { return database.queryForObject("SELECT COUNT(*) FROM " + table, Long.class); }
     private void expireAttempts() { database.update("UPDATE upload_attempt SET expires_at = TIMESTAMP '2000-01-01 00:00:00'"); }
