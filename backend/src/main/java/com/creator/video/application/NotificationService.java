@@ -53,13 +53,16 @@ public class NotificationService {
     public void follow(long userId, String follower) {
         notifications.add(userId, "FOLLOW", follower + " 关注了你", "", "/authors/" + userId);
     }
+    public void mention(long userId, String author, long videoId) {
+        notifications.add(userId, "MENTION", author + " 在评论中提到了你", "打开作品查看评论。", "/videos/" + videoId);
+    }
     @Transactional(readOnly = true)
     public PageResult<Notification> list(Actor actor, boolean unreadOnly, String type, PageRequest page) {
         active(actor);
         String cleanType = type == null || type.isBlank() ? null : type.trim().toUpperCase();
         if (cleanType != null && !(cleanType.equals("REVIEW") || cleanType.equals("COMMENT")
                 || cleanType.equals("FOLLOW") || cleanType.equals("REPORT") || cleanType.equals("APPEAL")
-                || cleanType.equals("MODERATION"))) {
+                || cleanType.equals("MODERATION") || cleanType.equals("MENTION"))) {
             throw new BusinessException(ErrorCode.INVALID_REQUEST);
         }
         return new PageResult<>(notifications.page(actor.id(), unreadOnly, cleanType, page),

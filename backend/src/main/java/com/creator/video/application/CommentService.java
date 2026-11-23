@@ -12,6 +12,10 @@ import com.creator.video.domain.VideoQueryRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.LinkedHashSet;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class CommentService {
@@ -20,6 +24,7 @@ public class CommentService {
     private final AccountQueryService accounts;
     private final AuditLog audit;
     private final ObjectProvider<NotificationService> notifications;
+    private static final Pattern MENTION = Pattern.compile("(?<![A-Za-z0-9_])@([A-Za-z0-9_]{3,32})(?![A-Za-z0-9_])");
     public CommentService(CommentRepository comments, VideoQueryRepository videos, AccountQueryService accounts, AuditLog audit,
             ObjectProvider<NotificationService> notifications) {
         this.comments = comments; this.videos = videos; this.accounts = accounts; this.audit = audit; this.notifications = notifications;
@@ -64,7 +69,10 @@ public class CommentService {
         long id = comments.insert(videoId, actor.id(), rootId, clean);
         Comment parentComment = parent;
         Long recipient = parentComment == null ? video.ownerId() : parentComment.userId();
+        Set<Long> notified = new LinkedHashSet<>();
+        notified.add(actor.id());
         if (!recipient.equals(actor.id())) {
+            notified.add(recipient);
             String link = "/videos/" + videoId;
             if (parentComment == null) {
                 notifications.ifAvailable(service -> service.comment(recipient, actor.username(), videoId));
@@ -73,6 +81,7 @@ public class CommentService {
                         parentComment.id(), link));
             }
         }
+        mention(actor, videoId, clean, notified);
         return comments.find(id, actor.id()).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
     }
     @Transactional(timeout = 5)
@@ -111,6 +120,16 @@ public class CommentService {
     public boolean liked(Actor actor, long id) {
         active(actor);
         return comments.liked(id, actor.id());
+    }
+    private void mention(Actor actor, long videoId, String content, Set<Long> notified) {
+        Matcher matcher = MENTION.matcher(content);
+        int found = 0;
+        while (matcher.find() && found < 5) {
+            var mentioned = accounts.findActive(matcher.group(1));
+            if (mentioned.isEmpty() || !notified.add(mentioned.get().id())) continue;
+            found++;
+            notifications.ifAvailable(service -> service.mention(mentioned.get().id(), actor.username(), videoId));
+        }
     }
     private void active(Actor actor) {
         if (actor == null) throw new BusinessException(ErrorCode.UNAUTHENTICATED);
