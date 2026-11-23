@@ -62,7 +62,7 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(HttpSecurity http, SecurityHandlers handlers,
             AccountQueryService accounts, SecurityResponseWriter writer, AuthRateLimiter limiter,
             AuthRateLimitProperties properties, AuthenticationManager authenticationManager,
-            ObjectProvider<Customizer<HttpSecurity>> securityCustomizers) throws Exception {
+            ObjectProvider<Customizer<HttpSecurity>> securityCustomizers, HttpDeviceSessions devices) throws Exception {
         http.authenticationManager(authenticationManager);
         http.authorizeHttpRequests(authorize -> authorize
                 .requestMatchers(HttpMethod.GET, "/api/auth/csrf").permitAll()
@@ -81,9 +81,10 @@ public class SecurityConfig {
         http.formLogin(login -> login.loginProcessingUrl("/api/auth/login")
                 .successHandler(handlers).failureHandler(handlers).permitAll());
         http.logout(logout -> logout.logoutUrl("/api/auth/logout")
+                .addLogoutHandler((request, response, authentication) -> devices.logout(request))
                 .invalidateHttpSession(true).clearAuthentication(true).deleteCookies("JSESSIONID")
                 .logoutSuccessHandler((request, response, authentication) -> response.setStatus(204)));
-        http.addFilterBefore(new ActiveAccountFilter(accounts, writer), CsrfFilter.class);
+        http.addFilterBefore(new ActiveAccountFilter(accounts, writer, devices), CsrfFilter.class);
         securityCustomizers.orderedStream().forEach(customizer -> customizer.customize(http));
         http.addFilterBefore(new AuthRateLimitFilter(limiter, writer, properties), UsernamePasswordAuthenticationFilter.class);
         return http.build();

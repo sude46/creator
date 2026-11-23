@@ -45,4 +45,10 @@ public interface UserAccountMapper extends BaseMapper<UserAccountRow> {
             WHERE id = #{id} AND status <> 'DELETED'
             """)
     int updatePassword(@Param("id") long id, @Param("passwordHash") String passwordHash);
+
+    @Select("SELECT session_version FROM user_account WHERE id = #{id}")
+    long sessionVersion(@Param("id") long id);
+
+    @Update("UPDATE user_account SET session_version = session_version + 1, updated_at = CURRENT_TIMESTAMP(6) WHERE id = #{id} AND status <> 'DELETED'")
+    int incrementSessionVersion(@Param("id") long id);
 }

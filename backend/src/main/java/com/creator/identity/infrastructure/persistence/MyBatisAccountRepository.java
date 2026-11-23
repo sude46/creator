@@ -72,6 +72,16 @@ public class MyBatisAccountRepository implements AccountRepository {
     }
 
     @Override
+    public long sessionVersion(long id) {
+        return mapper.sessionVersion(id);
+    }
+
+    @Override
+    public boolean incrementSessionVersion(long id) {
+        return mapper.incrementSessionVersion(id) == 1;
+    }
+
+    @Override
     public AccountSummary insert(String username, String passwordHash, Role role, AdminScope adminScope) {
         var row = new UserAccountRow();
         row.setUsername(username);

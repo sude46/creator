@@ -28,10 +28,12 @@ public class SecurityHandlers implements AuthenticationEntryPoint, AccessDeniedH
     private static final Logger LOGGER = LoggerFactory.getLogger(SecurityHandlers.class);
     private final AccountQueryService accounts;
     private final SecurityResponseWriter writer;
+    private final DeviceSessionRegistrar devices;
 
-    public SecurityHandlers(AccountQueryService accounts, SecurityResponseWriter writer) {
+    public SecurityHandlers(AccountQueryService accounts, SecurityResponseWriter writer, DeviceSessionRegistrar devices) {
         this.accounts = accounts;
         this.writer = writer;
+        this.devices = devices;
     }
 
     @Override
@@ -50,7 +52,9 @@ public class SecurityHandlers implements AuthenticationEntryPoint, AccessDeniedH
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
             Authentication authentication) throws IOException {
         try {
-            writer.write(response, UserView.from(accounts.current(authentication.getName())));
+            var user = accounts.current(authentication.getName());
+            devices.register(user.id(), request);
+            writer.write(response, UserView.from(user));
         } catch (BusinessException exception) {
             invalidate(request);
             writer.error(response, exception.getCode());

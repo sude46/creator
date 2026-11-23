@@ -38,4 +38,12 @@ public interface AccountRepository {
     default boolean updatePassword(long id, String passwordHash) {
         throw new UnsupportedOperationException();
     }
+
+    default long sessionVersion(long id) {
+        throw new UnsupportedOperationException();
+    }
+
+    default boolean incrementSessionVersion(long id) {
+        throw new UnsupportedOperationException();
+    }
 }

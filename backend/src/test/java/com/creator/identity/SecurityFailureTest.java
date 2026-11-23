@@ -34,7 +34,7 @@ class SecurityFailureTest {
 
     @Test
     void loginInfrastructureFailureIsNotReportedAsWrongPassword() throws Exception {
-        var handlers = new SecurityHandlers(unavailableQueries(), new SecurityResponseWriter(json));
+        var handlers = new SecurityHandlers(unavailableQueries(), new SecurityResponseWriter(json), (id, httpRequest) -> { });
         var response = new MockHttpServletResponse();
         handlers.onAuthenticationFailure(new MockHttpServletRequest(), response,
                 new InternalAuthenticationServiceException("private database details"));
@@ -51,7 +51,7 @@ class SecurityFailureTest {
         var chain = new MockFilterChain();
         SecurityContextHolder.getContext().setAuthentication(UsernamePasswordAuthenticationToken.authenticated(
                 "author_one", null, AuthorityUtils.createAuthorityList("ROLE_USER")));
-        new ActiveAccountFilter(unavailableQueries(), new SecurityResponseWriter(json))
+        new ActiveAccountFilter(unavailableQueries(), new SecurityResponseWriter(json), (id, httpRequest) -> true)
                 .doFilter(request, response, chain);
         assertEquals(503, response.getStatus());
         assertNull(chain.getRequest());
