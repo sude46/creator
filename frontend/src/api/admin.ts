@@ -9,6 +9,7 @@ export type AdminUser = { id: string; username: string; role: 'USER' | 'ADMIN'; 
 export type AdminTag = { id: string; name: string; uses: number }
 export type ContentReport = { id: string; reporterId: string; reporterName: string; targetType: 'VIDEO' | 'COMMENT'; targetId: string; reason: string; status: 'OPEN' | 'DISMISSED' | 'REMOVED'; resolverId: string | null; resolutionReason: string | null; createdAt: string; resolvedAt: string | null }
 export type AuditRecord = { id: string; actorId: string; action: string; targetType: string; targetId: string; reason: string | null; requestId: string | null; createdAt: string }
+export type HlsBackfillStatus = { enqueued: number; states: Record<string, number> }
 export type AdminOverview = { pendingReviews: string; failedProcessing: string; todayUsers: string; todayDecisions: string; recentDecisions: { id: string; videoId: string; reviewerId: string; outcome: 'APPROVED' | 'REJECTED'; reason: string; title: string; createdAt: string }[] }
 
 const boundedRead = <Result>(path: string, signal: AbortSignal) => request<Result>(path, { signal: AbortSignal.any([signal, AbortSignal.timeout(30000)]) })
@@ -56,6 +57,8 @@ export const adminApi = {
   history: (id: string, page: number, signal: AbortSignal) => boundedRead<Page<ReviewRecord>>(`/admin/reviews/${id}/history?page=${page}&size=20`, signal),
   managed: (page: number, signal?: AbortSignal) => request<Page<ManagedVideo>>(`/admin/videos?page=${page}&size=20`, { signal }),
   processing: (page: number, signal: AbortSignal) => boundedRead<Page<ManagedVideo>>(`/admin/videos/processing?page=${page}&size=20`, signal),
+  hlsBackfillStatus: (signal: AbortSignal) => boundedRead<HlsBackfillStatus>('/admin/maintenance/hls-backfill', signal),
+  hlsBackfill: (limit = 20, videoId?: string) => request<HlsBackfillStatus>(`/admin/maintenance/hls-backfill?limit=${limit}${videoId ? `&videoId=${videoId}` : ''}`, { method: 'POST' }),
   cancelProcessing: (video: CreatorVideo, reason: string) => request<CreatorVideo>(`/admin/videos/${video.id}/cancel-processing`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ version: video.version, reason }),
   }),

@@ -49,6 +49,9 @@ public interface VideoDeletionMapper {
     @Delete("DELETE FROM video_hls WHERE video_id = #{videoId}")
     void deleteHls(long videoId);
 
+    @Delete("DELETE FROM hls_backfill_task WHERE video_id = #{videoId}")
+    void deleteHlsBackfill(long videoId);
+
     @Update("""
             UPDATE video_deletion SET state = 'DONE', last_error = NULL, updated_at = CURRENT_TIMESTAMP(6)
             WHERE id = #{id} AND state = 'CLEANING'

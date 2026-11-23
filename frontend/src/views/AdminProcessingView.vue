@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import WorkspaceShell from '../components/WorkspaceShell.vue'
 import { adminApi } from '../api/admin'
-import type { ManagedVideo } from '../api/admin'
+import type { HlsBackfillStatus, ManagedVideo } from '../api/admin'
 import { formatTime } from '../api/creator'
 import { adminStatus } from '../api/videoStatus'
 import { useStudioError } from '../composables/useStudioError'
@@ -16,6 +16,9 @@ const busy = ref(false)
 const error = ref('')
 const notice = ref('')
 const selectedId = ref('')
+const hlsStatus = ref<HlsBackfillStatus>()
+const hlsBusy = ref(false)
+const hlsError = ref('')
 const reason = ref('')
 let activeRequest: AbortController | undefined
 let stopped = false
@@ -74,7 +77,24 @@ async function cancel() {
   if (succeeded && !stopped) await load()
 }
 
-onMounted(() => { void load() })
+async function loadHls() {
+  try { hlsStatus.value = await adminApi.hlsBackfillStatus(new AbortController().signal) }
+  catch (failure) { hlsError.value = explain(failure) }
+}
+async function enqueueHls() {
+  if (hlsBusy.value) return
+  if (!window.confirm('扫描最多 20 部 READY 且没有 HLS 的历史作品，并交给 Worker 低优先级回填。继续？')) return
+  hlsBusy.value = true
+  hlsError.value = ''
+  notice.value = ''
+  try {
+    const result = await adminApi.hlsBackfill(20)
+    hlsStatus.value = result
+    notice.value = `已排队 ${result.enqueued} 部作品；Worker 会自动逐个回填，失败任务会按次数重试。`
+  } catch (failure) { hlsError.value = explain(failure) }
+  finally { if (!stopped) hlsBusy.value = false }
+}
+onMounted(() => { void load(); void loadHls() })
 onBeforeUnmount(() => { stopped = true; activeRequest?.abort() })
 </script>
 
@@ -86,6 +106,12 @@ onBeforeUnmount(() => { stopped = true; activeRequest?.abort() })
     </div>
     <el-alert v-if="error" :title="error" type="error" :closable="false" role="alert" />
     <el-alert v-if="notice" :title="notice" type="success" :closable="false" role="status" />
+    <section class="studio-panel">
+      <div class="section-heading"><h2>历史 HLS 回填</h2><div class="inline-actions"><el-button :loading="hlsBusy" @click="loadHls">刷新状态</el-button><el-button type="primary" :loading="hlsBusy" @click="enqueueHls">扫描并排队</el-button></div></div>
+      <p class="muted">只处理 READY、已有源文件且没有 HLS 的作品；不重新审核、不改变发布状态，成功前继续使用 MP4。</p>
+      <el-alert v-if="hlsError" :title="hlsError" type="error" :closable="false" role="alert" />
+      <p v-if="hlsStatus" class="muted">待处理 {{ hlsStatus.states.PENDING ?? 0 }} · 运行中 {{ hlsStatus.states.RUNNING ?? 0 }} · 等待重试 {{ hlsStatus.states.RETRY_WAIT ?? 0 }} · 完成 {{ hlsStatus.states.DONE ?? 0 }} · 失败 {{ hlsStatus.states.FAILED ?? 0 }}</p>
+    </section>
     <div class="management-layout">
       <section class="studio-panel" :aria-busy="loading" aria-label="处理中作品">
         <div class="section-heading"><h2>处理任务 <span class="count">{{ total }}</span></h2><el-button :loading="loading" :disabled="busy" @click="load()">刷新列表</el-button></div>

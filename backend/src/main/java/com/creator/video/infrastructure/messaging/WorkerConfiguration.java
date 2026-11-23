@@ -47,6 +47,16 @@ public class WorkerConfiguration {
         return new ExecutionMaintenance(repository, transactions, storage, workspace, clock);
     }
     @Bean
+    HlsBackfillTransactions hlsBackfillTransactions(com.creator.video.domain.HlsBackfillRepository repository,
+            WorkerProperties properties, Clock clock) {
+        return new HlsBackfillTransactions(repository, properties, clock);
+    }
+    @Bean
+    HlsBackfillWorker hlsBackfillWorker(HlsBackfillTransactions transactions, ProcessingStorage storage,
+            MediaProcessor processor, ProcessingWorkspace workspace, WorkerProperties properties) {
+        return new HlsBackfillWorker(transactions, storage, processor, workspace, properties);
+    }
+    @Bean
     RabbitAdmin workerRabbitAdmin(ConnectionFactory factory) {
         var admin = new RabbitAdmin(factory);
         admin.setRetryTemplate(RetryTemplate.builder().maxAttempts(1).build());
@@ -54,7 +64,7 @@ public class WorkerConfiguration {
     }
     @Bean
     WorkerRuntime workerRuntime(ConnectionFactory factory, ProcessingWorker worker, ObjectMapper json,
-            ExecutionMaintenance maintenance) {
+            ExecutionMaintenance maintenance, HlsBackfillWorker hlsBackfill) {
         var container = new SimpleMessageListenerContainer(factory);
         container.setQueueNames(ProcessingTopology.QUEUE);
         container.setConcurrentConsumers(1);
@@ -68,7 +78,7 @@ public class WorkerConfiguration {
         container.setShutdownTimeout(5000);
         container.setMessageListener(new ProcessingConsumer(worker, json));
         container.afterPropertiesSet();
-        return new WorkerRuntime(container, maintenance, worker);
+        return new WorkerRuntime(container, maintenance, worker, hlsBackfill);
     }
     @Bean
     ApplicationRunner startWorker(WorkerRuntime runtime, ProcessingStorage storage, MediaProcessor media, Environment environment) {
@@ -88,22 +98,30 @@ public class WorkerConfiguration {
         private final SimpleMessageListenerContainer container;
         private final ExecutionMaintenance maintenance;
         private final ProcessingWorker worker;
+        private final HlsBackfillWorker hlsBackfill;
         private ScheduledExecutorService scheduler;
-        WorkerRuntime(SimpleMessageListenerContainer container, ExecutionMaintenance maintenance, ProcessingWorker worker) {
+        private ScheduledExecutorService hlsScheduler;
+        WorkerRuntime(SimpleMessageListenerContainer container, ExecutionMaintenance maintenance, ProcessingWorker worker,
+                HlsBackfillWorker hlsBackfill) {
             this.container = container;
             this.maintenance = maintenance;
             this.worker = worker;
+            this.hlsBackfill = hlsBackfill;
         }
         public void start() {
             scheduler = Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform().name("execution-maintenance").factory());
             scheduler.scheduleWithFixedDelay(maintenance, 5, 5, TimeUnit.SECONDS);
+            hlsScheduler = Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform().name("hls-backfill").factory());
+            hlsScheduler.scheduleWithFixedDelay(hlsBackfill::runOnce, 10, 10, TimeUnit.SECONDS);
             container.start();
         }
         @Override
         public void close() {
             worker.close();
+            hlsBackfill.close();
             container.stop();
             if (scheduler != null) scheduler.shutdownNow();
+            if (hlsScheduler != null) hlsScheduler.shutdownNow();
             container.destroy();
         }
     }

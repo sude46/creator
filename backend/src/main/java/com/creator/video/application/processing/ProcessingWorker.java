@@ -60,10 +60,11 @@ public class ProcessingWorker implements AutoCloseable {
                 var uploadedHls = new ArrayList<String>();
                 boolean committed = false;
                 try {
-                    var variants = uploadHls(claim, processed.variants(), hlsDirectory, deadline, uploadedHls);
+                    var variants = HlsUploader.upload(claim.videoId(), claim.generation(), processed.variants(),
+                            hlsDirectory, storage, deadline, uploadedHls);
                     committed = transactions.succeed(claim, metadata, coverBytes, variants);
                 } finally {
-                    if (!committed) cleanupHls(uploadedHls);
+                    if (!committed) HlsUploader.cleanup(storage, uploadedHls, LOGGER);
                 }
             } catch (ProcessingException exception) {
                 transactions.fail(claim, exception.failure());
@@ -81,40 +82,6 @@ public class ProcessingWorker implements AutoCloseable {
             }
             active.set(null);
             permit.release();
-        }
-    }
-
-    private List<HlsVariant> uploadHls(ExecutionClaim claim, List<ProcessedMedia.HlsVariant> processed, Path root,
-            long deadline, List<String> uploaded) throws IOException {
-        var variants = new ArrayList<HlsVariant>();
-        for (var variant : processed) {
-            var directory = root.resolve(variant.name());
-            var baseKey = "videos/" + claim.videoId() + "/" + claim.generation() + "/hls/" + variant.name();
-            var playlist = directory.resolve("index.m3u8");
-            var playlistKey = baseKey + "/index.m3u8";
-            storage.uploadHls(playlistKey, playlist, Files.size(playlist), "application/vnd.apple.mpegurl", deadline);
-            uploaded.add(playlistKey);
-            var segmentKeys = new ArrayList<String>();
-            try (var files = Files.list(directory)) {
-                for (var segment : files.filter(path -> path.getFileName().toString().endsWith(".ts")).sorted().toList()) {
-                    requireTime(deadline);
-                    String key = baseKey + "/" + segment.getFileName();
-                    storage.uploadHls(key, segment, Files.size(segment), "video/mp2t", deadline);
-                    uploaded.add(key);
-                    segmentKeys.add(key);
-                }
-            }
-            if (segmentKeys.isEmpty()) throw new ProcessingException(ProcessingFailure.PROCESS_FAILED);
-            variants.add(new HlsVariant(variant.name(), variant.bandwidth(), variant.width(), variant.height(),
-                    baseKey, playlistKey, variant.playlist(), segmentKeys));
-        }
-        return variants;
-    }
-
-    private void cleanupHls(List<String> keys) {
-        for (String key : keys) {
-            try { storage.delete(key); }
-            catch (RuntimeException exception) { LOGGER.warn("HLS cleanup deferred [key={}, failure={}]", key, exception.getClass().getSimpleName()); }
         }
     }
 

@@ -14,6 +14,8 @@
 | `PUT /api/creator/videos/{id}/subtitle` | 作者上传或替换 WEBVTT，`Content-Type: text/vtt`，最大 512 KiB |
 | `GET /api/creator/videos/{id}/subtitle` | 作者查询字幕是否存在、大小和更新时间 |
 | `DELETE /api/creator/videos/{id}/subtitle` | 作者删除字幕 |
+| `POST /api/admin/maintenance/hls-backfill?limit=20&videoId=` | 超级管理员将历史 READY 且无 HLS 的作品排队回填；`videoId` 可指定单作品 |
+| `GET /api/admin/maintenance/hls-backfill` | 超级管理员查询回填任务状态计数 |
 | `POST /api/videos/{id}/media?kind=SOURCE` | 公开作品源视频；`kind=COVER` 为封面 |
 | `POST /api/creator/videos/{id}/preview?kind=SOURCE` | 作者本人预览已处理完成的作品，可选 COVER |
 | `POST /api/admin/reviews/{id}/preview?kind=SOURCE&version=3&reviewRound=2` | 管理员预览当前待审轮次，可选 COVER，禁止自审 |
@@ -28,7 +30,9 @@ Worker 仅在源文件通过 FFprobe 校验后生成 HLS。当前按源高度选
 
 公开播放先请求 master，再请求 media playlist。media playlist 中的相对 `.ts` 文件名逐行替换为 COS/MinIO 原生签名 GET 地址，TTL 由 `MEDIA_HLS_LINK_SECONDS` 控制，默认 900 秒，须覆盖最长 10 分钟视频。master/media playlist 不缓存且只对当前已发布作品返回；作品下架、封禁、删除、审核撤回后不再生成新的 playlist 或分片签名。分片 URL 一旦签发，在 TTL 内不能被立即撤销。
 
-前端优先使用 HLS：浏览器原生支持时直接播放 master；Firefox/Chrome 使用 hls.js；hls.js 发生 fatal 错误或浏览器不支持时回退到 `POST /api/videos/{id}/media?kind=SOURCE` 的 MP4 链接。HLS 生成失败或历史 READY 作品没有 HLS 时，`hasHls=false`，直接使用 MP4。当前未做历史作品回填、字幕、DRM、清晰度手动切换和码率策略调优。
+前端优先使用 HLS：浏览器原生支持时直接播放 master；Firefox/Chrome 使用 hls.js；hls.js 发生 fatal 错误或浏览器不支持时回退到 `POST /api/videos/{id}/media?kind=SOURCE` 的 MP4 链接。HLS 生成失败或历史 READY 作品没有 HLS 时，`hasHls=false`，直接使用 MP4。
+
+历史作品回填由超级管理员触发：`POST /api/admin/maintenance/hls-backfill` 扫描最多 50 部 READY、已有源文件且没有 HLS 的作品，或通过 `videoId` 指定一部。Worker 每 10 秒领取一项，只调用 HLS-only 处理，不重新生成封面，不修改版本、审核、发布或处理状态。成功写入 HLS 表；失败最多尝试 3 次，随后 FAILED，再次扫描会重置失败或“已完成但缺 HLS”的任务。回填任务与正常媒体处理共享 Worker，没有独立优先级队列；当前只有状态计数，没有百分比进度，也不自动全量扫描。
 
 ## 字幕
 

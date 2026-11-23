@@ -48,6 +48,11 @@ public class FfmpegMediaProcessor implements MediaProcessor {
         return new ProcessedMedia(metadata, hls(source, hlsDirectory, metadata, deadlineNanos));
     }
 
+    @Override
+    public List<ProcessedMedia.HlsVariant> processHlsOnly(Path source, Path hlsDirectory, long deadlineNanos) {
+        return hls(source, hlsDirectory, probe(source, deadlineNanos), deadlineNanos);
+    }
+
     private List<ProcessedMedia.HlsVariant> hls(Path source, Path hlsDirectory, MediaMetadata metadata, long deadlineNanos) {
         try {
             Files.createDirectories(hlsDirectory);
@@ -101,14 +106,18 @@ public class FfmpegMediaProcessor implements MediaProcessor {
 
     private record Rendition(String name, int width, int height, int bitrate) { }
 
-    @Override
-    public MediaMetadata process(Path source, Path cover, long deadlineNanos) {
+    private MediaMetadata probe(Path source, long deadlineNanos) {
         var probeCommand = new ArrayList<>(List.of(probe.toString(), "-v", "error", "-protocol_whitelist", "file",
                 "-format_whitelist", "mov", "-enable_drefs", "0", "-use_absolute_path", "0", "-threads", "1",
                 "-show_format", "-show_streams", "-of", "json", source.toAbsolutePath().toString()));
         var result = processes.run(probeCommand, source.getParent(), deadline(deadlineNanos, properties.probeSeconds()));
         if (result.exitCode() != 0) throw new ProcessingException(ProcessingFailure.INVALID_MEDIA);
-        var metadata = metadata(result.stdout());
+        return metadata(result.stdout());
+    }
+
+    @Override
+    public MediaMetadata process(Path source, Path cover, long deadlineNanos) {
+        var metadata = probe(source, deadlineNanos);
         var command = List.of(ffmpeg.toString(), "-hide_banner", "-v", "error", "-nostdin", "-y",
                 "-protocol_whitelist", "file", "-format_whitelist", "mov", "-enable_drefs", "0", "-use_absolute_path", "0",
                 "-threads", "1", "-i", source.toAbsolutePath().toString(), "-map", "0:v:0", "-an", "-sn", "-dn",
