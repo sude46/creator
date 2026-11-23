@@ -20,10 +20,22 @@ public class NotificationService {
                 reason == null ? "" : reason, "/studio/" + videoId);
     }
     public void comment(long userId, String author, long videoId) {
-        notifications.add(userId, "COMMENT", author + " 评论了你的作品", "", "/videos/" + videoId);
+        aggregateComment(userId, "COMMENT:" + videoId + ":root", author,
+                author + " 评论了你的作品", false, "/videos/" + videoId);
     }
     public void commentReply(long userId, String author, long videoId, Long parentId, String link) {
-        notifications.add(userId, "COMMENT", author + " 回复了你的评论", "", link);
+        aggregateComment(userId, "COMMENT:" + videoId + ":reply", author,
+                author + " 回复了你的评论", true, link);
+    }
+    private void aggregateComment(long userId, String key, String author, String firstTitle, boolean reply, String link) {
+        var existing = notifications.findAggregate(userId, "COMMENT", key);
+        if (existing != null) {
+            int count = existing.count() + 1;
+            notifications.updateAggregated(existing.id(), count + (reply ? " 条新回复" : " 条新评论"),
+                    "最新来自 " + author, count, java.time.LocalDateTime.now(java.time.ZoneOffset.UTC));
+        } else {
+            notifications.addAggregated(userId, "COMMENT", key, firstTitle, "", link);
+        }
     }
     public void reportResolved(long userId, boolean removed, String reason, String link) {
         String message = reason == null || reason.isBlank() ? "管理员已处理你的举报。" : reason;

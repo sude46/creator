@@ -2,6 +2,7 @@ package com.creator.video.infrastructure;
 
 import com.creator.common.PageRequest;
 import com.creator.video.domain.Notification;
+import com.creator.video.domain.NotificationAggregate;
 import com.creator.video.domain.NotificationRepository;
 import java.util.List;
 import org.springframework.stereotype.Repository;
@@ -16,6 +17,15 @@ public class MyBatisNotificationRepository implements NotificationRepository {
     }
     public long count(long userId, boolean unreadOnly, String type) {
         return mapper.count(userId, unreadOnly, type);
+    }
+    public NotificationAggregate findAggregate(long userId, String type, String key) {
+        return mapper.findAggregate(userId, type, key);
+    }
+    public void addAggregated(long userId, String type, String key, String title, String body, String link) {
+        mapper.addAggregated(userId, type, key, title, body, link);
+    }
+    public void updateAggregated(long id, String title, String body, int count, java.time.LocalDateTime now) {
+        mapper.updateAggregated(id, title, body, count, now);
     }
     public boolean delete(long userId, long id) { return mapper.delete(userId, id) == 1; }
     public void clearRead(long userId) { mapper.clearRead(userId); }
