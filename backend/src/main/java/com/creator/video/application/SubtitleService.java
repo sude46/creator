@@ -6,6 +6,7 @@ import com.creator.common.ErrorCode;
 import com.creator.identity.application.AccountQueryService;
 import com.creator.identity.domain.Actor;
 import com.creator.video.domain.CreatorVideoRepository;
+import com.creator.video.domain.SubtitleLanguage;
 import com.creator.video.domain.SubtitleRepository;
 import com.creator.video.domain.VideoQueryRepository;
 import java.nio.ByteBuffer;
@@ -37,37 +38,77 @@ public class SubtitleService {
     }
 
     @Transactional(timeout = 5)
-    public SubtitleRepository.Metadata upload(Actor actor, long videoId, byte[] content) {
+    public SubtitleRepository.Metadata upload(Actor actor, long videoId, String languageCode, byte[] content) {
         active(actor);
         owned(actor, videoId, true);
+        var language = language(languageCode);
         if (content == null || content.length == 0) throw new BusinessException(ErrorCode.INVALID_REQUEST);
         if (content.length > MAX_BYTES) throw new BusinessException(ErrorCode.REQUEST_TOO_LARGE);
         validate(content);
-        subtitles.save(videoId, content, content.length);
-        audit.record(actor, "SUBTITLE_UPDATED", "VIDEO", videoId);
-        return subtitles.metadata(videoId).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        subtitles.save(videoId, language.code(), language.label(), content, content.length);
+        audit.record(actor, "SUBTITLE_UPDATED", "VIDEO", videoId, language.code());
+        return subtitles.metadata(videoId, language.code()).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+    }
+
+    @Transactional(timeout = 5)
+    public SubtitleRepository.Metadata upload(Actor actor, long videoId, byte[] content) {
+        return upload(actor, videoId, "zh-CN", content);
+    }
+
+    @Transactional(readOnly = true)
+    public List<SubtitleRepository.Metadata> list(Actor actor, long videoId) {
+        active(actor);
+        owned(actor, videoId, false);
+        return subtitles.list(videoId);
     }
 
     @Transactional(readOnly = true)
     public SubtitleRepository.Metadata metadata(Actor actor, long videoId) {
+        return metadata(actor, videoId, "zh-CN");
+    }
+
+    @Transactional(readOnly = true)
+    public SubtitleRepository.Metadata metadata(Actor actor, long videoId, String languageCode) {
         active(actor);
         owned(actor, videoId, false);
-        return subtitles.metadata(videoId).orElse(new SubtitleRepository.Metadata(videoId, 0, null));
+        var language = language(languageCode);
+        return subtitles.metadata(videoId, language.code())
+                .orElse(new SubtitleRepository.Metadata(videoId, language.code(), language.label(), 0, null));
     }
 
     @Transactional(timeout = 5)
     public void delete(Actor actor, long videoId) {
+        delete(actor, videoId, "zh-CN");
+    }
+
+    @Transactional(timeout = 5)
+    public void delete(Actor actor, long videoId, String languageCode) {
         active(actor);
         owned(actor, videoId, true);
-        if (subtitles.metadata(videoId).isEmpty()) throw new BusinessException(ErrorCode.NOT_FOUND);
-        subtitles.delete(videoId);
-        audit.record(actor, "SUBTITLE_DELETED", "VIDEO", videoId);
+        var language = language(languageCode);
+        if (subtitles.metadata(videoId, language.code()).isEmpty()) throw new BusinessException(ErrorCode.NOT_FOUND);
+        subtitles.delete(videoId, language.code());
+        audit.record(actor, "SUBTITLE_DELETED", "VIDEO", videoId, language.code());
+    }
+
+    public List<SubtitleRepository.Metadata> publicList(long videoId) {
+        publicVideos.findPublic(videoId).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        return subtitles.list(videoId);
     }
 
     public byte[] publicContent(long videoId) {
+        return publicContent(videoId, "zh-CN");
+    }
+
+    public byte[] publicContent(long videoId, String languageCode) {
         publicVideos.findPublic(videoId).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-        return subtitles.find(videoId).map(subtitle -> subtitle.content())
+        var language = language(languageCode);
+        return subtitles.find(videoId, language.code()).map(subtitle -> subtitle.content())
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+    }
+
+    private SubtitleLanguage language(String code) {
+        return SubtitleLanguage.parse(code).orElseThrow(() -> new BusinessException(ErrorCode.INVALID_REQUEST));
     }
 
     private void validate(byte[] content) {

@@ -1,5 +1,5 @@
 import { request } from './http'
-import type { Page, SignedMedia } from './creator'
+import type { Page, SignedMedia, SubtitleTrack } from './creator'
 
 export type PublicVideo = { id: string; authorId: string; authorName: string; categoryId: string; categoryName: string; title: string; description: string; durationMillis: number; width: number; height: number; publishedAt: string; hasCover: boolean; coverKey: string | null; viewCount: number; favoriteCount: number; likeCount: number; hasHls: boolean; hasSubtitle: boolean }
 export type Comment = { id: string; videoId: string; userId: string; username: string; content: string; parentId: string | null; likeCount: number; liked: boolean; replyCount: number; createdAt: string }
@@ -31,6 +31,7 @@ export const publicApi = {
     return read<AnchorPage>(`/videos?${query}`, signal)
   },
   get: (id: string, signal: AbortSignal) => read<PublicVideo>(`/videos/${id}`, signal),
+  subtitles: (id: string, signal: AbortSignal) => read<{ items: SubtitleTrack[] }>(`/videos/${id}/subtitles`, signal),
   media: async (id: string, kind: 'SOURCE' | 'COVER', signal: AbortSignal) => { const signed = await request<SignedMedia>(`/videos/${id}/media?kind=${kind}`, { method: 'POST', signal: AbortSignal.any([signal, AbortSignal.timeout(30000)]) }); const address = new URL(signed.url); if (!['https:', 'http:'].includes(address.protocol) || address.username || address.password) throw new Error('媒体地址无效'); return signed },
   folders: (signal: AbortSignal) => read<{ items: FavoriteFolder[] }>('/favorite-folders', signal),
   createFolder: (name: string) => request<FavoriteFolder>('/favorite-folders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) }),

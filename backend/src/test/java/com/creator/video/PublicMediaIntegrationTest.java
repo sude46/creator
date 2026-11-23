@@ -432,13 +432,30 @@ class PublicMediaIntegrationTest {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.exists").value(true))
                 .andExpect(jsonPath("$.sizeBytes").value(vtt.length));
         mvc.perform(get("/api/creator/videos/{id}/subtitle", id).session(session))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.exists").value(true));
+                .andExpect(status().isOk()).andExpect(jsonPath("$.exists").value(true))
+                .andExpect(jsonPath("$.language").value("zh-CN"));
+        byte[] english = "WEBVTT\n\n00:00.000 --> 00:02.000\nHello from Frame.\n"
+                .getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        mvc.perform(put("/api/creator/videos/{id}/subtitles/en", id).session(session).with(csrf().asHeader())
+                        .contentType("text/vtt").content(english))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.language").value("en"))
+                .andExpect(jsonPath("$.label").value("English"));
+        mvc.perform(get("/api/creator/videos/{id}/subtitles", id).session(session))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.items.length()").value(2))
+                .andExpect(jsonPath("$.items[0].language").value("en"));
+        mvc.perform(get("/api/videos/{id}/subtitles", id))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.items.length()").value(2));
+        mvc.perform(get("/api/videos/{id}/subtitles/en.vtt", id))
+                .andExpect(status().isOk()).andExpect(content().bytes(english));
         mvc.perform(get("/api/videos/{id}/subtitle.vtt", id))
                 .andExpect(status().isOk()).andExpect(content().bytes(vtt))
                 .andExpect(content().contentTypeCompatibleWith("text/vtt"));
         mvc.perform(get("/api/videos/{id}", id)).andExpect(status().isOk())
                 .andExpect(jsonPath("$.hasSubtitle").value(true));
 
+        mvc.perform(put("/api/creator/videos/{id}/subtitles/fr", id).session(session).with(csrf().asHeader())
+                        .contentType("text/vtt").content(vtt))
+                .andExpect(status().isBadRequest());
         mvc.perform(put("/api/creator/videos/{id}/subtitle", id).session(login(other)).with(csrf().asHeader())
                         .contentType("text/vtt").content(vtt))
                 .andExpect(status().isNotFound());
@@ -452,9 +469,16 @@ class PublicMediaIntegrationTest {
                         .contentType("text/vtt").content(new byte[524289]))
                 .andExpect(status().isPayloadTooLarge());
 
+        mvc.perform(delete("/api/creator/videos/{id}/subtitles/en", id).session(session).with(csrf().asHeader()))
+                .andExpect(status().isNoContent());
+        mvc.perform(get("/api/videos/{id}/subtitles", id))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.items[0].language").value("zh-CN"));
         mvc.perform(delete("/api/creator/videos/{id}/subtitle", id).session(session).with(csrf().asHeader()))
                 .andExpect(status().isNoContent());
         mvc.perform(get("/api/videos/{id}/subtitle.vtt", id)).andExpect(status().isNotFound());
+        mvc.perform(get("/api/videos/{id}/subtitles", id))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.items.length()").value(0));
         mvc.perform(get("/api/videos/{id}", id)).andExpect(status().isOk())
                 .andExpect(jsonPath("$.hasSubtitle").value(false));
     }

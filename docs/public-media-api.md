@@ -10,10 +10,15 @@
 | `GET /api/videos/{id}` | 当前公开详情，不可见返回 404 |
 | `GET /api/videos/{id}/hls/master.m3u8` | 公开作品的 HLS master playlist；无 HLS 返回 404 |
 | `GET /api/videos/{id}/hls/{rendition}/index.m3u8` | 指定档位的 media playlist，分片改写为短期签名地址 |
-| `GET /api/videos/{id}/subtitle.vtt` | 公开作品的单条中文字幕；不存在或不可见返回 404 |
-| `PUT /api/creator/videos/{id}/subtitle` | 作者上传或替换 WEBVTT，`Content-Type: text/vtt`，最大 512 KiB |
-| `GET /api/creator/videos/{id}/subtitle` | 作者查询字幕是否存在、大小和更新时间 |
-| `DELETE /api/creator/videos/{id}/subtitle` | 作者删除字幕 |
+| `GET /api/videos/{id}/subtitles` | 公开作品的可用字幕语言列表 |
+| `GET /api/videos/{id}/subtitles/{language}.vtt` | 指定语言 WEBVTT；不存在或不可见返回 404 |
+| `GET /api/videos/{id}/subtitle.vtt` | 中文兼容别名，等价于 `zh-CN` |
+| `PUT /api/creator/videos/{id}/subtitles/{language}` | 作者上传或替换指定语言 WEBVTT，最大 512 KiB |
+| `GET /api/creator/videos/{id}/subtitles` | 作者查询全部字幕语言、大小和更新时间 |
+| `DELETE /api/creator/videos/{id}/subtitles/{language}` | 作者删除指定语言字幕 |
+| `PUT /api/creator/videos/{id}/subtitle` | 中文兼容别名 |
+| `GET /api/creator/videos/{id}/subtitle` | 中文兼容别名 |
+| `DELETE /api/creator/videos/{id}/subtitle` | 中文兼容别名 |
 | `POST /api/admin/maintenance/hls-backfill?limit=20&videoId=` | 超级管理员将历史 READY 且无 HLS 的作品排队回填；`videoId` 可指定单作品 |
 | `GET /api/admin/maintenance/hls-backfill` | 超级管理员查询回填任务状态计数 |
 | `POST /api/videos/{id}/media?kind=SOURCE` | 公开作品源视频；`kind=COVER` 为封面 |
@@ -36,9 +41,9 @@ Worker 仅在源文件通过 FFprobe 校验后生成 HLS。当前按源高度选
 
 ## 字幕
 
-每个作品最多一条中文字幕，格式为 WEBVTT，最大 512 KiB。服务端按严格 UTF-8 解码，要求内容以 `WEBVTT` 开头，拒绝 NUL/控制字符以及 `<script`、`<iframe`、`<object`、`<embed`、`<style`、`javascript:` 等常见注入片段；这不是完整的 WebVTT 解析器或浏览器安全沙箱。字幕正文存 `video_subtitle` 的 `MEDIUMBLOB`，作者上传、替换、删除均要求当前会话和作品所有权，并写审计日志。
+每个作品最多 5 条字幕，语言固定为 `zh-CN`、`zh-TW`、`en`、`ja`、`ko`，格式为 WEBVTT，每条最大 512 KiB。服务端按严格 UTF-8 解码，要求内容以 `WEBVTT` 开头，拒绝 NUL/控制字符以及 `<script`、`<iframe`、`<object`、`<embed`、`<style`、`javascript:` 等常见注入片段；这不是完整的 WebVTT 解析器或浏览器安全沙箱。字幕正文存 `video_subtitle` 的 `MEDIUMBLOB`，作者上传、替换、删除均要求当前会话和作品所有权，并按语言写审计日志。
 
-公开播放器只在作品当前可见且存在字幕时返回内容，响应为 `text/vtt;charset=UTF-8` 且不缓存。作品下架、封禁、删除或审核撤回后，字幕接口返回 404；已加载到浏览器中的字幕文本不能被服务端撤回。当前不支持多语言、SRT 转换、自动生成、字幕编辑或独立字幕资产存储。
+公开播放器先读取语言列表，再为每种语言创建 `<track>`；只在作品当前可见时返回内容，响应为 `text/vtt;charset=UTF-8` 且不缓存。作品下架、封禁、删除或审核撤回后，字幕接口返回 404；已加载到浏览器中的字幕文本不能被服务端撤回。前端把字幕开关和最近语言写入 `localStorage` 的 `frame-subtitle-choice`，按浏览器记忆，不跟随账号跨设备；没有记忆时优先中文，其次第一条可用语言。当前不支持 SRT 转换、自动生成、字幕编辑、双语同屏、样式设置或独立字幕资产存储。
 
 ## 可见性与并发边界
 

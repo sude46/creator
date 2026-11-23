@@ -2,22 +2,28 @@ package com.creator.video.infrastructure;
 
 import com.creator.video.domain.SubtitleRepository;
 import com.creator.video.domain.VideoSubtitle;
+import java.util.List;
 import org.apache.ibatis.annotations.*;
 
 @Mapper
 public interface SubtitleMapper {
-    @Select("SELECT video_id, content, size_bytes, updated_at FROM video_subtitle WHERE video_id = #{videoId}")
-    VideoSubtitle find(long videoId);
+    @Select("SELECT video_id, language, label, content, size_bytes, updated_at FROM video_subtitle WHERE video_id = #{videoId} AND language = #{language}")
+    VideoSubtitle find(@Param("videoId") long videoId, @Param("language") String language);
 
-    @Select("SELECT video_id, size_bytes, updated_at FROM video_subtitle WHERE video_id = #{videoId}")
-    SubtitleRepository.Metadata metadata(long videoId);
+    @Select("SELECT video_id, language, label, size_bytes, updated_at FROM video_subtitle WHERE video_id = #{videoId} ORDER BY language")
+    List<SubtitleRepository.Metadata> list(long videoId);
 
-    @Update("UPDATE video_subtitle SET content = #{content}, size_bytes = #{sizeBytes}, updated_at = CURRENT_TIMESTAMP(6) WHERE video_id = #{videoId}")
-    int update(@Param("videoId") long videoId, @Param("content") byte[] content, @Param("sizeBytes") int sizeBytes);
+    @Select("SELECT video_id, language, label, size_bytes, updated_at FROM video_subtitle WHERE video_id = #{videoId} AND language = #{language}")
+    SubtitleRepository.Metadata metadata(@Param("videoId") long videoId, @Param("language") String language);
 
-    @Insert("INSERT INTO video_subtitle (video_id, content, size_bytes) VALUES (#{videoId}, #{content}, #{sizeBytes})")
-    void insert(@Param("videoId") long videoId, @Param("content") byte[] content, @Param("sizeBytes") int sizeBytes);
+    @Update("UPDATE video_subtitle SET label = #{label}, content = #{content}, size_bytes = #{sizeBytes}, updated_at = CURRENT_TIMESTAMP(6) WHERE video_id = #{videoId} AND language = #{language}")
+    int update(@Param("videoId") long videoId, @Param("language") String language, @Param("label") String label,
+            @Param("content") byte[] content, @Param("sizeBytes") int sizeBytes);
 
-    @Delete("DELETE FROM video_subtitle WHERE video_id = #{videoId}")
-    void delete(@Param("videoId") long videoId);
+    @Insert("INSERT INTO video_subtitle (video_id, language, label, content, size_bytes) VALUES (#{videoId}, #{language}, #{label}, #{content}, #{sizeBytes})")
+    void insert(@Param("videoId") long videoId, @Param("language") String language, @Param("label") String label,
+            @Param("content") byte[] content, @Param("sizeBytes") int sizeBytes);
+
+    @Delete("DELETE FROM video_subtitle WHERE video_id = #{videoId} AND language = #{language}")
+    void delete(@Param("videoId") long videoId, @Param("language") String language);
 }

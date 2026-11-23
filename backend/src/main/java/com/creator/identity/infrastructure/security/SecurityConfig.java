@@ -72,7 +72,7 @@ public class SecurityConfig {
                         "/api/videos/*/comments", "/api/comments/*/replies", "/api/tags", "/api/categories",
                         "/api/collections/*", "/api/authors/*/collections", "/api/authors/*/videos",
                         "/api/authors/*/profile", "/api/authors/*/avatar", "/api/videos/*/hls/**",
-                        "/api/videos/*/subtitle.vtt").permitAll()
+                        "/api/videos/*/subtitle.vtt", "/api/videos/*/subtitles", "/api/videos/*/subtitles/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/videos/*/media", "/api/videos/*/view").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated());
