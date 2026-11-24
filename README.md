@@ -1,5 +1,7 @@
 # 帧间
 
+[![CI](https://github.com/sude46/creator/actions/workflows/ci.yml/badge.svg)](https://github.com/sude46/creator/actions/workflows/ci.yml)
+
 一个面向视频创作者的 UGC 平台原型：创作者上传视频、平台转码与审核，观众公开浏览、播放、评论和收藏。
 
 > 当前定位：**完整可运行的项目原型 / 作品集项目**，不是生产上线平台。项目边界见 [已知边界](#已知边界)。
