@@ -4,7 +4,7 @@
 
 - `backend/Dockerfile`：Maven 多阶段构建，运行阶段 JDK 21 JRE、非 root 用户 `10001`、包含 FFmpeg/FFprobe。
 - `frontend/Dockerfile`：Node 22 构建，Nginx 静态托管。
-- `frontend/nginx/default.conf`：SPA、`/api` 反代、220 MiB 请求体上限、基础安全响应头。
+- `frontend/nginx/default.conf`：SPA、`/api` 反代、220 MiB 请求体上限、基础安全响应头；`index.html` 与 SPA 回退禁止缓存，带哈希的 `/assets/` 长缓存，避免部署后浏览器继续运行旧前端。
 - `deploy/compose.prod.yml`：MySQL、RabbitMQ、API、Worker、Web；API 和 Worker 只读根文件系统、`cap_drop: ALL`、`no-new-privileges`、PID/内存/CPU 限制；所有服务使用 `json-file` 日志轮转（50 MiB × 3）。
 - `deploy/nginx/tls.conf.example`：外部 TLS 终止示例，包含 HSTS 和安全头。
 - `deploy/nginx/http-8080.conf.example`：备案前 8080 端口 HTTP 演示示例，保留现有 80/443 站点，并把签名媒体路径反代到 MinIO。
