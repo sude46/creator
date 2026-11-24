@@ -28,7 +28,7 @@ const covers = ref<Record<string, string>>({})
 const loading = ref(true)
 const error = ref('')
 const notice = ref('')
-const muted = ref(localStorage.getItem('frame-feed-muted') !== 'false')
+const muted = ref(localStorage.getItem('frame-feed-muted') === 'true')
 const favorited = ref<boolean>(); const liked = ref<boolean>(); const likeBusy = ref(false)
 const favoriteBusy = ref(false)
 const progress = ref(0)
@@ -87,8 +87,14 @@ function playCurrent() {
     const video = videoRefs.value[index]
     if (!video) return
     video.muted = muted.value
-    if (index === current.value) video.play().catch(() => {})
-    else video.pause()
+    if (index !== current.value) { video.pause(); return }
+    video.play().catch(() => {
+      if (muted.value) return
+      muted.value = true
+      video.muted = true
+      notice.value = '浏览器阻止了有声自动播放，点击“开启声音”恢复。'
+      video.play().catch(() => {})
+    })
   })
 }
 
@@ -269,7 +275,7 @@ onBeforeUnmount(() => {
           <p class="feed-description">{{ item.description || '作者没有留下简介。' }}</p>
           <p class="feed-author"><RouterLink :to="`/authors/${item.authorId}`">@{{ item.authorName }}</RouterLink> · {{ item.viewCount }} 次播放 · {{ item.favoriteCount }} 收藏 · {{ item.likeCount }} 赞 · <RouterLink class="feed-detail" :to="`/videos/${item.id}`">查看详情</RouterLink></p>
         </div>
-        <button class="feed-mute" :aria-label="muted ? '取消静音' : '静音'" @click="toggleMute">{{ muted ? '静音' : '声音' }}</button>
+        <button class="feed-mute" :aria-label="muted ? '开启声音' : '静音'" @click="toggleMute">{{ muted ? '开启声音' : '静音' }}</button>
         <div class="feed-progress"><span :style="{ width: `${progress}%` }"></span></div>
       </section>
     </div>

@@ -6,22 +6,28 @@ export class ApiFailure extends Error {
 
 type CsrfToken = { headerName: string; token: string }
 let csrf: CsrfToken | undefined
+let csrfPromise: Promise<CsrfToken> | undefined
 
 export function clearCsrf() {
   csrf = undefined
+  csrfPromise = undefined
 }
 
 export async function csrfHeader(): Promise<CsrfToken> {
-  csrf ??= await request<CsrfToken>('/auth/csrf')
-  return csrf
+  if (csrf) return csrf
+  csrfPromise ??= request<CsrfToken>('/auth/csrf').then(token => {
+    csrf = token
+    return token
+  }).finally(() => { csrfPromise = undefined })
+  return csrfPromise
 }
 
 export async function request<Result>(path: string, options: RequestInit = {}): Promise<Result> {
   const method = (options.method ?? 'GET').toUpperCase()
   const headers = new Headers(options.headers)
   if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
-    csrf ??= await request<CsrfToken>('/auth/csrf')
-    headers.set(csrf.headerName, csrf.token)
+    const token = await csrfHeader()
+    headers.set(token.headerName, token.token)
   }
   let response: Response
   try {
