@@ -4,6 +4,26 @@
 
 > 当前定位：**完整可运行的项目原型 / 作品集项目**，不是生产上线平台。项目边界见 [已知边界](#已知边界)。
 
+## 截图
+
+截图来自演示环境的合成示例数据。
+
+| 首页 | 视频详情 |
+| --- | --- |
+| ![首页](docs/screenshots/home.png) | ![视频详情](docs/screenshots/video.png) |
+
+| 创作中心 | 管理概览 |
+| --- | --- |
+| ![创作中心](docs/screenshots/studio.png) | ![管理概览](docs/screenshots/admin.png) |
+
+| 账号安全 | 通知 |
+| --- | --- |
+| ![账号安全](docs/screenshots/security.png) | ![通知](docs/screenshots/notifications.png) |
+
+移动端：
+
+![移动端首页](docs/screenshots/mobile-home.png)
+
 ## 功能
 
 ### 公开发现
@@ -199,6 +219,7 @@ H2：252 项，0 失败/错误，11 项真实依赖测试跳过
 ## 文档
 
 - [架构设计](docs/architecture.md)
+- [项目案例](docs/portfolio.md)
 - [未完成清单](docs/remaining-work.md)
 - [上传与对象存储](docs/upload-storage-setup.md)
 - [公开媒体与签名](docs/public-media-api.md)
