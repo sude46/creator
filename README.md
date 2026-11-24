@@ -160,6 +160,8 @@ cp .env.example .env
 docker compose --env-file .env -f deploy/compose.prod.yml up -d --build
 ```
 
+Compose 默认给服务配置 Docker `json-file` 日志轮转：单文件 50 MiB，保留 3 个文件，避免长期运行日志无限增长。
+
 在线演示（HTTP，仅用于作品集查看）：
 
 ```text

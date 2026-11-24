@@ -1,6 +1,13 @@
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "50m"
+    max-file: "3"
+
 services:
   mysql:
     image: mysql:8.4.3
+    logging: *default-logging
     environment:
       MYSQL_DATABASE: ${MYSQL_DATABASE:?Set MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER:?Set MYSQL_USER}
@@ -19,6 +26,7 @@ services:
     restart: unless-stopped
   rabbitmq:
     image: rabbitmq:4.0.5-management
+    logging: *default-logging
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:?Set RABBITMQ_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD}
