@@ -105,9 +105,10 @@
 .public-results-heading{display:flex;align-items:center;gap:15px;margin:0 0 18px;flex-wrap:wrap}
 .public-results-heading h2{font-size:18px;margin:0}
 .public-results-heading span{font-size:12px;color:var(--color-muted);margin-right:auto}
-.watch-screen{background:#17231f;aspect-ratio:16/9;max-height:620px;display:grid;place-items:center;margin:12px 0 0}
-.watch-screen video{width:100%;height:100%;object-fit:contain}
-.watch-prompt{text-align:center;color:var(--color-bg)}
+.watch-screen{position:relative;background:#17231f;aspect-ratio:16/9;max-height:620px;display:grid;place-items:center;margin:12px auto 0;overflow:hidden;width:100%;border-radius:3px}
+.watch-screen.portrait{height:min(72vh,720px);max-height:none;max-width:100%}
+.watch-screen video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#0f1a17}
+.watch-prompt{position:relative;z-index:1;text-align:center;color:var(--color-bg);padding:24px}
 .watch-prompt > span{font-size:12px;color:#c8cec6}
 .watch-prompt p{font-size:20px;margin:14px 0 20px}
 .watch-toolbar{display:flex;justify-content:space-between;gap:15px;align-items:center;padding:14px 0;border-bottom:1px solid var(--color-border);color:var(--color-muted);font-size:12px}
