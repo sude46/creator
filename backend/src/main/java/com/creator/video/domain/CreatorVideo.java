@@ -44,7 +44,7 @@ public record CreatorVideo(long id, long ownerId, long categoryId, String title,
     }
 
     public boolean retryAllowed() {
-        boolean failed = "FAILED".equals(taskState) && failureCode != null && failureCode.retryable();
+        boolean failed = "FAILED".equals(taskState) && failureCode != null && failureCode.manuallyRetryable();
         boolean cancelled = "CANCELLED".equals(taskState);
         return sourceUploaded && !moderationBlocked && processingStatus.equals("FAILED") && (failed || cancelled)
                 && reviewStatus.equals("NOT_SUBMITTED") && publicationStatus.equals("UNPUBLISHED")

@@ -181,7 +181,7 @@ onBeforeUnmount(() => { categoryRequest?.abort(); uploadRequest?.abort() })
           <label class="file-picker" for="new-video-file">视频文件</label>
           <input id="new-video-file" type="file" accept=".mp4,video/mp4" :disabled="busy || !!createdDraft" @change="chooseFile" />
           <p v-if="file" class="muted">{{ file.name }} · {{ (file.size / 1024 / 1024).toFixed(2) }} MiB</p>
-          <p v-else class="muted">仅支持 MP4，最大 200 MiB；上传后由平台转码并生成封面。</p>
+          <p v-else class="muted">仅支持 MP4，最大 200 MiB；支持 H.264/HEVC/AV1/VP9 输入，平台会转码为 H.264 HLS 并生成封面。</p>
           <p v-if="createdDraft" class="muted">作品草稿已创建。上传失败时可直接重试，不要重复创建作品。</p>
         </template>
       </fieldset>

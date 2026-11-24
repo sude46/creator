@@ -420,7 +420,7 @@ onBeforeUnmount(() => {
       </section>
       <VideoEditor v-if="editing" :key="video.id" :video="video" @saved="saved" @cancel="editing = false; load()" @busy="editorBusy = $event" />
       <section v-if="draft && !editing" ref="uploadPanel" class="studio-panel">
-        <h2>上传源视频</h2><p class="muted">MP4 / H.264 / yuv420p，可含一条 AAC 音频；最长 10 分钟、最高 60 帧，每边不超过 1920 像素且总像素不超过 1920 × 1080。最大 200 MiB（以服务端限制为准）。上传成功不代表已审核发布。</p>
+        <h2>上传源视频</h2><p class="muted">MP4，支持 H.264/HEVC/AV1/VP9 输入，平台统一转码为 H.264 HLS；音频支持 AAC/MP3/Opus 等常见编码。最长 10 分钟、最高 60 帧，每边不超过 1920 像素且总像素不超过 1920 × 1080，最大 200 MiB。上传成功不代表已审核发布。</p>
         <label class="file-picker" for="source-video">选择视频文件</label><input id="source-video" ref="fileInput" type="file" accept=".mp4,video/mp4" :disabled="blocked || uploadUnknown" @change="chooseFile" />
         <p v-if="file" class="muted">{{ file.name }} · {{ (file.size / 1024 / 1024).toFixed(2) }} MiB</p>
         <div class="inline-actions"><el-button type="primary" :loading="uploading" :disabled="!file || blocked || uploadUnknown" @click="upload">上传视频</el-button><el-button v-if="uploading" @click="uploadRequest?.abort()">停止上传并核对状态</el-button><el-button v-if="uploadUnknown && !uploading" :disabled="blocked" @click="confirmUpload">查询上传结果</el-button></div>

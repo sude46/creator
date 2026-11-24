@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import Hls from 'hls.js'
 import { publicApi } from '../api/public'
 import type { PublicVideo } from '../api/public'
 import { cachedCover } from '../api/coverCache'
@@ -33,6 +34,8 @@ const favorited = ref<boolean>(); const liked = ref<boolean>(); const likeBusy =
 const favoriteBusy = ref(false)
 const progress = ref(0)
 const signing = new Set<string>()
+const hlsInstances = new Map<string, Hls>()
+const fallbackSources = new Map<string, string>()
 let observer: IntersectionObserver | undefined
 let request: AbortController | undefined
 let moreRequest: AbortController | undefined
@@ -53,9 +56,44 @@ async function loadSource(item: PublicVideo) {
   signing.add(item.id)
   try {
     const media = await publicApi.media(item.id, 'SOURCE', request!.signal)
-    if (!stopped && !request?.signal.aborted) sources.value = { ...sources.value, [item.id]: media.url }
+    if (stopped || request?.signal.aborted) return
+    fallbackSources.set(item.id, media.url)
+    sources.value = { ...sources.value, [item.id]: item.hasHls ? `/api/videos/${item.id}/hls/master.m3u8` : media.url }
   } catch { /* keep the poster if the source cannot be signed */ }
   finally { signing.delete(item.id) }
+}
+function destroyHls(id: string) {
+  const instance = hlsInstances.get(id)
+  if (instance) { instance.destroy(); hlsInstances.delete(id) }
+}
+function destroyAllHls() {
+  for (const id of [...hlsInstances.keys()]) destroyHls(id)
+}
+function attachHls(video: HTMLVideoElement, item: PublicVideo) {
+  if (!item.hasHls || hlsInstances.has(item.id)) return
+  const url = `/api/videos/${item.id}/hls/master.m3u8`
+  if (video.canPlayType('application/vnd.apple.mpegurl')) { video.src = url; return }
+  if (!Hls.isSupported()) {
+    const fallback = fallbackSources.get(item.id)
+    if (fallback) video.src = fallback
+    return
+  }
+  const instance = new Hls({ maxBufferLength: 30 })
+  hlsInstances.set(item.id, instance)
+  instance.on(Hls.Events.ERROR, (_event, data) => {
+    if (!data.fatal) return
+    destroyHls(item.id)
+    const fallback = fallbackSources.get(item.id)
+    if (fallback) { video.src = fallback; void video.play().catch(() => {}) }
+    else notice.value = '视频暂时无法播放。'
+  })
+  instance.loadSource(url)
+  instance.attachMedia(video)
+}
+function setVideoRef(el: HTMLVideoElement | null, index: number, item: PublicVideo) {
+  videoRefs.value[index] = el as HTMLVideoElement
+  if (!el) { destroyHls(item.id); return }
+  attachHls(el, item)
 }
 
 async function loadCover(item: PublicVideo) {
@@ -197,7 +235,7 @@ async function loadCategories() {
 
 async function loadFeed(nextCategory = category.value, followingMode = false, recommendedMode = false) {
   request?.abort(); moreRequest?.abort(); const controller = new AbortController(); request = controller
-  loading.value = true; error.value = ''; items.value = []; sources.value = {}; covers.value = {}; current.value = 0; category.value = nextCategory; following.value = followingMode; recommended.value = recommendedMode
+  destroyAllHls(); fallbackSources.clear(); loading.value = true; error.value = ''; items.value = []; sources.value = {}; covers.value = {}; current.value = 0; category.value = nextCategory; following.value = followingMode; recommended.value = recommendedMode
   feedPage.value = 1; feedTotal.value = 0; hasMore.value = false; anchorMode = false; mode.value = followingMode ? 'following' : recommendedMode ? 'recommended' : 'latest'
   const deepId = !followingMode && !recommendedMode && (typeof route.params.id === 'string' ? route.params.id : (sessionStorage.getItem('frame-feed-anchor') ?? ''))
   try {
@@ -243,6 +281,7 @@ watch(sources, () => { void nextTick().then(playCurrent) }, { deep: true })
 onMounted(async () => { await loadCategories(); await loadFeed() })
 onBeforeUnmount(() => {
   stopped = true; request?.abort(); moreRequest?.abort(); categoryRequest?.abort(); favoriteRequest?.abort(); observer?.disconnect()
+  destroyAllHls(); fallbackSources.clear()
   videoRefs.value.forEach(video => { video.pause(); video.removeAttribute('src'); video.load() })
 })
 </script>
@@ -261,7 +300,7 @@ onBeforeUnmount(() => {
     <div v-else ref="scroller" class="feed-scroller">
       <section v-for="(item, index) in items" :key="item.id" :ref="el => slides[index] = el as HTMLElement" class="feed-slide" :data-index="index" :aria-label="item.title">
         <div class="feed-backdrop" :style="covers[item.id] ? { backgroundImage: `url(${covers[item.id]})` } : undefined"></div>
-        <video v-if="Math.abs(index - current) <= 1 && sources[item.id]" :ref="el => videoRefs[index] = el as HTMLVideoElement" class="feed-video" :src="sources[item.id]" :muted="muted" playsinline preload="metadata" loop @click="openDetail" @canplay="index === current && playCurrent()" @timeupdate="onTimeUpdate($event, index)" />
+        <video v-if="Math.abs(index - current) <= 1 && sources[item.id]" :ref="el => setVideoRef(el as HTMLVideoElement | null, index, item)" class="feed-video" :src="item.hasHls ? undefined : sources[item.id]" :muted="muted" playsinline preload="metadata" loop @click="openDetail" @canplay="index === current && playCurrent()" @timeupdate="onTimeUpdate($event, index)" />
         <img v-else-if="covers[item.id]" class="feed-poster" :src="covers[item.id]" alt="" role="button" tabindex="0" :aria-label="`播放：${item.title}`" referrerpolicy="no-referrer" @click="openDetail" @keydown.enter="openDetail" @keydown.space.prevent="openDetail" />
         <div class="feed-shade"></div>
         <aside class="feed-rail">

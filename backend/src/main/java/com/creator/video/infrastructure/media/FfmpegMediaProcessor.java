@@ -10,6 +10,9 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 public class FfmpegMediaProcessor implements MediaProcessor {
+    private static final Set<String> VIDEO_CODECS = Set.of("h264", "hevc", "av1", "vp9", "vp8");
+    private static final Set<String> PIXEL_FORMATS = Set.of("yuv420p", "yuvj420p", "yuv420p10le", "yuv420p12le", "p010le");
+    private static final Set<String> AUDIO_CODECS = Set.of("aac", "mp3", "opus", "vorbis", "ac3", "eac3");
     private final WorkerProperties properties;
     private final ObjectMapper json;
     private final BoundedMediaProcess processes;
@@ -147,8 +150,8 @@ public class FfmpegMediaProcessor implements MediaProcessor {
             for (var stream : streams) {
                 switch (stream.path("codec_type").asText()) {
                     case "video" -> {
-                        if (video != null || !stream.path("codec_name").asText().equals("h264")
-                                || !stream.path("pix_fmt").asText().equals("yuv420p")
+                        if (video != null || !VIDEO_CODECS.contains(stream.path("codec_name").asText())
+                                || !PIXEL_FORMATS.contains(stream.path("pix_fmt").asText())
                                 || stream.path("disposition").path("attached_pic").asInt() != 0) unsupported();
                         video = stream;
                         String[] rate = stream.path("avg_frame_rate").asText().split("/");
@@ -157,9 +160,9 @@ public class FfmpegMediaProcessor implements MediaProcessor {
                         if (!Double.isFinite(fps) || fps <= 0 || fps > 60) unsupported();
                     }
                     case "audio" -> {
-                        if (++audioCount > 1 || !stream.path("codec_name").asText().equals("aac")
-                                || stream.path("channels").asInt() < 1 || stream.path("channels").asInt() > 2
-                                || stream.path("sample_rate").asInt() < 8000 || stream.path("sample_rate").asInt() > 48000) unsupported();
+                        if (++audioCount > 1 || !AUDIO_CODECS.contains(stream.path("codec_name").asText())
+                                || stream.path("channels").asInt() < 1 || stream.path("channels").asInt() > 6
+                                || stream.path("sample_rate").asInt() < 8000 || stream.path("sample_rate").asInt() > 96000) unsupported();
                     }
                     default -> unsupported();
                 }

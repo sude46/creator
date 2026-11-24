@@ -148,7 +148,7 @@ class ExecutionIntegrationTest {
 
     @Test
     void invalidMediaFailsPermanentlyWithoutBindingCover() {
-        media.failure = ProcessingFailure.UNSUPPORTED_MEDIA;
+        media.failure = ProcessingFailure.INVALID_MEDIA;
         worker.consume(message);
         assertEquals("FAILED", taskState());
         clock.advance(1000);
@@ -156,6 +156,14 @@ class ExecutionIntegrationTest {
         worker.consume(message);
         assertTrue(storage.objects.isEmpty());
         assertEquals(0, database.queryForObject("SELECT COUNT(*) FROM media_asset WHERE kind='COVER'", Integer.class));
+    }
+
+    @Test
+    void unsupportedMediaFailsWithoutAutomaticRetry() {
+        media.failure = ProcessingFailure.UNSUPPORTED_MEDIA;
+        worker.consume(message);
+        assertEquals("FAILED", taskState());
+        assertEquals(1, database.queryForObject("SELECT execution_attempts FROM processing_task WHERE id=?", Integer.class, message.taskId()));
     }
 
     @Test

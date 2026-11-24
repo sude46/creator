@@ -148,7 +148,7 @@ class CreatorVideoIntegrationTest {
     @Test
     void permanentFailureActiveTaskBlockedAndDeletedVideosCannotRetry() {
         long id = failed();
-        database.update("UPDATE processing_task SET failure_code='UNSUPPORTED_MEDIA' WHERE video_id=?", id);
+        database.update("UPDATE processing_task SET failure_code='INVALID_MEDIA' WHERE video_id=?", id);
         assertRetryDenied(id);
         database.update("UPDATE processing_task SET failure_code='STORAGE_UNAVAILABLE', state='RUNNING' WHERE video_id=?", id);
         assertRetryDenied(id);
@@ -157,6 +157,15 @@ class CreatorVideoIntegrationTest {
         assertRetryDenied(id);
         database.update("UPDATE video SET moderation_blocked=FALSE, deleted_at=CURRENT_TIMESTAMP(6) WHERE id=?", id);
         assertEquals(ErrorCode.NOT_FOUND, assertThrows(BusinessException.class, () -> videos.retry(author, id, 0)).getCode());
+    }
+
+    @Test
+    void unsupportedMediaCanBeManuallyRetriedWhileInvalidMediaCannot() {
+        long id = failed();
+        database.update("UPDATE processing_task SET failure_code='UNSUPPORTED_MEDIA' WHERE video_id=?", id);
+        var retried = videos.retry(author, id, 0);
+        assertEquals("PENDING", retried.processingStatus());
+        assertEquals(2, retried.processingGeneration());
     }
 
     @Test

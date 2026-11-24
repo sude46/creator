@@ -101,14 +101,31 @@ class MediaProcessTest {
 
     @Test
     @EnabledIfEnvironmentVariable(named = "CREATOR_FFMPEG_IT_DIR", matches = ".+")
+    void actualFfmpegTranscodesHevcToH264Hls() throws Exception {
+        var bin = Path.of(System.getenv("CREATOR_FFMPEG_IT_DIR"));
+        var ffmpeg = bin.resolve(nativeName("ffmpeg"));
+        var processor = new FfmpegMediaProcessor(properties(bin.resolve(nativeName("ffprobe")).toString(), ffmpeg.toString()),
+                new ObjectMapper(), new BoundedMediaProcess());
+        var source = directory.resolve("hevc-source.mp4");
+        generate(ffmpeg, source, "libx265");
+        var processed = processor.processWithHls(source, directory.resolve("hevc-cover.jpg"),
+                directory.resolve("hevc-hls"), System.nanoTime() + TimeUnit.SECONDS.toNanos(45));
+        assertEquals(1, processed.variants().size());
+        assertTrue(processed.variants().getFirst().playlist().contains("#EXTM3U"));
+    }
+
+    @Test
+    @EnabledIfEnvironmentVariable(named = "CREATOR_FFMPEG_IT_DIR", matches = ".+")
     void metadataRejectsExternalStreamTypesInvalidDimensionsAndExcessiveDuration() throws Exception {
         var bin = Path.of(System.getenv("CREATOR_FFMPEG_IT_DIR"));
         var processor = new FfmpegMediaProcessor(properties(bin.resolve(nativeName("ffprobe")).toString(), bin.resolve(nativeName("ffmpeg")).toString()),
                 new ObjectMapper(), new BoundedMediaProcess());
         String base = "{\"format\":{\"format_name\":\"mov,mp4\",\"duration\":\"1.000001\"},\"streams\":[{\"codec_type\":\"video\",\"codec_name\":\"h264\",\"pix_fmt\":\"yuv420p\",\"width\":640,\"height\":360,\"avg_frame_rate\":\"30/1\"}]}";
         assertEquals(1001, processor.metadata(base.getBytes(StandardCharsets.UTF_8)).durationMillis());
-        for (String invalid : List.of(base.replace("h264", "hevc"), base.replace("640", "8000"), base.replace("1.000001", "601"),
-                base.replace("30/1", "120/1"), base.replace("video", "data"), base.replace("yuv420p", "yuv420p10le"))) {
+        assertEquals(1001, processor.metadata(base.replace("h264", "hevc").getBytes(StandardCharsets.UTF_8)).durationMillis());
+        assertEquals(1001, processor.metadata(base.replace("yuv420p", "yuv420p10le").getBytes(StandardCharsets.UTF_8)).durationMillis());
+        for (String invalid : List.of(base.replace("640", "8000"), base.replace("1.000001", "601"),
+                base.replace("30/1", "120/1"), base.replace("video", "data"))) {
             assertThrows(ProcessingException.class, () -> processor.metadata(invalid.getBytes(StandardCharsets.UTF_8)));
         }
     }
