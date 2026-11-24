@@ -34,29 +34,30 @@ function attachHls(fallback: SignedMedia) {
   const url = media.value?.url
   if (!element || !url) return
   hlsPlayer?.destroy()
+  // Chrome reports "maybe" for HLS but cannot demux MPEG-TS natively; prefer hls.js whenever available.
+  if (Hls.isSupported()) {
+    const instance = new Hls({ maxBufferLength: 30 })
+    hlsPlayer = instance
+    instance.on(Hls.Events.ERROR, (_event, data) => {
+      if (!data.fatal) return
+      instance.destroy()
+      if (hlsPlayer === instance) hlsPlayer = undefined
+      media.value = fallback
+      mediaError.value = 'HLS 播放失败，已切换为源文件。'
+      void nextTick().then(() => startPlayback(player.value))
+    })
+    instance.loadSource(url)
+    instance.attachMedia(element)
+    startPlayback(element)
+    return
+  }
   if (element.canPlayType('application/vnd.apple.mpegurl')) {
     element.src = url
     startPlayback(element)
     return
   }
-  if (!Hls.isSupported()) {
-    media.value = fallback
-    mediaError.value = '当前浏览器不支持 HLS 播放，已尝试直接播放源文件。建议使用最新版 Chrome、Edge、Firefox 或 Safari。'
-    return
-  }
-  const instance = new Hls({ maxBufferLength: 30 })
-  hlsPlayer = instance
-  instance.on(Hls.Events.ERROR, (_event, data) => {
-    if (!data.fatal) return
-    instance.destroy()
-    if (hlsPlayer === instance) hlsPlayer = undefined
-    media.value = fallback
-    mediaError.value = 'HLS 播放失败，已切换为源文件。'
-    void nextTick().then(() => startPlayback(player.value))
-  })
-  instance.loadSource(url)
-  instance.attachMedia(element)
-  startPlayback(element)
+  media.value = fallback
+  mediaError.value = '当前浏览器不支持 HLS 播放，已尝试直接播放源文件。建议使用最新版 Chrome、Edge、Firefox 或 Safari。'
 }
 async function load() { activeRequest?.abort(); mediaRequest?.abort(); relatedRequest?.abort(); signing.value = false; clearMedia(); related.value = []; relatedError.value = ''; const controller = new AbortController(); activeRequest = controller; loading.value = true; error.value = ''; video.value = undefined; try { const result = await publicApi.get(id, controller.signal); if (!controller.signal.aborted) { video.value = result; void loadRelated(result); void loadTags(); void loadSubtitles() } } catch (failure) { if (!controller.signal.aborted) error.value = explain(failure) } finally { if (!controller.signal.aborted) loading.value = false } }
 async function loadComments(next = commentPage.value) {

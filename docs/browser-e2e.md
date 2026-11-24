@@ -84,6 +84,12 @@ Firefox 390×844 实测：
 
 仍待目标移动浏览器、弱网和真实触摸手势验收。
 
+## 2026-11-24 Chrome 158 HLS 复测
+
+Chrome 158 对 `application/vnd.apple.mpegurl` 返回 `maybe`，但原生播放器不能解 MPEG-TS，直接设置 `<video src="...m3u8">` 会报 `DEMUXER_ERROR_COULD_NOT_PARSE`。播放器现在先判断 `Hls.isSupported()`，可用时一律走 hls.js，仅在 hls.js 不可用时才尝试原生 HLS。
+
+真实 Chrome 158 桌面版实测首页、竖屏 feed 和详情页：17 个公开作品均 `readyState=4`，播放时间正常推进，无 HLS 致命错误；35/36 是约 2 秒短片，播放结束后自然暂停。构建机 DNS 将 COS 域名解析到 169.254 内网地址，复测时用 `--host-resolver-rules` 指向公网 COS IP；公开访问仍应使用公网 DNS。
+
 ## 2026-11-19 公开作者页复测
 
 Firefox 实测：首页作者名链接到 `/authors/2`，页面加载作者名和 12 张卡片；`GET /api/authors/2/videos` 返回 13 部公开作品、首页 12 张；feed 底部作者链接同样进入作者页。作者页只显示该作者的公开作品，分页和数据来自真实接口。

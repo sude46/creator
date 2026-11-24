@@ -72,23 +72,25 @@ function destroyAllHls() {
 function attachHls(video: HTMLVideoElement, item: PublicVideo) {
   if (!item.hasHls || hlsInstances.has(item.id)) return
   const url = `/api/videos/${item.id}/hls/master.m3u8`
-  if (video.canPlayType('application/vnd.apple.mpegurl')) { video.src = url; return }
-  if (!Hls.isSupported()) {
-    const fallback = fallbackSources.get(item.id)
-    if (fallback) video.src = fallback
+  // Chrome reports "maybe" for HLS but cannot demux MPEG-TS natively; prefer hls.js whenever available.
+  if (Hls.isSupported()) {
+    const instance = new Hls({ maxBufferLength: 30 })
+    hlsInstances.set(item.id, instance)
+    instance.on(Hls.Events.ERROR, (_event, data) => {
+      if (!data.fatal) return
+      destroyHls(item.id)
+      const fallback = fallbackSources.get(item.id)
+      if (fallback) { video.src = fallback; void video.play().catch(() => {}) }
+      else notice.value = '视频暂时无法播放。'
+    })
+    instance.loadSource(url)
+    instance.attachMedia(video)
     return
   }
-  const instance = new Hls({ maxBufferLength: 30 })
-  hlsInstances.set(item.id, instance)
-  instance.on(Hls.Events.ERROR, (_event, data) => {
-    if (!data.fatal) return
-    destroyHls(item.id)
-    const fallback = fallbackSources.get(item.id)
-    if (fallback) { video.src = fallback; void video.play().catch(() => {}) }
-    else notice.value = '视频暂时无法播放。'
-  })
-  instance.loadSource(url)
-  instance.attachMedia(video)
+  if (video.canPlayType('application/vnd.apple.mpegurl')) { video.src = url; return }
+  const fallback = fallbackSources.get(item.id)
+  if (fallback) video.src = fallback
+  else notice.value = '当前浏览器不支持视频播放。'
 }
 function setVideoRef(el: HTMLVideoElement | null, index: number, item: PublicVideo) {
   videoRefs.value[index] = el as HTMLVideoElement
