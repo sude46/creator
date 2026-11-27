@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
 import WorkspaceShell from '../components/WorkspaceShell.vue'
 import { adminApi } from '../api/admin'
@@ -7,8 +7,12 @@ import type { AdminModerationRecord, ManagedVideo } from '../api/admin'
 import { formatTime } from '../api/creator'
 import { adminStatus } from '../api/videoStatus'
 import { useStudioError } from '../composables/useStudioError'
+import { auth } from '../stores/auth'
+import { canModerate, canReview } from '../permissions'
 
 const explain = useStudioError()
+const canModerateAccess = computed(() => canModerate(auth.user.value))
+const canReviewAccess = computed(() => canReview(auth.user.value))
 const items = ref<ManagedVideo[]>([])
 const page = ref(1)
 const total = ref(0)
@@ -155,7 +159,7 @@ onBeforeUnmount(() => {
   <WorkspaceShell>
     <div class="studio-heading">
       <div><p class="eyebrow">FRAME ROOM / MODERATION</p><h1>作品管理</h1><p class="muted">管理处理完成的作品，查看封禁与解禁记录。</p></div>
-      <div class="inline-actions"><RouterLink to="/admin/reviews">待审核队列 →</RouterLink><RouterLink to="/admin/processing">异常处理 →</RouterLink></div>
+      <div class="inline-actions"><RouterLink v-if="canReviewAccess" to="/admin/reviews">待审核队列 →</RouterLink><RouterLink v-if="canReviewAccess" to="/admin/processing">异常处理 →</RouterLink><RouterLink v-if="canModerateAccess" to="/admin/reports">举报处理 →</RouterLink></div>
     </div>
     <el-alert v-if="error" :title="error" type="error" :closable="false" role="alert" />
     <div class="management-layout">
@@ -178,12 +182,13 @@ onBeforeUnmount(() => {
           <p class="muted">作品 #{{ selected.video.id }} · 作者 #{{ selected.ownerId }} · 版本 {{ selected.video.version }}</p>
           <div class="status-group"><el-tag :type="adminStatus(selected.video).tone">{{ adminStatus(selected.video).label }}</el-tag><el-tag type="info">{{ adminStatus(selected.video).visibilityLabel }}</el-tag></div><p class="muted">{{ adminStatus(selected.video).detail }}</p>
           <p class="video-description">{{ selected.video.description || '作者未填写简介。' }}</p>
-          <form class="studio-form" @submit.prevent="moderate">
+          <form v-if="canModerateAccess" class="studio-form" @submit.prevent="moderate">
             <label for="moderation-reason">{{ selected.video.moderationBlocked ? '解禁原因' : '封禁原因' }}（必填）</label>
             <textarea id="moderation-reason" v-model="reason" required maxlength="500" rows="4" :disabled="busy" />
             <p class="muted">解禁不会自动发布，作者需要重新送审。</p>
             <el-button native-type="submit" :type="selected.video.moderationBlocked ? 'primary' : 'danger'" :loading="busy" :disabled="loading || detailLoading || needsRefresh">{{ selected.video.moderationBlocked ? '确认解禁' : '确认封禁' }}</el-button><el-button type="danger" :loading="busy" :disabled="loading || detailLoading || needsRefresh" @click="remove">删除作品</el-button>
           </form>
+          <p v-else class="muted">审核员只能查看作品状态；封禁、解禁和删除由内容管理员处理。</p>
           <div class="section-heading history-subheading"><h2>处理记录</h2><el-button :disabled="historyLoading || busy" @click="history(historyPage)">刷新记录</el-button></div>
           <el-alert v-if="historyError" :title="historyError" type="error" :closable="false" role="alert" />
           <p v-if="historyLoading" role="status">正在加载记录…</p>

@@ -6,8 +6,11 @@ import type { HlsBackfillStatus, ManagedVideo } from '../api/admin'
 import { formatTime } from '../api/creator'
 import { adminStatus } from '../api/videoStatus'
 import { useStudioError } from '../composables/useStudioError'
+import { auth } from '../stores/auth'
+import { isSuperAdmin } from '../permissions'
 
 const explain = useStudioError()
+const superAccess = computed(() => isSuperAdmin(auth.user.value))
 const items = ref<ManagedVideo[]>([])
 const page = ref(1)
 const total = ref(0)
@@ -94,7 +97,7 @@ async function enqueueHls() {
   } catch (failure) { hlsError.value = explain(failure) }
   finally { if (!stopped) hlsBusy.value = false }
 }
-onMounted(() => { void load(); void loadHls() })
+onMounted(() => { void load(); if (superAccess.value) void loadHls() })
 onBeforeUnmount(() => { stopped = true; activeRequest?.abort() })
 </script>
 
@@ -106,7 +109,7 @@ onBeforeUnmount(() => { stopped = true; activeRequest?.abort() })
     </div>
     <el-alert v-if="error" :title="error" type="error" :closable="false" role="alert" />
     <el-alert v-if="notice" :title="notice" type="success" :closable="false" role="status" />
-    <section class="studio-panel">
+    <section v-if="superAccess" class="studio-panel">
       <div class="section-heading"><h2>历史 HLS 回填</h2><div class="inline-actions"><el-button :loading="hlsBusy" @click="loadHls">刷新状态</el-button><el-button type="primary" :loading="hlsBusy" @click="enqueueHls">扫描并排队</el-button></div></div>
       <p class="muted">只处理 READY、已有源文件且没有 HLS 的作品；不重新审核、不改变发布状态，成功前继续使用 MP4。</p>
       <el-alert v-if="hlsError" :title="hlsError" type="error" :closable="false" role="alert" />

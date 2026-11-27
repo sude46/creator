@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { auth } from '../stores/auth'
+import { adminRoleLabel, canModerate as hasModerateAccess, canReview as hasReviewAccess, isAdmin, isSuperAdmin } from '../permissions'
 import { notificationState } from '../stores/notifications'
 import { profileApi, type ProfileForm } from '../api/profile'
 import { useStudioError } from '../composables/useStudioError'
@@ -9,16 +10,16 @@ import { useStudioError } from '../composables/useStudioError'
 const router = useRouter()
 const route = useRoute()
 const user = auth.user
-const adminArea = computed(() => user.value?.role === 'ADMIN' && (route.path === '/admin' || route.path.startsWith('/admin/')))
-const superAdmin = computed(() => user.value?.role === 'ADMIN' && (!user.value.adminScope || user.value.adminScope === 'SUPER_ADMIN'))
-const canReview = computed(() => user.value?.role === 'ADMIN' && (!user.value.adminScope || ['SUPER_ADMIN', 'REVIEWER'].includes(user.value.adminScope)))
-const canModerate = computed(() => user.value?.role === 'ADMIN' && (!user.value.adminScope || ['SUPER_ADMIN', 'MODERATOR'].includes(user.value.adminScope)))
+const adminArea = computed(() => isAdmin(user.value) && (route.path === '/admin' || route.path.startsWith('/admin/')))
+const superAdmin = computed(() => isSuperAdmin(user.value))
+const canReview = computed(() => hasReviewAccess(user.value))
+const canModerate = computed(() => hasModerateAccess(user.value))
 const unread = notificationState.unread
 let unreadTimer: ReturnType<typeof setInterval> | undefined
 function refreshUnread() { if (user.value) void notificationState.refresh() }
 watch(() => route.fullPath, refreshUnread)
 watch(() => user.value?.id, id => { if (id) { refreshUnread(); void loadProfile() } else { notificationState.clear(); profile.value = null; menuOpen.value = false } })
-const roleLabel = computed(() => !user.value || user.value.role !== 'ADMIN' ? '用户' : user.value.adminScope === 'REVIEWER' ? '审核员' : user.value.adminScope === 'MODERATOR' ? '内容管理员' : '超级管理员')
+const roleLabel = computed(() => adminRoleLabel(user.value))
 const busy = ref(false)
 const error = ref('')
 const shell = ref<HTMLElement>()
@@ -113,7 +114,7 @@ async function logout() {
       <span class="admin-nav-group">概览</span><RouterLink to="/admin">总览</RouterLink>
       <span class="admin-nav-group">内容</span><RouterLink to="/admin/videos">作品管理</RouterLink><RouterLink v-if="canReview" to="/admin/reviews">审核</RouterLink><RouterLink v-if="canReview" to="/admin/processing">异常处理</RouterLink>
       <span v-if="superAdmin" class="admin-nav-group">配置</span><RouterLink v-if="superAdmin" to="/admin/categories">分类管理</RouterLink><RouterLink v-if="superAdmin" to="/admin/tags">标签管理</RouterLink>
-      <span class="admin-nav-group">系统</span><RouterLink v-if="superAdmin" to="/admin/users">用户管理</RouterLink><RouterLink v-if="canModerate" to="/admin/reports">举报处理</RouterLink><RouterLink v-if="canModerate" to="/admin/appeals">申诉处理</RouterLink><RouterLink v-if="superAdmin" to="/admin/audit">审计记录</RouterLink>
+      <template v-if="superAdmin || canModerate"><span class="admin-nav-group">系统</span><RouterLink v-if="superAdmin" to="/admin/users">用户管理</RouterLink><RouterLink v-if="canModerate" to="/admin/reports">举报处理</RouterLink><RouterLink v-if="canModerate" to="/admin/appeals">申诉处理</RouterLink><RouterLink v-if="superAdmin" to="/admin/audit">审计记录</RouterLink></template>
     </nav>
     <main class="studio-main">
       <el-alert v-if="error" :title="error" type="error" :closable="false" role="alert" />
