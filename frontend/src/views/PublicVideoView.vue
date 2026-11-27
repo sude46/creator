@@ -4,15 +4,16 @@ import Hls from 'hls.js'
 import { useRoute } from 'vue-router'
 import WorkspaceShell from '../components/WorkspaceShell.vue'
 import PublicVideoCard from '../components/PublicVideoCard.vue'
-import { publicApi, durationLabel } from '../api/public'
+import { publicApi } from '../api/public'
 import type { PublicVideo } from '../api/public'
+import { cachedCover } from '../api/coverCache'
 import type { SignedMedia, SubtitleTrack } from '../api/creator'
 import { formatTime } from '../api/creator'
 import { useStudioError } from '../composables/useStudioError'
 import { auth } from '../stores/auth'
 import type { Comment } from '../api/public'
 type Playback = { url: string; expiresAt?: string; hls?: boolean }
-const id = String(useRoute().params.id); const explain = useStudioError(); const video = ref<PublicVideo>(); const media = ref<Playback>(); const player = ref<HTMLVideoElement>(); const loading = ref(false); const signing = ref(false); const favoriteBusy = ref(false); const favorited = ref<boolean>(); const liked = ref<boolean>(); const likeBusy = ref(false); const error = ref(''); const mediaError = ref(''); const playbackNotice = ref(''); const favoriteError = ref(''); const notice = ref(''); const related = ref<PublicVideo[]>([]); const comments = ref<Comment[]>([]); const replies = ref<Record<string, Comment[]>>({}); const repliesOpen = ref<Record<string, boolean>>({}); const replyForm = ref<Record<string, boolean>>({}); const replyText = ref<Record<string, string>>({}); const replyBusy = ref<string>(); const commentLikeBusy = ref<string>(); const commentPage = ref(1); const commentSort = ref<'latest' | 'oldest' | 'hot'>('latest'); const commentTotal = ref(0); const commentLoading = ref(false); const commentBusy = ref(false); const commentText = ref(''); const videoTags = ref<string[]>([]); const subtitleTracks = ref<SubtitleTrack[]>([]); const subtitleChoice = ref('off'); const SUBTITLE_KEY = 'frame-subtitle-choice'; const relatedLoading = ref(false); const relatedError = ref(''); let hlsPlayer: Hls | undefined
+const id = String(useRoute().params.id); const explain = useStudioError(); const video = ref<PublicVideo>(); const media = ref<Playback>(); const player = ref<HTMLVideoElement>(); const cover = ref(''); const playing = ref(false); const buffering = ref(false); const hasFrame = ref(false); const loading = ref(false); const signing = ref(false); const favoriteBusy = ref(false); const favorited = ref<boolean>(); const liked = ref<boolean>(); const likeBusy = ref(false); const error = ref(''); const mediaError = ref(''); const playbackNotice = ref(''); const favoriteError = ref(''); const notice = ref(''); const related = ref<PublicVideo[]>([]); const comments = ref<Comment[]>([]); const replies = ref<Record<string, Comment[]>>({}); const repliesOpen = ref<Record<string, boolean>>({}); const replyForm = ref<Record<string, boolean>>({}); const replyText = ref<Record<string, string>>({}); const replyBusy = ref<string>(); const commentLikeBusy = ref<string>(); const commentPage = ref(1); const commentSort = ref<'latest' | 'oldest' | 'hot'>('latest'); const commentTotal = ref(0); const commentLoading = ref(false); const commentBusy = ref(false); const commentText = ref(''); const videoTags = ref<string[]>([]); const subtitleTracks = ref<SubtitleTrack[]>([]); const subtitleChoice = ref('off'); const SUBTITLE_KEY = 'frame-subtitle-choice'; const relatedLoading = ref(false); const relatedError = ref(''); let hlsPlayer: Hls | undefined
 const portraitVideo = computed(() => {
   const width = Number(video.value?.width)
   const height = Number(video.value?.height)
@@ -26,21 +27,34 @@ const watchStyle = computed(() => {
   if (height > width) style.width = `min(100%, calc(min(72vh, 720px) * ${(width / height).toFixed(6)}))`
   return style
 })
-let activeRequest: AbortController | undefined; let mediaRequest: AbortController | undefined; let relatedRequest: AbortController | undefined; let commentRequest: AbortController | undefined; const lifetime = new AbortController()
-function clearMedia() { hlsPlayer?.destroy(); hlsPlayer = undefined; player.value?.pause(); player.value?.removeAttribute('src'); player.value?.load(); media.value = undefined }
-function playerError() { if (!media.value?.hls) mediaError.value = '视频无法播放：源文件可能不受当前浏览器支持，或播放地址已过期。请重新获取或更换浏览器。' }
+let activeRequest: AbortController | undefined; let mediaRequest: AbortController | undefined; let relatedRequest: AbortController | undefined; let commentRequest: AbortController | undefined; let coverRequest: AbortController | undefined; const lifetime = new AbortController()
+function clearMedia() { hlsPlayer?.destroy(); hlsPlayer = undefined; playing.value = false; buffering.value = false; hasFrame.value = false; player.value?.pause(); player.value?.removeAttribute('src'); player.value?.load(); media.value = undefined }
+function playerError() { playing.value = false; buffering.value = false; if (!media.value?.hls) mediaError.value = '视频无法播放：源文件可能不受当前浏览器支持，或播放地址已过期。请重新加载或更换浏览器。' }
 function startPlayback(element: HTMLVideoElement | null | undefined) {
   if (!element) return
   element.play().catch((failure: unknown) => {
     if (element.muted || (failure as DOMException)?.name !== 'NotAllowedError') return
     element.muted = true
     void element.play().then(() => {
-      playbackNotice.value = '浏览器阻止了有声播放，已切换为静音；可在播放器中打开声音。'
+      playbackNotice.value = '已静音播放，可在播放器音量键中打开声音。'
     }).catch(() => {
-      playbackNotice.value = '浏览器阻止了自动播放，请点击播放器上的播放按钮。'
+      // Stay quiet: the player shows a play control the viewer can tap.
+      playbackNotice.value = ''
     })
   })
 }
+function togglePlayer() {
+  const element = player.value
+  if (!element) { void play(); return }
+  if (!element.paused) { element.pause(); return }
+  element.play().catch(() => {
+    element.muted = true
+    void element.play().catch(() => {})
+  })
+}
+function onPlaying() { playing.value = true; buffering.value = false; hasFrame.value = true; if (media.value && !media.value.hls) mediaError.value = '' }
+function onPause() { playing.value = false; buffering.value = false }
+function onWaiting() { buffering.value = true }
 function onVolumeChange() { if (player.value && !player.value.muted) playbackNotice.value = '' }
 function attachHls(fallback: SignedMedia) {
   const element = player.value
@@ -72,7 +86,17 @@ function attachHls(fallback: SignedMedia) {
   media.value = fallback
   mediaError.value = '当前浏览器不支持 HLS 播放，已尝试直接播放源文件。建议使用最新版 Chrome、Edge、Firefox 或 Safari。'
 }
-async function load() { activeRequest?.abort(); mediaRequest?.abort(); relatedRequest?.abort(); signing.value = false; clearMedia(); related.value = []; relatedError.value = ''; const controller = new AbortController(); activeRequest = controller; loading.value = true; error.value = ''; video.value = undefined; try { const result = await publicApi.get(id, controller.signal); if (!controller.signal.aborted) { video.value = result; void loadRelated(result); void loadTags(); void loadSubtitles() } } catch (failure) { if (!controller.signal.aborted) error.value = explain(failure) } finally { if (!controller.signal.aborted) loading.value = false } }
+async function loadCover() {
+  if (!video.value?.hasCover) return
+  coverRequest?.abort()
+  const controller = new AbortController()
+  coverRequest = controller
+  try {
+    const entry = await cachedCover(video.value.coverKey ?? `public:${id}`, () => publicApi.media(id, 'COVER', controller.signal))
+    if (!controller.signal.aborted) cover.value = entry.url
+  } catch { /* the stage keeps its dark background */ }
+}
+async function load() { activeRequest?.abort(); mediaRequest?.abort(); relatedRequest?.abort(); signing.value = false; clearMedia(); cover.value = ''; related.value = []; relatedError.value = ''; const controller = new AbortController(); activeRequest = controller; loading.value = true; error.value = ''; video.value = undefined; try { const result = await publicApi.get(id, controller.signal); if (!controller.signal.aborted) { video.value = result; void loadCover(); void loadRelated(result); void loadTags(); void loadSubtitles(); void play() } } catch (failure) { if (!controller.signal.aborted) error.value = explain(failure) } finally { if (!controller.signal.aborted) loading.value = false } }
 async function loadComments(next = commentPage.value) {
   commentRequest?.abort()
   const c = new AbortController()
@@ -193,13 +217,13 @@ async function recordView() {
     if (!lifetime.signal.aborted && video.value) video.value = { ...video.value, viewCount: result.viewCount }
   } catch { /* views are best-effort */ }
 }
-async function play() { if (!video.value || signing.value || loading.value) return; mediaRequest?.abort(); const controller = new AbortController(); mediaRequest = controller; signing.value = true; mediaError.value = ''; playbackNotice.value = ''; clearMedia(); void recordView(); try { const result = await publicApi.media(id, 'SOURCE', controller.signal); if (controller.signal.aborted) return; if (!video.value?.hasHls) { media.value = result; await nextTick(); applySubtitlePreference(); startPlayback(player.value); return } media.value = { url: `/api/videos/${id}/hls/master.m3u8`, hls: true }; await nextTick(); if (!controller.signal.aborted) { attachHls(result); applySubtitlePreference() } } catch (failure) { if (!controller.signal.aborted) mediaError.value = explain(failure) } finally { if (!controller.signal.aborted) signing.value = false } }
+async function play() { if (!video.value || signing.value) return; mediaRequest?.abort(); const controller = new AbortController(); mediaRequest = controller; signing.value = true; mediaError.value = ''; playbackNotice.value = ''; clearMedia(); void recordView(); try { const result = await publicApi.media(id, 'SOURCE', controller.signal); if (controller.signal.aborted) return; if (!video.value?.hasHls) { media.value = result; await nextTick(); applySubtitlePreference(); startPlayback(player.value); return } media.value = { url: `/api/videos/${id}/hls/master.m3u8`, hls: true }; await nextTick(); if (!controller.signal.aborted) { attachHls(result); applySubtitlePreference() } } catch (failure) { if (!controller.signal.aborted) mediaError.value = explain(failure) } finally { if (!controller.signal.aborted) signing.value = false } }
 async function reportVideo() { const reason = window.prompt('举报原因（1～500 字）')?.trim() ?? ''; if (!reason) return; try { await publicApi.report('VIDEO', id, reason); mediaError.value = ''; notice.value = '举报已提交。' } catch (failure) { if (!lifetime.signal.aborted) mediaError.value = explain(failure) } }
 async function likeState() { try { const result = await publicApi.likeState(id, lifetime.signal); if (!lifetime.signal.aborted) liked.value = result.liked } catch { if (!lifetime.signal.aborted) liked.value = undefined } }
 async function toggleLike() { if (liked.value === undefined || likeBusy.value) return; const add = !liked.value; likeBusy.value = true; try { await publicApi.like(id, add); if (!lifetime.signal.aborted) { liked.value = add; if (video.value) video.value = { ...video.value, likeCount: Math.max(0, video.value.likeCount + (add ? 1 : -1)) } } } catch { /* best effort */ } finally { if (!lifetime.signal.aborted) likeBusy.value = false } }
 async function favoriteState() { favoriteBusy.value = true; favoriteError.value = ''; try { const result = await publicApi.favoriteState(id, lifetime.signal); if (!lifetime.signal.aborted) favorited.value = result.favorited } catch (failure) { if (!lifetime.signal.aborted) { favorited.value = undefined; favoriteError.value = explain(failure) } } finally { if (!lifetime.signal.aborted) favoriteBusy.value = false } }
 async function toggleFavorite() { if (favoriteBusy.value || favorited.value === undefined) return; const add = !favorited.value; favoriteBusy.value = true; favoriteError.value = ''; notice.value = ''; try { await publicApi.favorite(id, add); if (!lifetime.signal.aborted) { favorited.value = add; if (video.value) video.value = { ...video.value, favoriteCount: Math.max(0, video.value.favoriteCount + (add ? 1 : -1)) }; notice.value = add ? '已加入收藏。' : '已取消收藏。' } } catch (failure) { if (!lifetime.signal.aborted) { favoriteError.value = `${explain(failure)}。正在核对收藏状态。`; favorited.value = undefined; await favoriteState() } } finally { if (!lifetime.signal.aborted) favoriteBusy.value = false } }
-onMounted(() => { if (/^[1-9]\d{0,18}$/.test(id)) { void load(); if (auth.user.value) { void favoriteState(); void likeState() } void loadComments() } else error.value = '作品编号无效' }); onBeforeUnmount(() => { lifetime.abort(); activeRequest?.abort(); mediaRequest?.abort(); relatedRequest?.abort(); commentRequest?.abort(); clearMedia() })
+onMounted(() => { if (/^[1-9]\d{0,18}$/.test(id)) { void load(); if (auth.user.value) { void favoriteState(); void likeState() } void loadComments() } else error.value = '作品编号无效' }); onBeforeUnmount(() => { lifetime.abort(); activeRequest?.abort(); mediaRequest?.abort(); relatedRequest?.abort(); commentRequest?.abort(); coverRequest?.abort(); clearMedia() })
 </script>
 <template>
   <WorkspaceShell>
@@ -211,13 +235,19 @@ onMounted(() => { if (/^[1-9]\d{0,18}$/.test(id)) { void load(); if (auth.user.v
       <div class="watch-top" :class="{ portrait: portraitVideo }">
         <div class="watch-stage">
           <section class="watch-screen" :class="{ portrait: portraitVideo }" :style="watchStyle" aria-label="视频播放器">
-            <video v-if="media" ref="player" :src="media.hls ? undefined : media.url" controls playsinline preload="metadata" @loadedmetadata="applySubtitlePreference" @error="playerError" @volumechange="onVolumeChange">
+            <img v-if="cover && !hasFrame" class="watch-cover" :src="cover" alt="" aria-hidden="true" referrerpolicy="no-referrer" />
+            <div v-if="cover && !hasFrame" class="watch-cover-scrim" aria-hidden="true"></div>
+            <video v-if="media" ref="player" :src="media.hls ? undefined : media.url" controls playsinline webkit-playsinline x5-playsinline x5-video-player-type="h5" x5-video-player-fullscreen="false" preload="auto" @loadedmetadata="applySubtitlePreference" @loadeddata="hasFrame = true" @error="playerError" @volumechange="onVolumeChange" @playing="onPlaying" @pause="onPause" @waiting="onWaiting">
               <track v-for="track in subtitleTracks" :key="track.language" kind="subtitles" :srclang="track.language" :label="track.label" :src="`/api/videos/${id}/subtitles/${track.language}.vtt`" />
             </video>
-            <div v-else class="watch-prompt">
-              <span>{{ durationLabel(video.durationMillis) }}</span>
-              <p>准备观看《{{ video.title }}》</p>
-              <el-button :loading="signing" @click="play">加载视频</el-button>
+            <div v-if="!media || !playing" class="watch-center">
+              <button v-if="signing || buffering" class="watch-play-icon" type="button" disabled aria-label="正在加载视频"><span class="watch-spinner" aria-hidden="true"></span></button>
+              <template v-else>
+                <button class="watch-play-icon" type="button" :aria-label="media ? '播放视频' : '重新加载视频'" @click="media ? togglePlayer() : play()">
+                  <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M8 5.4v13.2L19 12Z" fill="currentColor" /></svg>
+                </button>
+                <span v-if="mediaError && !media" class="watch-center-label">重新加载</span>
+              </template>
             </div>
           </section>
           <el-alert v-if="playbackNotice" :title="playbackNotice" type="info" :closable="true" role="status" @close="playbackNotice = ''" />
@@ -227,7 +257,7 @@ onMounted(() => { if (/^[1-9]\d{0,18}$/.test(id)) { void load(); if (auth.user.v
           <div class="watch-toolbar">
             <span>分类：{{ video.categoryName }} · 作者：{{ video.authorName }}</span>
             <label v-if="subtitleTracks.length" class="subtitle-select">字幕<select v-model="subtitleChoice" @change="changeSubtitle"><option value="off">关闭</option><option v-for="track in subtitleTracks" :key="track.language" :value="track.language">{{ track.label }}</option></select></label>
-            <el-button :loading="signing" @click="play">重新获取播放地址</el-button>
+            <el-button :loading="signing" @click="play">重新加载</el-button>
           </div>
           <div class="watch-heading">
             <div>

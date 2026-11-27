@@ -117,10 +117,18 @@
 .watch-info .watch-heading .inline-actions{margin-top:16px}
 .watch-screen{position:relative;background:#17231f;aspect-ratio:16/9;max-height:620px;display:grid;place-items:center;margin:12px auto 0;overflow:hidden;width:100%;border-radius:3px}
 .watch-screen.portrait{height:min(72vh,720px);max-height:none;max-width:100%}
-.watch-screen video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#0f1a17}
-.watch-prompt{position:relative;z-index:1;text-align:center;color:var(--color-bg);padding:24px}
-.watch-prompt > span{font-size:12px;color:#c8cec6}
-.watch-prompt p{font-size:20px;margin:14px 0 20px}
+.watch-screen video{position:absolute;inset:0;z-index:1;width:100%;height:100%;object-fit:contain;background:#0f1a17}
+.watch-cover{position:absolute;inset:0;z-index:2;width:100%;height:100%;object-fit:cover;pointer-events:none}
+.watch-cover-scrim{position:absolute;inset:0;z-index:2;background:linear-gradient(to bottom,rgba(10,18,15,.12),rgba(10,18,15,.55));pointer-events:none}
+.watch-center{position:absolute;inset:0;z-index:3;display:grid;place-content:center;justify-items:center;gap:10px;pointer-events:none}
+.watch-play-icon{pointer-events:auto;display:grid;place-items:center;width:64px;height:64px;border-radius:50%;border:1px solid rgba(247,244,236,.55);background:rgba(10,18,15,.55);color:var(--color-on-primary);cursor:pointer;padding:0}
+.watch-play-icon:hover{background:rgba(10,18,15,.75)}
+.watch-play-icon:focus-visible{outline:2px solid var(--color-focus);outline-offset:3px}
+.watch-play-icon:disabled{cursor:progress}
+.watch-spinner{width:26px;height:26px;border:2px solid rgba(247,244,236,.28);border-top-color:var(--color-on-primary);border-radius:50%;animation:watch-spin .9s linear infinite}
+.watch-center-label{font-size:12px;color:rgba(247,244,236,.85)}
+@keyframes watch-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.watch-spinner{animation-duration:2.4s}}
 .watch-toolbar{display:flex;justify-content:space-between;gap:15px;align-items:center;padding:14px 0;border-bottom:1px solid var(--color-border);color:var(--color-muted);font-size:12px}
 .watch-heading{display:flex;justify-content:space-between;gap:20px;align-items:start;padding:28px 0 10px}
 .watch-heading h1{font-size:32px;margin:0 0 9px;line-height:1.3;overflow-wrap:anywhere}

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import Hls from 'hls.js'
 import { publicApi } from '../api/public'
 import type { PublicVideo } from '../api/public'
@@ -9,7 +9,6 @@ import { useStudioError } from '../composables/useStudioError'
 import { auth } from '../stores/auth'
 
 const route = useRoute()
-const router = useRouter()
 const explain = useStudioError()
 const scroller = ref<HTMLElement>()
 const slides = ref<HTMLElement[]>([])
@@ -29,7 +28,12 @@ const covers = ref<Record<string, string>>({})
 const loading = ref(true)
 const error = ref('')
 const notice = ref('')
-const muted = ref(localStorage.getItem('frame-feed-muted') === 'true')
+const storedMute = localStorage.getItem('frame-feed-muted')
+const muted = ref(storedMute === null ? true : storedMute === 'true')
+const playing = ref(false)
+const ready = ref(false)
+const videoSetters = new Map<string, (el: unknown) => void>()
+const slideSetters = new Map<string, (el: unknown) => void>()
 const favorited = ref<boolean>(); const liked = ref<boolean>(); const likeBusy = ref(false)
 const favoriteBusy = ref(false)
 const progress = ref(0)
@@ -47,7 +51,6 @@ function scrollToCurrent() {
   const slide = slides.value[current.value]
   if (slide && scroller.value) scroller.value.scrollTo({ top: slide.offsetTop, behavior: 'auto' })
 }
-function openDetail() { const item = items.value[current.value]; if (item) void router.push(`/videos/${item.id}`) }
 function savePosition() { const item = items.value[current.value]; if (item) sessionStorage.setItem('frame-feed-anchor', item.id) }
 function signed(id: string) { return !!sources.value[id] }
 
@@ -92,10 +95,28 @@ function attachHls(video: HTMLVideoElement, item: PublicVideo) {
   if (fallback) video.src = fallback
   else notice.value = '当前浏览器不支持视频播放。'
 }
-function setVideoRef(el: HTMLVideoElement | null, index: number, item: PublicVideo) {
-  videoRefs.value[index] = el as HTMLVideoElement
-  if (!el) { destroyHls(item.id); return }
-  attachHls(el, item)
+function videoSetter(index: number, item: PublicVideo) {
+  let setter = videoSetters.get(item.id)
+  if (!setter) {
+    setter = (el) => {
+      videoRefs.value[index] = el as HTMLVideoElement
+      if (!el) { destroyHls(item.id); return }
+      attachHls(el as HTMLVideoElement, item)
+    }
+    videoSetters.set(item.id, setter)
+  }
+  return setter
+}
+function slideSetter(index: number, item: PublicVideo) {
+  let setter = slideSetters.get(item.id)
+  if (!setter) { setter = (el) => { slides.value[index] = el as HTMLElement }; slideSetters.set(item.id, setter) }
+  return setter
+}
+function onSlideTap(index: number) {
+  if (index !== current.value) { setCurrent(index); return }
+  const video = videoRefs.value[index]
+  if (video) { togglePlayback(); return }
+  void loadMedia(index)
 }
 
 async function loadCover(item: PublicVideo) {
@@ -131,16 +152,49 @@ function playCurrent() {
     video.play().catch(() => {
       if (muted.value) return
       muted.value = true
+      localStorage.setItem('frame-feed-muted', 'true')
       video.muted = true
-      notice.value = '浏览器阻止了有声自动播放，点击“开启声音”恢复。'
       video.play().catch(() => {})
     })
   })
+}
+function togglePlayback() {
+  const video = videoRefs.value[current.value]
+  if (!video) { void loadMedia(current.value); return }
+  if (!video.paused) { video.pause(); return }
+  video.muted = muted.value
+  video.play().catch(() => {
+    muted.value = true
+    localStorage.setItem('frame-feed-muted', 'true')
+    video.muted = true
+    video.play().catch(() => {})
+  })
+}
+function onPlaying(index: number) { if (index === current.value) { playing.value = true; ready.value = true } }
+function onPause(index: number) { if (index === current.value) playing.value = false }
+function onCanPlay(index: number) {
+  if (index !== current.value) return
+  ready.value = true
+  const video = videoRefs.value[index]
+  if (video?.paused) {
+    video.muted = muted.value
+    video.play().catch(() => {
+      muted.value = true
+      localStorage.setItem('frame-feed-muted', 'true')
+      video.muted = true
+      video.play().catch(() => {})
+    })
+  }
 }
 
 function setCurrent(index: number) {
   if (index < 0 || index >= items.value.length || index === current.value) return
   current.value = index
+  playing.value = false
+  const element = videoRefs.value[index]
+  ready.value = !!element && element.readyState >= 3
+  const keep = new Set([index - 1, index, index + 1].filter(i => i >= 0 && i < items.value.length).map(i => items.value[i].id))
+  for (const held of [...hlsInstances.keys()]) if (!keep.has(held)) destroyHls(held)
   if (index >= items.value.length - 3) void loadMore()
   progress.value = 0
   savePosition()
@@ -237,7 +291,7 @@ async function loadCategories() {
 
 async function loadFeed(nextCategory = category.value, followingMode = false, recommendedMode = false) {
   request?.abort(); moreRequest?.abort(); const controller = new AbortController(); request = controller
-  destroyAllHls(); fallbackSources.clear(); loading.value = true; error.value = ''; items.value = []; sources.value = {}; covers.value = {}; current.value = 0; category.value = nextCategory; following.value = followingMode; recommended.value = recommendedMode
+  destroyAllHls(); fallbackSources.clear(); videoSetters.clear(); slideSetters.clear(); videoRefs.value = []; slides.value = []; loading.value = true; error.value = ''; items.value = []; sources.value = {}; covers.value = {}; current.value = 0; playing.value = false; ready.value = false; category.value = nextCategory; following.value = followingMode; recommended.value = recommendedMode
   feedPage.value = 1; feedTotal.value = 0; hasMore.value = false; anchorMode = false; mode.value = followingMode ? 'following' : recommendedMode ? 'recommended' : 'latest'
   const deepId = !followingMode && !recommendedMode && (typeof route.params.id === 'string' ? route.params.id : (sessionStorage.getItem('frame-feed-anchor') ?? ''))
   try {
@@ -300,11 +354,17 @@ onBeforeUnmount(() => {
     <div v-else-if="error" class="feed-state">{{ error }} <button @click="loadFeed()">重试</button></div>
     <div v-else-if="!items.length" class="feed-state">还没有作品。<RouterLink to="/studio">去发布</RouterLink></div>
     <div v-else ref="scroller" class="feed-scroller">
-      <section v-for="(item, index) in items" :key="item.id" :ref="el => slides[index] = el as HTMLElement" class="feed-slide" :data-index="index" :aria-label="item.title">
+      <section v-for="(item, index) in items" :key="item.id" :ref="slideSetter(index, item)" class="feed-slide" :data-index="index" :aria-label="item.title">
         <div class="feed-backdrop" :style="covers[item.id] ? { backgroundImage: `url(${covers[item.id]})` } : undefined"></div>
-        <video v-if="Math.abs(index - current) <= 1 && sources[item.id]" :ref="el => setVideoRef(el as HTMLVideoElement | null, index, item)" class="feed-video" :src="item.hasHls ? undefined : sources[item.id]" :muted="muted" playsinline preload="metadata" loop @click="openDetail" @canplay="index === current && playCurrent()" @timeupdate="onTimeUpdate($event, index)" />
-        <img v-else-if="covers[item.id]" class="feed-poster" :src="covers[item.id]" alt="" role="button" tabindex="0" :aria-label="`播放：${item.title}`" referrerpolicy="no-referrer" @click="openDetail" @keydown.enter="openDetail" @keydown.space.prevent="openDetail" />
+        <video v-if="Math.abs(index - current) <= 1 && sources[item.id]" :ref="videoSetter(index, item)" class="feed-video" :src="item.hasHls ? undefined : sources[item.id]" :muted="muted" playsinline webkit-playsinline x5-playsinline x5-video-player-type="h5" x5-video-player-fullscreen="false" preload="auto" loop @click="togglePlayback" @canplay="onCanPlay(index)" @playing="onPlaying(index)" @pause="onPause(index)" @timeupdate="onTimeUpdate($event, index)" />
+        <img v-else-if="covers[item.id]" class="feed-poster" :src="covers[item.id]" alt="" role="button" tabindex="0" :aria-label="`播放：${item.title}`" referrerpolicy="no-referrer" @click="onSlideTap(index)" @keydown.enter="onSlideTap(index)" @keydown.space.prevent="onSlideTap(index)" />
         <div class="feed-shade"></div>
+        <div v-if="index === current && !playing && sources[item.id]" class="feed-gate">
+          <button type="button" :aria-label="ready ? '播放视频' : '正在加载视频'" @click="togglePlayback">
+            <span v-if="!ready" class="feed-spinner" aria-hidden="true"></span>
+            <svg v-else viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M8 5.4v13.2L19 12Z" fill="currentColor" /></svg>
+          </button>
+        </div>
         <aside class="feed-rail">
           <button :disabled="likeBusy || liked === undefined" :aria-pressed="liked" @click="toggleLike">{{ liked ? '♥' : '♡' }}<span>{{ liked ? '已赞' : '点赞' }}</span></button>
           <button :disabled="favoriteBusy || favorited === undefined" :aria-pressed="favorited" @click="toggleFavorite">{{ favorited ? '♥' : '♡' }}<span>{{ favorited ? '已收藏' : '收藏' }}</span></button>
@@ -312,7 +372,7 @@ onBeforeUnmount(() => {
         </aside>
         <div class="feed-copy">
           <p class="feed-category">{{ item.categoryName }}</p>
-          <h1>{{ item.title }}</h1>
+          <h1><RouterLink :to="`/videos/${item.id}`">{{ item.title }}</RouterLink></h1>
           <p class="feed-description">{{ item.description || '作者没有留下简介。' }}</p>
           <p class="feed-author"><RouterLink :to="`/authors/${item.authorId}`">@{{ item.authorName }}</RouterLink> · {{ item.viewCount }} 次播放 · {{ item.favoriteCount }} 收藏 · {{ item.likeCount }} 赞 · <RouterLink class="feed-detail" :to="`/videos/${item.id}`">查看详情</RouterLink></p>
         </div>
@@ -333,10 +393,19 @@ onBeforeUnmount(() => {
 .feed-slide{position:relative;height:100dvh;scroll-snap-align:start;display:grid;place-items:center;overflow:hidden;background:#0f1a17}
 .feed-backdrop{pointer-events:none;position:absolute;inset:-30px;background-size:cover;background-position:center;filter:blur(28px);opacity:.38;transform:scale(1.08)}
 .feed-shade{pointer-events:none;position:absolute;inset:0;background:linear-gradient(to bottom,rgba(10,18,15,.25),transparent 35%,rgba(10,18,15,.82))}
+.feed-gate{position:absolute;inset:0;z-index:3;display:grid;place-items:center;pointer-events:none}
+.feed-gate button{pointer-events:auto;display:grid;place-items:center;width:64px;height:64px;padding:0;border-radius:50%;border:1px solid rgba(247,244,236,.5);background:rgba(10,18,15,.55);color:var(--color-surface);cursor:pointer}
+.feed-gate button:hover{background:rgba(10,18,15,.75)}
+.feed-gate button:focus-visible{outline:2px solid #f0a096;outline-offset:3px}
+.feed-spinner{width:24px;height:24px;border:2px solid rgba(247,244,236,.28);border-top-color:var(--color-surface);border-radius:50%;animation:feed-spin .9s linear infinite}
+@keyframes feed-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.feed-spinner{animation-duration:2.4s}}
 .feed-video,.feed-poster{cursor:pointer;position:relative;z-index:1;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain}
 .feed-poster{width:100%;height:100%;object-fit:contain}
 .feed-rail{position:absolute;right:18px;bottom:150px;z-index:2;display:grid;gap:18px;justify-items:center}.feed-rail button{display:grid;gap:5px;place-items:center;border:0;background:rgba(10,18,15,.35);color:var(--color-surface);font:inherit;font-size:22px;cursor:pointer;padding:9px;border-radius:50%;width:52px;height:52px}.feed-rail button span{font-size:10px;line-height:1}.feed-rail button[aria-pressed="true"]{color:#f0a096}
-.feed-copy{position:absolute;z-index:2;left:20px;right:90px;bottom:34px}.feed-category{color:#f0a096;font-size:11px;letter-spacing:.1em;margin:0 0 6px}.feed-copy h1{font-size:24px;line-height:1.25;margin:0 0 8px;overflow-wrap:anywhere}.feed-description{font-size:13px;line-height:1.6;color:rgba(247,244,236,.8);margin:0 0 8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.feed-detail{color:#f0a096;text-decoration:underline}.feed-author{font-size:13px;color:rgba(247,244,236,.72);margin:0}
+.feed-copy{position:absolute;z-index:2;left:20px;right:90px;bottom:34px}.feed-category{color:#f0a096;font-size:11px;letter-spacing:.1em;margin:0 0 6px}.feed-copy h1{font-size:24px;line-height:1.25;margin:0 0 8px;overflow-wrap:anywhere}
+.feed-copy h1 a{color:inherit;text-decoration:none}
+.feed-copy h1 a:hover{text-decoration:underline}.feed-description{font-size:13px;line-height:1.6;color:rgba(247,244,236,.8);margin:0 0 8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.feed-detail{color:#f0a096;text-decoration:underline}.feed-author{font-size:13px;color:rgba(247,244,236,.72);margin:0}
 .feed-author a{color:var(--color-on-primary)}
 .feed-author a:hover{color:#f0a096}
 .feed-copy a:focus-visible{outline:2px solid #f0a096;outline-offset:2px;border-radius:2px}
