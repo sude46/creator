@@ -17,7 +17,7 @@ const canModerate = computed(() => hasModerateAccess(user.value))
 const unread = notificationState.unread
 let unreadTimer: ReturnType<typeof setInterval> | undefined
 function refreshUnread() { if (user.value) void notificationState.refresh() }
-watch(() => route.fullPath, refreshUnread)
+watch(() => route.fullPath, () => { refreshUnread(); void nextTick(revealActiveNav) })
 watch(() => user.value?.id, id => { if (id) { refreshUnread(); void loadProfile() } else { notificationState.clear(); profile.value = null; menuOpen.value = false } })
 const roleLabel = computed(() => adminRoleLabel(user.value))
 const busy = ref(false)
@@ -47,15 +47,17 @@ function revealActiveNav() {
   const root = shell.value
   if (!root) return
   for (const nav of root.querySelectorAll<HTMLElement>('.workspace-nav, .admin-nav')) {
-    if (nav.scrollWidth <= nav.clientWidth) continue
     const active = nav.querySelector<HTMLElement>('a.router-link-exact-active')
     if (!active) continue
-    const navRect = nav.getBoundingClientRect()
-    const activeRect = active.getBoundingClientRect()
-    nav.scrollLeft += activeRect.left - navRect.left - (navRect.width - activeRect.width) / 2
+    active.scrollIntoView({ block: 'nearest', inline: 'center' })
+    const after = active.getBoundingClientRect()
+    const current = nav.getBoundingClientRect()
+    if (after.right > current.right) nav.scrollLeft = nav.scrollWidth - nav.clientWidth
+    else if (after.left < current.left) nav.scrollLeft = 0
   }
 }
 onMounted(() => {
+  window.addEventListener('resize', revealActiveNav)
   void nextTick(revealActiveNav)
   refreshUnread()
   void loadProfile()
@@ -64,6 +66,7 @@ onMounted(() => {
   document.addEventListener('keydown', onDocumentKeydown)
 })
 onBeforeUnmount(() => {
+  window.removeEventListener('resize', revealActiveNav)
   if (unreadTimer) clearInterval(unreadTimer)
   document.removeEventListener('click', onDocumentClick)
   document.removeEventListener('keydown', onDocumentKeydown)
@@ -81,7 +84,7 @@ async function logout() {
   <div ref="shell" class="workspace">
     <header class="workspace-header">
       <RouterLink class="brand" to="/">帧间<span>FRAME ROOM</span></RouterLink>
-      <nav class="workspace-nav" aria-label="主导航"><RouterLink to="/">发现</RouterLink><template v-if="user"><RouterLink to="/favorites">我的收藏</RouterLink><RouterLink to="/history">观看历史</RouterLink><RouterLink to="/studio">我的作品</RouterLink><RouterLink to="/studio/analytics">数据</RouterLink><RouterLink to="/studio/collections">我的合集</RouterLink><RouterLink to="/notifications" class="notification-link" :aria-label="unread ? `通知，${unread} 条未读` : '通知'">通知<span v-if="unread" class="nav-badge" aria-hidden="true">{{ unread > 99 ? '99+' : unread }}</span></RouterLink><RouterLink to="/settings/profile">个人资料</RouterLink><RouterLink to="/settings/security">账号安全</RouterLink><RouterLink v-if="user.role === 'ADMIN'" to="/admin">管理后台</RouterLink></template></nav>
+      <nav class="workspace-nav" :class="{ 'public-home': !user && route.path === '/' }" aria-label="主导航"><RouterLink to="/">发现</RouterLink><template v-if="user"><RouterLink to="/favorites">我的收藏</RouterLink><RouterLink to="/history">观看历史</RouterLink><RouterLink to="/studio">我的作品</RouterLink><RouterLink to="/studio/analytics">数据</RouterLink><RouterLink to="/studio/collections">我的合集</RouterLink><RouterLink to="/notifications" class="notification-link" :aria-label="unread ? `通知，${unread} 条未读` : '通知'">通知<span v-if="unread" class="nav-badge" aria-hidden="true">{{ unread > 99 ? '99+' : unread }}</span></RouterLink><RouterLink to="/settings/profile">个人资料</RouterLink><RouterLink to="/settings/security">账号安全</RouterLink><RouterLink v-if="user.role === 'ADMIN'" class="admin-link" to="/admin">管理后台</RouterLink></template></nav>
       <div class="account-menu">
         <div v-if="user" ref="account" class="account">
           <button type="button" class="account-trigger" :aria-label="`账号菜单，${displayName}`" :aria-expanded="menuOpen" aria-haspopup="menu" @click="toggleMenu">
@@ -133,6 +136,8 @@ async function logout() {
 .nav-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--color-accent); color: var(--color-surface); font-size: 10px; font-weight: 700; line-height: 1; }
 .workspace-nav a.router-link-exact-active { background: var(--color-primary-soft); color: var(--color-primary); font-weight: 700; }
 @media (max-width: 1180px) {
+  .workspace-nav.public-home { display: none; }
+  .workspace-nav .admin-link { display: none; }
   .workspace-header { flex-wrap: wrap; gap: 10px 18px; }
   .workspace-nav { order: 3; width: 100%; flex-wrap: nowrap; overflow-x: auto; gap: 2px; padding: 2px 0 4px; scrollbar-width: none; }
   .workspace-nav::-webkit-scrollbar { display: none; }
