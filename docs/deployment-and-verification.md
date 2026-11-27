@@ -25,7 +25,7 @@
 
 - 桶：私有桶，地域 `ap-guangzhou`
 - provider：`STORAGE_PROVIDER=cos`，原生 `cos_api:5.6.247`
-- 媒体：COS 直接签名 URL，`MEDIA_PUBLIC_ENDPOINT` 等于桶域名
+- 媒体：源文件/封面使用 COS 直接签名 URL，HLS 分片经 API 同源代理；`MEDIA_PUBLIC_ENDPOINT` 等于桶域名
 - 生命周期：`sources/` 前缀一天期未完成分片中止规则
 - CORS：允许应用来源的 GET/HEAD
 - 迁移：MinIO 中 29 个已有对象复制到 COS，保留原对象键

@@ -43,6 +43,7 @@ import org.slf4j.LoggerFactory;
 public class CosObjectStorage implements ObjectStorage, ProcessingStorage, AutoCloseable {
     private static final Logger LOGGER = LoggerFactory.getLogger(CosObjectStorage.class);
     private static final byte[] VERIFY_BODY = "creator storage verification".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    private static final int MAX_READ_BYTES = 8 * 1024 * 1024;
 
     private final StorageProperties properties;
     private final COSClient client;
@@ -164,6 +165,23 @@ public class CosObjectStorage implements ObjectStorage, ProcessingStorage, AutoC
         } catch (Exception exception) {
             LOGGER.warn("COS delete failed [key={}, failure={}, message={}]", objectKey,
                     exception.getClass().getSimpleName(), exception.getMessage());
+            throw new BusinessException(ErrorCode.SERVICE_UNAVAILABLE);
+        }
+    }
+
+    @Override
+    public byte[] read(String objectKey) {
+        try (COSObject object = client.getObject(new GetObjectRequest(properties.bucket(), objectKey));
+                COSObjectInputStream input = object.getObjectContent()) {
+            byte[] bytes = input.readNBytes(MAX_READ_BYTES + 1);
+            if (bytes.length > MAX_READ_BYTES) throw new BusinessException(ErrorCode.SERVICE_UNAVAILABLE);
+            return bytes;
+        } catch (BusinessException exception) {
+            throw exception;
+        } catch (CosServiceException exception) {
+            if (exception.getStatusCode() == 404) throw new BusinessException(ErrorCode.NOT_FOUND);
+            throw new BusinessException(ErrorCode.SERVICE_UNAVAILABLE);
+        } catch (Exception exception) {
             throw new BusinessException(ErrorCode.SERVICE_UNAVAILABLE);
         }
     }

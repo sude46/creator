@@ -112,6 +112,8 @@ Chrome 158 在 1440×900 和 390×844 下复测：
 - 首页 1440px 下三列网格，列宽约 359px；1023px 两列，390px 单列。作品标题 20px，作者与播放数据 13px，封面保持 16:9；页面无横向溢出。
 - 后台概览改为两张“待处理”主操作卡加一行今日统计，管理导航用细分隔线分组；390px 下主操作卡单列，导航可横滚。
 - 在初始化脚本中删除 `AbortSignal.any` 和 `AbortSignal.timeout` 后，手机尺寸的详情页和 feed 仍能请求媒体并播放（`readyState=4`），用于覆盖旧 Safari/WebView。
+- 阻断所有 `*.myqcloud.com` 请求后，手机尺寸详情页和 feed 仍通过同源 `/api/videos/{id}/hls/...` 分片播放（`readyState=4`）；封面会降级，但视频不再依赖第三方域名。
+- 使用 VivoBrowser/31.6.1.5 UA（V2352GA、Android 16）并阻断 COS 域名后，feed 与详情页同样 `readyState=4` 播放，验证了实际移动浏览器的第三方媒体限制路径。
 
 ## 2026-11-19 公开作者页复测
 

@@ -7,5 +7,4 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 @ConfigurationProperties("creator.media")
 public record MediaProperties(@NotBlank String publicEndpoint, @NotBlank String region,
-        @Min(15) @Max(120) int linkSeconds, @Min(30) @Max(900) int coverLinkSeconds,
-        @Min(60) @Max(3600) int hlsLinkSeconds) { }
+        @Min(15) @Max(120) int linkSeconds, @Min(30) @Max(900) int coverLinkSeconds) { }

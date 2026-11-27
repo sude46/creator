@@ -61,6 +61,7 @@ class MinioObjectStorageTest {
             var target = directory.resolve("download.mp4");
             storage.download("sources/test.mp4", target, payload.length, deadline);
             assertArrayEquals(payload, Files.readAllBytes(target));
+            assertArrayEquals(payload, storage.read("sources/test.mp4"));
             var exception = assertThrows(com.creator.video.application.processing.ProcessingException.class,
                     () -> storage.download("sources/test.mp4", directory.resolve("too-large.mp4"), 3, deadline));
             assertEquals(com.creator.video.domain.ProcessingFailure.INVALID_MEDIA, exception.failure());

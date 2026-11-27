@@ -40,9 +40,10 @@ class CosStorageIntegrationTest {
                 cos.put(key, source, Files.size(source));
                 cos.download(key, downloaded, Files.size(source), System.nanoTime() + Duration.ofSeconds(30).toNanos());
                 assertEquals(Files.size(source), Files.size(downloaded));
+                assertArrayEquals(Files.readAllBytes(source), cos.read(key));
             }
             var signer = new CosMediaSigner(storage,
-                    new MediaProperties(publicEndpoint, region, 60, 300, 900), Clock.systemUTC());
+                    new MediaProperties(publicEndpoint, region, 60, 300), Clock.systemUTC());
             var signed = signer.sign(new MediaTarget(key, Files.size(source)), MediaKind.SOURCE);
             assertEquals(bucket + ".cos." + region + ".myqcloud.com", URI.create(signed.url()).getHost());
             HttpClient http = HttpClient.newHttpClient();

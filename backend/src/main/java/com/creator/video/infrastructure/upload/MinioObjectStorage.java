@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 
 public class MinioObjectStorage implements ObjectStorage, ProcessingStorage, AutoCloseable {
     private static final Logger LOGGER = LoggerFactory.getLogger(MinioObjectStorage.class);
+    private static final int MAX_READ_BYTES = 8 * 1024 * 1024;
     private final StorageProperties properties;
     private final OkHttpClient http;
 
@@ -93,6 +94,22 @@ public class MinioObjectStorage implements ObjectStorage, ProcessingStorage, Aut
             client().removeObject(RemoveObjectArgs.builder().bucket(properties.bucket()).object(objectKey).build());
         } catch (Exception exception) {
             LOGGER.warn("Object storage delete failed [key={}, failure={}, message={}]", objectKey, exception.getClass().getSimpleName(), exception.getMessage(), exception);
+            throw new BusinessException(ErrorCode.SERVICE_UNAVAILABLE);
+        }
+    }
+
+    @Override
+    public byte[] read(String objectKey) {
+        try (var input = client().getObject(GetObjectArgs.builder().bucket(properties.bucket()).object(objectKey).build())) {
+            byte[] bytes = input.readNBytes(MAX_READ_BYTES + 1);
+            if (bytes.length > MAX_READ_BYTES) throw new BusinessException(ErrorCode.SERVICE_UNAVAILABLE);
+            return bytes;
+        } catch (BusinessException exception) {
+            throw exception;
+        } catch (ErrorResponseException exception) {
+            if ("NoSuchKey".equals(exception.errorResponse().code())) throw new BusinessException(ErrorCode.NOT_FOUND);
+            throw new BusinessException(ErrorCode.SERVICE_UNAVAILABLE);
+        } catch (Exception exception) {
             throw new BusinessException(ErrorCode.SERVICE_UNAVAILABLE);
         }
     }

@@ -33,7 +33,7 @@
    │                          │
 ┌──▼──────────┐        ┌──────▼─────────┐
 │ COS / MinIO │        │ 对象存储私有桶 │
-│ 源/封面/HLS │        │ 短期签名访问   │
+│ 源/封面/HLS │        │ 源/封面短期签名，HLS 同源代理   │
 └─────────────┘        └────────────────┘
 ```
 
@@ -74,7 +74,7 @@ infrastructure  MyBatis、对象存储、RabbitMQ、FFmpeg
 - 注册/登录/设备会话
 - 草稿、上传、审核、发布、评论、通知、举报、申诉
 - 公开查询、媒体签名
-- HLS playlist 生成与分片签名
+- HLS playlist 生成与分片同源代理
 - 管理端接口
 
 ### Worker
@@ -190,7 +190,7 @@ processing_task PENDING
 - 4 秒分片
 - 私有对象存储
 - 公开 master/media playlist
-- media playlist 中相对 `.ts` 改写为短期签名 URL
+- media playlist 中相对 `.ts` 改写为同源 API 分片地址
 - 前端 hls.js；fatal 错误回退 MP4
 - 历史作品由超级管理员触发 HLS-only 回填
 

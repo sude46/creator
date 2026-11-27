@@ -49,6 +49,7 @@ class PublicMediaIntegrationTest {
     @Autowired VideoQueryRepository videoQueries;
     @Autowired AccountQueryService accountQueries;
     @Autowired RecordingSigner signer;
+    @Autowired HlsStorage hlsStorage;
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
     Actor author;
@@ -403,6 +404,8 @@ class PublicMediaIntegrationTest {
         database.update("INSERT INTO video_hls (video_id,rendition,bandwidth,width,height,base_key,playlist_key,playlist)"
                 + " VALUES (?,?,?,?,?,?,?,?)", id, "720p", 2500, 1280, 720, base, base + "/index.m3u8",
                 "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:4\n#EXTINF:3.0,\nseg-00000.ts\n#EXT-X-ENDLIST\n");
+        byte[] segmentBytes = new byte[] {0x47, 0x40, 0x11, 0x10};
+        hlsStorage.objects.put(base + "/seg-00000.ts", segmentBytes);
         String master = mvc.perform(get("/api/videos/{id}/hls/master.m3u8", id))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith("application/vnd.apple.mpegurl"))
@@ -411,11 +414,15 @@ class PublicMediaIntegrationTest {
         assertTrue(master.contains("/api/videos/" + id + "/hls/720p/index.m3u8"));
         String playlist = mvc.perform(get("/api/videos/{id}/hls/720p/index.m3u8", id))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
-        assertTrue(playlist.contains("https://media.example.test/signed"));
+        assertTrue(playlist.contains("/api/videos/" + id + "/hls/720p/seg-00000.ts"));
         assertFalse(playlist.lines().anyMatch(line -> line.equals("seg-00000.ts")));
+        mvc.perform(get("/api/videos/{id}/hls/720p/seg-00000.ts", id))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith("video/mp2t"))
+                .andExpect(content().bytes(segmentBytes));
         mvc.perform(get("/api/videos/{id}", id)).andExpect(status().isOk())
                 .andExpect(jsonPath("$.hasHls").value(true));
-        assertEquals(1, signer.calls.size());
+        assertTrue(signer.calls.isEmpty());
 
         mvc.perform(get("/api/videos/{id}/hls/1080p/index.m3u8", id)).andExpect(status().isNotFound());
         database.update("UPDATE video SET publication_status='OFFLINE' WHERE id=?", id);
@@ -518,8 +525,21 @@ class PublicMediaIntegrationTest {
     @TestConfiguration
     static class Fixtures {
         @Bean RecordingSigner recordingSigner() { return new RecordingSigner(); }
+        @Bean HlsStorage hlsStorage() { return new HlsStorage(); }
         @Bean com.creator.video.infrastructure.media.MediaProperties mediaProperties() {
-            return new com.creator.video.infrastructure.media.MediaProperties("https://media.example.test", "test-region", 60, 300, 900);
+            return new com.creator.video.infrastructure.media.MediaProperties("https://media.example.test", "test-region", 60, 300);
+        }
+    }
+
+    static class HlsStorage implements ObjectStorage {
+        final Map<String, byte[]> objects = new java.util.concurrent.ConcurrentHashMap<>();
+        @Override public void verifyPrivateBucket() { }
+        @Override public void put(String objectKey, java.nio.file.Path file, long size) { }
+        @Override public void delete(String objectKey) { objects.remove(objectKey); }
+        @Override public byte[] read(String objectKey) {
+            var value = objects.get(objectKey);
+            if (value == null) throw new BusinessException(ErrorCode.NOT_FOUND);
+            return value.clone();
         }
     }
 }

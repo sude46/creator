@@ -107,7 +107,7 @@ Browser
 - Worker 生成最多 3 档 HLS
 - 4 秒分片，playlist + TS 存私有对象存储
 - 公开 master/media playlist
-- media playlist 动态改写相对 TS 为短期签名 URL
+- media playlist 动态改写相对 TS 为同源 API 分片地址，避免移动浏览器跨域播放失败
 - 前端 hls.js，失败回退 MP4
 - 历史作品由管理员触发 HLS-only 回填，不改审核/发布状态
 

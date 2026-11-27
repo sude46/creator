@@ -778,5 +778,10 @@ class UploadIntegrationTest {
             if (failDelete) throw new DataAccessResourceFailureException("Injected storage delete failure");
             objects.remove(key);
         }
+        @Override public byte[] read(String key) {
+            var value = objects.get(key);
+            if (value == null) throw new com.creator.common.BusinessException(com.creator.common.ErrorCode.NOT_FOUND);
+            return value.clone();
+        }
     }
 }

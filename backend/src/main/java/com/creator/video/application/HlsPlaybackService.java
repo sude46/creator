@@ -3,12 +3,9 @@ package com.creator.video.application;
 import com.creator.common.BusinessException;
 import com.creator.common.ErrorCode;
 import com.creator.video.domain.HlsPlaylist;
-import com.creator.video.domain.MediaTarget;
 import com.creator.video.domain.VideoQueryRepository;
-import com.creator.video.infrastructure.media.MediaProperties;
 import java.util.List;
 import java.util.regex.Pattern;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -16,14 +13,9 @@ public class HlsPlaybackService {
     private static final Pattern NAME = Pattern.compile("[A-Za-z0-9]{1,16}");
     private static final Pattern SEGMENT = Pattern.compile("[A-Za-z0-9._-]+\\.ts");
     private final VideoQueryRepository videos;
-    private final ObjectProvider<MediaSigner> signers;
-    private final ObjectProvider<MediaProperties> properties;
 
-    public HlsPlaybackService(VideoQueryRepository videos, ObjectProvider<MediaSigner> signers,
-            ObjectProvider<MediaProperties> properties) {
+    public HlsPlaybackService(VideoQueryRepository videos) {
         this.videos = videos;
-        this.signers = signers;
-        this.properties = properties;
     }
 
     public String master(long videoId) {
@@ -40,26 +32,31 @@ public class HlsPlaybackService {
     }
 
     public String playlist(long videoId, String rendition) {
-        if (rendition == null || !NAME.matcher(rendition).matches()) {
-            throw new BusinessException(ErrorCode.NOT_FOUND);
-        }
-        videos.findPublic(videoId).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-        var playlist = renditions(videoId).stream().filter(item -> item.name().equals(rendition)).findFirst()
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-        var signer = signers.getIfAvailable();
-        var mediaProperties = properties.getIfAvailable();
-        if (signer == null || mediaProperties == null) throw new BusinessException(ErrorCode.SERVICE_UNAVAILABLE);
+        var playlist = rendition(videoId, rendition);
         var result = new StringBuilder();
         for (String line : playlist.playlist().split("\\R", -1)) {
             String value = line.trim();
             if (value.isEmpty()) continue;
             if (value.startsWith("#")) { result.append(value).append('\n'); continue; }
             if (!SEGMENT.matcher(value).matches()) throw new BusinessException(ErrorCode.SERVICE_UNAVAILABLE);
-            var signed = signer.signHlsSegment(new MediaTarget(playlist.baseKey() + "/" + value, 0),
-                    mediaProperties.hlsLinkSeconds());
-            result.append(signed.url()).append('\n');
+            result.append("/api/videos/").append(videoId).append("/hls/")
+                    .append(playlist.name()).append('/').append(value).append('\n');
         }
         return result.toString();
+    }
+
+    public String segmentKey(long videoId, String rendition, String segment) {
+        if (segment == null || !SEGMENT.matcher(segment).matches()) throw new BusinessException(ErrorCode.NOT_FOUND);
+        return rendition(videoId, rendition).baseKey() + "/" + segment;
+    }
+
+    private HlsPlaylist rendition(long videoId, String rendition) {
+        if (rendition == null || !NAME.matcher(rendition).matches()) {
+            throw new BusinessException(ErrorCode.NOT_FOUND);
+        }
+        videos.findPublic(videoId).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        return renditions(videoId).stream().filter(item -> item.name().equals(rendition)).findFirst()
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
     }
 
     private List<HlsPlaylist> renditions(long videoId) {

@@ -33,7 +33,7 @@
 
 Worker 仅在源文件通过 FFprobe 校验后生成 HLS。当前按源高度选择最多三档（1080p/720p/480p/360p 中不超过源分辨率的档位，源文件更小时保留源高度），每档使用独立 H.264/AAC 转码，4 秒分片、VOD playlist。生成的 `index.m3u8` 和 `*.ts` 写入私有对象的 `videos/{videoId}/{generation}/hls/{rendition}/` 前缀，`video_hls` 保存档位、带宽、宽高、对象前缀和 playlist 文本，`video_hls_segment` 保存分片键用于删除回收。
 
-公开播放先请求 master，再请求 media playlist。media playlist 中的相对 `.ts` 文件名逐行替换为 COS/MinIO 原生签名 GET 地址，TTL 由 `MEDIA_HLS_LINK_SECONDS` 控制，默认 900 秒，须覆盖最长 10 分钟视频。master/media playlist 不缓存且只对当前已发布作品返回；作品下架、封禁、删除、审核撤回后不再生成新的 playlist 或分片签名。分片 URL 一旦签发，在 TTL 内不能被立即撤销。
+公开播放先请求 master，再请求 media playlist。media playlist 中的相对 `.ts` 文件名逐行改写为同源 `/api/videos/{id}/hls/{rendition}/{segment}.ts` 地址；API 重新检查作品公开状态后，从私有桶读取分片并返回 `video/mp2t`，浏览器不再直接跨域访问 COS/MinIO。master、media playlist 和分片响应均不缓存，且只对当前已发布作品返回；作品下架、封禁、删除或审核撤回后，新的 playlist 和分片请求都会被拒绝。
 
 前端优先使用 HLS：浏览器原生支持时直接播放 master；Firefox/Chrome 使用 hls.js；hls.js 发生 fatal 错误或浏览器不支持时回退到 `POST /api/videos/{id}/media?kind=SOURCE` 的 MP4 链接。HLS 生成失败或历史 READY 作品没有 HLS 时，`hasHls=false`，直接使用 MP4。
 
@@ -55,9 +55,9 @@ Worker 仅在源文件通过 FFprobe 校验后生成 HLS。当前按源高度选
 
 列表和详情现在返回 `hasCover` 与 `coverKey`，不返回 `coverUrl`。封面仍由卡片进入视口后单独签名；封面 TTL 由 `MEDIA_COVER_LINK_SECONDS` 控制，默认 300 秒，源文件/播放保持 `MEDIA_LINK_SECONDS`（默认 120 秒）。前端并发上限为 4，缓存到 `expiresAt - 30s` 再重签。
 
-腾讯 COS provider 使用原生 COS SDK 生成 virtual-hosted 签名 URL；`MEDIA_PUBLIC_ENDPOINT` 必须等于 `https://{bucket}.cos.{region}.myqcloud.com`。媒体直连 COS 时由桶 CORS 允许应用来源的 GET/HEAD；不能用 MinIO SDK 的 path-style endpoint 代替。2026-11-19 已实测签名 URL 的 Range 206、匿名访问 403 和 Firefox 播放。
+腾讯 COS provider 使用原生 COS SDK 生成 virtual-hosted 签名 URL；`MEDIA_PUBLIC_ENDPOINT` 必须等于 `https://{bucket}.cos.{region}.myqcloud.com`。SOURCE/COVER 仍由浏览器直连签名 URL，HLS 分片已改为 API 同源代理，避免移动浏览器对第三方媒体域名的 CORS、拦截或网络限制。不能用 MinIO SDK 的 path-style endpoint 代替 COS。
 
-授权只保证查询时刻的状态。查询与签名之间可能发生编辑或下架；已签发链接是持有者可使用的临时凭证，后续账号禁用、编辑撤下、退出或审核完成不能立即撤销。过期约束新请求，不能中断已经开始的下载，也不能撤回已保存的内容。需要即时撤销时必须另做媒体网关。[上下架/封禁管理接口](publication-moderation-api.md) 已在后续模块接入，包含真实用例操作后公开查询和新签发拒绝的回归；真实浏览器与存储验证仍待完成。
+授权只保证查询时刻的状态。SOURCE/COVER 的签名链接在 TTL 内仍是持有者可用的临时凭证，后续编辑撤下或审核完成不能立即撤销；HLS 分片每次请求都由 API 重新检查公开状态。需要即时撤销已下载源文件时必须另做媒体网关。[上下架/封禁管理接口](publication-moderation-api.md) 已在后续模块接入，包含真实用例操作后公开查询和新签发拒绝的回归；真实浏览器与存储验证仍待完成。
 
 ## 存储配置
 
@@ -69,7 +69,6 @@ Worker 仅在源文件通过 FFprobe 校验后生成 HLS。当前按源高度选
 | MEDIA_PUBLIC_ENDPOINT | 空 | 浏览器可达的 HTTP(S) origin，例如 `https://media.example.com` |
 | STORAGE_REGION | us-east-1 | 必须与存储端一致，显式指定以避免签名时查询地域 |
 | MEDIA_LINK_SECONDS | 60 | 范围 15～120 秒 |
-| MEDIA_HLS_LINK_SECONDS | 900 | 范围 60～3600 秒，覆盖最长视频播放 |
 | STORAGE_ENDPOINT | 空 | 后端可达的存储 API 端点，用于启动检查及存储操作 |
 | STORAGE_ACCESS_KEY / STORAGE_SECRET_KEY | 空 | 专用应用账号，不能提交真实值 |
 | STORAGE_BUCKET | creator-private | 与上传、Worker 指向同一个私有桶 |
