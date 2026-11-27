@@ -3,7 +3,7 @@ import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { publicApi, durationLabel } from '../api/public'
 import type { PublicVideo } from '../api/public'
 import { cachedCover } from '../api/coverCache'
-const props = defineProps<{ video: PublicVideo; featured?: boolean }>(); const cover = ref(''); const coverError = ref(false); const signing = ref(false); const controller = new AbortController(); let refresh: ReturnType<typeof setTimeout> | undefined; let retry: ReturnType<typeof setTimeout> | undefined; let attempts = 0
+const props = defineProps<{ video: PublicVideo }>(); const cover = ref(''); const coverError = ref(false); const signing = ref(false); const controller = new AbortController(); let refresh: ReturnType<typeof setTimeout> | undefined; let retry: ReturnType<typeof setTimeout> | undefined; let attempts = 0
 async function loadCover(force = false) {
   if (!props.video.hasCover || controller.signal.aborted) return
   if (signing.value) return
@@ -34,7 +34,7 @@ onMounted(() => void loadCover())
 onBeforeUnmount(() => { controller.abort(); clearTimeout(refresh); clearTimeout(retry); cover.value = '' })
 </script>
 <template>
-  <article class="public-video-card" :class="{ featured }">
+  <article class="public-video-card">
     <RouterLink class="public-cover" :to="`/videos/${video.id}`" :aria-label="`观看：${video.title}`">
       <img v-if="cover" :src="cover" alt="" decoding="async" loading="lazy" referrerpolicy="no-referrer" @error="coverFailed" />
       <span v-else class="cover-unavailable">{{ coverError || !video.hasCover ? '封面暂不可用' : '正在加载封面' }}</span>
@@ -44,9 +44,7 @@ onBeforeUnmount(() => { controller.abort(); clearTimeout(refresh); clearTimeout(
     <div class="public-card-copy">
       <p class="public-category">{{ video.categoryName }}</p>
       <h2><RouterLink :to="`/videos/${video.id}`">{{ video.title }}</RouterLink></h2>
-      <p v-if="featured && video.description" class="public-description">{{ video.description }}</p>
       <p class="public-author"><RouterLink :to="`/authors/${video.authorId}`">{{ video.authorName }}</RouterLink> · {{ video.viewCount }} 次播放 · {{ video.favoriteCount }} 收藏 · {{ video.likeCount }} 赞</p>
-      <RouterLink v-if="featured" class="featured-link" :to="`/videos/${video.id}`">观看作品 →</RouterLink>
     </div>
   </article>
 </template>

@@ -45,7 +45,7 @@ $env:API_PROXY_TARGET = 'http://127.0.0.1:18080'
 npm.cmd run dev -- --port 5188
 ```
 
-该变量只用于开发服务器代理，不写入浏览器配置，不替代生产同源反向代理。没有新增依赖或修改锁文件。现代浏览器需支持 AbortSignal.timeout/any；普通 HTTP 演示下不依赖 `crypto.randomUUID`，前端使用 `getRandomValues` 回退生成请求键，正式支持范围仍需按部署浏览器确认。
+该变量只用于开发服务器代理，不写入浏览器配置，不替代生产同源反向代理。没有新增依赖或修改锁文件。应用启动时补齐 `AbortSignal.any` / `AbortSignal.timeout` 的兼容实现，避免旧 Safari 和部分 WebView 在媒体请求前直接抛错；普通 HTTP 演示下不依赖 `crypto.randomUUID`，前端使用 `getRandomValues` 回退生成请求键，正式支持范围仍需按部署浏览器确认。
 
 2026-11-17 已完成 Vue TypeScript 检查与生产构建。使用真实 Spring Boot + MySQL8.4.3，浏览器验证登录、创建草稿、分类选择、编辑保存、列表回显；使用专用 creator_it 的 READY 数据样本验证送审、撤回、版本冲突（保留输入）、媒体关闭时503提示，以及上传关闭时404后停止重传并核对状态。390像素窄屏检查未发现横向溢出。没有把数据库 READY 样本视为真实上传/处理完成。
 

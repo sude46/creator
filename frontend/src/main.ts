@@ -7,10 +7,13 @@ import 'element-plus/es/components/tag/style/css'
 import App from './App.vue'
 import { router } from './router'
 import { auth } from './stores/auth'
+import { ensureAbortSignalSupport } from './api/signals'
 import './tokens.css'
 import './style.css'
 import './studio.css'
 import './public.css'
+
+ensureAbortSignalSupport()
 
 window.addEventListener('creator:unauthorized', () => {
   if (!auth.user.value) return

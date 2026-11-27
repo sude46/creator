@@ -69,9 +69,7 @@
 
 /* ---------- 作品网格与卡片 ---------- */
 .public-video-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:25px}
-.discover-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:34px 28px}
-.discover-grid.single{grid-template-columns:minmax(0,640px);justify-content:center}
-.discover-feed{display:block}
+.discover-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:30px 24px}
 .public-video-card{display:flex;flex-direction:column;height:100%;min-width:0;transition:transform .2s ease}
 .public-video-card:hover{transform:translateY(-2px)}
 .public-card-copy{display:flex;flex-direction:column;flex:1;min-width:0}
@@ -93,16 +91,6 @@
 .public-author a{color:inherit}
 .public-author a:hover{color:var(--color-accent-text)}
 
-.public-video-card.featured{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:30px;align-items:center;height:auto;padding:18px;border:1px solid var(--color-border);border-radius:4px;background:var(--color-surface);margin-bottom:32px}
-.public-video-card.featured:hover{transform:none}
-.public-video-card.featured .public-card-copy{padding:2px 8px}
-.public-video-card.featured .public-category{margin-top:0}
-.public-video-card.featured h2{font-size:30px;line-height:1.3;min-height:0;-webkit-line-clamp:3}
-.public-video-card.featured .public-description{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;margin:14px 0 0;color:var(--color-muted);font-size:14px;line-height:1.8;overflow-wrap:anywhere}
-.public-video-card.featured .public-author{margin:0;padding-top:16px;font-size:13px;color:var(--color-muted-2);white-space:normal}
-.public-video-card.featured .featured-link{margin-top:18px;font-size:13px;font-weight:600;color:var(--color-accent-text)}
-.public-video-card.featured .featured-link:hover{color:var(--color-primary)}
-.public-video-card.featured .featured-link:focus-visible{outline:2px solid var(--color-focus);outline-offset:2px}
 
 .public-card-skeleton{min-height:0;border-radius:0;background:transparent}
 .public-card-skeleton::before{content:"";display:block;aspect-ratio:16/9;border-radius:var(--radius-card);background:linear-gradient(90deg,var(--color-placeholder),var(--color-skeleton-light),var(--color-placeholder));background-size:200% 100%;animation:pulse 1.4s infinite}
@@ -156,11 +144,6 @@
   .public-video-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .watch-top,.watch-top.portrait{display:block}
   .watch-info .watch-toolbar{padding-top:14px}
-}
-@media(max-width:900px){
-  .public-video-card.featured{display:flex;flex-direction:column;gap:0;padding:0;border:0;background:transparent;margin-bottom:26px}
-  .public-video-card.featured .public-card-copy{padding:14px 0 0}
-  .public-video-card.featured h2{font-size:24px}
 }
 @media(max-width:760px){
   .discover-hero{flex-direction:column;align-items:flex-start;gap:18px;margin:4px 0 22px}

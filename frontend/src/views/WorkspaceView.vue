@@ -44,8 +44,6 @@ const heading = computed(() => {
 })
 const sortLabel = computed(() => sort.value === 'popular' ? '最多播放' : sort.value === 'recommended' ? '为你推荐' : '最新发布')
 const hasFilters = computed(() => Boolean(title.value.trim() || category.value || tag.value || sort.value !== 'latest'))
-const featuredVideo = computed(() => !hasFilters.value && page.value === 1 && videos.value.length > 2 ? videos.value[0] : undefined)
-const gridVideos = computed(() => featuredVideo.value ? videos.value.slice(1) : videos.value)
 const lede = computed(() => loading.value ? '正在整理片单…' : error.value ? '片单暂时没有加载出来。' : '按分类、标签和热度，慢慢挑一部。')
 
 async function loadCategories() {
@@ -247,11 +245,8 @@ onBeforeUnmount(() => { stopped = true; clearTimeout(suggestTimer); activeReques
     <div v-if="loading" class="public-video-grid discover-grid" aria-busy="true" aria-label="正在加载作品">
       <div v-for="index in 6" :key="index" class="public-card-skeleton" aria-hidden="true"></div>
     </div>
-    <div v-else-if="videos.length" class="discover-feed">
-      <PublicVideoCard v-if="featuredVideo" :video="featuredVideo" featured />
-      <div class="public-video-grid discover-grid" :class="{ single: gridVideos.length === 1 }">
-        <PublicVideoCard v-for="video in gridVideos" :key="video.id" :video="video" />
-      </div>
+    <div v-else-if="videos.length" class="public-video-grid discover-grid">
+      <PublicVideoCard v-for="video in videos" :key="video.id" :video="video" />
     </div>
     <div v-else-if="!error" class="discover-empty">
       <h3>{{ hasFilters ? '没有找到匹配的作品' : '还没有公开作品' }}</h3>
