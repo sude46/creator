@@ -69,8 +69,12 @@
 
 /* ---------- 作品网格与卡片 ---------- */
 .public-video-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:25px}
+.discover-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:34px 28px}
+.discover-grid.single{grid-template-columns:minmax(0,640px);justify-content:center}
+.discover-feed{display:block}
 .public-video-card{display:flex;flex-direction:column;height:100%;min-width:0;transition:transform .2s ease}
 .public-video-card:hover{transform:translateY(-2px)}
+.public-card-copy{display:flex;flex-direction:column;flex:1;min-width:0}
 .public-cover{position:relative;display:block;aspect-ratio:16/9;border-radius:var(--radius-card);background:var(--color-placeholder);overflow:hidden}
 .public-cover img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .35s ease}
 .public-video-card:hover .public-cover{box-shadow:0 12px 26px rgba(28,40,34,.12)}
@@ -80,14 +84,25 @@
 .cover-play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:grid;place-items:center;width:44px;height:44px;border:1px solid rgba(255,255,255,.7);border-radius:50%;background:rgba(20,29,26,.55);color:var(--color-surface);transition:background .2s ease}
 .public-video-card:hover .cover-play{background:rgba(20,29,26,.78)}
 .video-duration{position:absolute;right:10px;bottom:9px;padding:3px 6px;border-radius:2px;background:rgba(20,29,26,.82);color:var(--color-surface);font-size:11px;line-height:1.4;font-variant-numeric:tabular-nums}
-.public-category{color:var(--color-accent-text);font-size:11px;line-height:1.5;letter-spacing:.08em;margin:14px 0 7px}
-.public-video-card h2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.7em;font-size:18px;line-height:1.35;margin:0;overflow-wrap:anywhere}
+.public-category{color:var(--color-accent-text);font-size:12px;line-height:1.5;letter-spacing:.08em;margin:14px 0 7px}
+.public-video-card h2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.8em;font-size:20px;line-height:1.4;margin:0;overflow-wrap:anywhere}
 .public-video-card h2 a{color:var(--color-text)}
 .public-video-card h2 a:hover{color:var(--color-accent-text)}
 .public-video-card h2 a:focus-visible{outline:2px solid var(--color-focus);outline-offset:2px;border-radius:2px}
-.public-author{margin:auto 0 0;padding-top:8px;font-size:12px;line-height:1.6;color:var(--color-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+.public-author{margin:auto 0 0;padding-top:10px;font-size:13px;line-height:1.6;color:var(--color-muted-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
 .public-author a{color:inherit}
 .public-author a:hover{color:var(--color-accent-text)}
+
+.public-video-card.featured{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:30px;align-items:center;height:auto;padding:18px;border:1px solid var(--color-border);border-radius:4px;background:var(--color-surface);margin-bottom:32px}
+.public-video-card.featured:hover{transform:none}
+.public-video-card.featured .public-card-copy{padding:2px 8px}
+.public-video-card.featured .public-category{margin-top:0}
+.public-video-card.featured h2{font-size:30px;line-height:1.3;min-height:0;-webkit-line-clamp:3}
+.public-video-card.featured .public-description{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;margin:14px 0 0;color:var(--color-muted);font-size:14px;line-height:1.8;overflow-wrap:anywhere}
+.public-video-card.featured .public-author{margin:0;padding-top:16px;font-size:13px;color:var(--color-muted-2);white-space:normal}
+.public-video-card.featured .featured-link{margin-top:18px;font-size:13px;font-weight:600;color:var(--color-accent-text)}
+.public-video-card.featured .featured-link:hover{color:var(--color-primary)}
+.public-video-card.featured .featured-link:focus-visible{outline:2px solid var(--color-focus);outline-offset:2px}
 
 .public-card-skeleton{min-height:0;border-radius:0;background:transparent}
 .public-card-skeleton::before{content:"";display:block;aspect-ratio:16/9;border-radius:var(--radius-card);background:linear-gradient(90deg,var(--color-placeholder),var(--color-skeleton-light),var(--color-placeholder));background-size:200% 100%;animation:pulse 1.4s infinite}
@@ -141,6 +156,11 @@
   .public-video-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .watch-top,.watch-top.portrait{display:block}
   .watch-info .watch-toolbar{padding-top:14px}
+}
+@media(max-width:900px){
+  .public-video-card.featured{display:flex;flex-direction:column;gap:0;padding:0;border:0;background:transparent;margin-bottom:26px}
+  .public-video-card.featured .public-card-copy{padding:14px 0 0}
+  .public-video-card.featured h2{font-size:24px}
 }
 @media(max-width:760px){
   .discover-hero{flex-direction:column;align-items:flex-start;gap:18px;margin:4px 0 22px}

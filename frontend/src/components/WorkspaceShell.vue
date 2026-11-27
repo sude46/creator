@@ -114,10 +114,11 @@ async function logout() {
       </div>
     </header>
     <nav v-if="adminArea" class="admin-nav" aria-label="管理导航">
-      <span class="admin-nav-group">概览</span><RouterLink to="/admin">总览</RouterLink>
-      <span class="admin-nav-group">内容</span><RouterLink to="/admin/videos">作品管理</RouterLink><RouterLink v-if="canReview" to="/admin/reviews">审核</RouterLink><RouterLink v-if="canReview" to="/admin/processing">异常处理</RouterLink>
-      <span v-if="superAdmin" class="admin-nav-group">配置</span><RouterLink v-if="superAdmin" to="/admin/categories">分类管理</RouterLink><RouterLink v-if="superAdmin" to="/admin/tags">标签管理</RouterLink>
-      <template v-if="superAdmin || canModerate"><span class="admin-nav-group">系统</span><RouterLink v-if="superAdmin" to="/admin/users">用户管理</RouterLink><RouterLink v-if="canModerate" to="/admin/reports">举报处理</RouterLink><RouterLink v-if="canModerate" to="/admin/appeals">申诉处理</RouterLink><RouterLink v-if="superAdmin" to="/admin/audit">审计记录</RouterLink></template>
+      <RouterLink to="/admin">总览</RouterLink>
+      <span class="admin-nav-divider" aria-hidden="true"></span>
+      <RouterLink to="/admin/videos">作品管理</RouterLink><RouterLink v-if="canReview" to="/admin/reviews">审核</RouterLink><RouterLink v-if="canReview" to="/admin/processing">异常处理</RouterLink>
+      <template v-if="superAdmin"><span class="admin-nav-divider" aria-hidden="true"></span><RouterLink to="/admin/categories">分类管理</RouterLink><RouterLink to="/admin/tags">标签管理</RouterLink></template>
+      <template v-if="superAdmin || canModerate"><span class="admin-nav-divider" aria-hidden="true"></span><RouterLink v-if="superAdmin" to="/admin/users">用户管理</RouterLink><RouterLink v-if="canModerate" to="/admin/reports">举报处理</RouterLink><RouterLink v-if="canModerate" to="/admin/appeals">申诉处理</RouterLink><RouterLink v-if="superAdmin" to="/admin/audit">审计记录</RouterLink></template>
     </nav>
     <main class="studio-main">
       <el-alert v-if="error" :title="error" type="error" :closable="false" role="alert" />
@@ -146,14 +147,12 @@ async function logout() {
 .admin-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; padding: 11px 28px; border-top: 1px solid #d9ddd5; border-bottom: 1px solid #d9ddd5; background: #fff; font-size: 13px; }
 .admin-nav a { color: #4f5f56; }
 .admin-nav a.router-link-exact-active { color: var(--color-accent-text); font-weight: 700; }
-.admin-nav-group { color: var(--color-muted-soft); font-size: 11px; letter-spacing: .14em; margin-left: 8px; }
-.admin-nav-group:first-child { margin-left: 0; }
+.admin-nav-divider { width: 1px; height: 18px; flex: none; background: var(--color-border); margin: 0 2px; }
 .workspace-footer { border-top: 1px solid var(--color-border); padding: 22px 28px 30px; text-align: center; color: var(--color-muted-soft); font-size: 12px; letter-spacing: .08em; }
 @media (max-width: 760px) {
   .admin-nav { flex-wrap: nowrap; overflow-x: auto; gap: 6px 14px; padding: 8px 16px; scrollbar-width: none; }
   .admin-nav::-webkit-scrollbar { display: none; }
   .admin-nav a { display: inline-flex; align-items: center; min-height: 40px; white-space: nowrap; }
-  .admin-nav-group { white-space: nowrap; margin-left: 4px; }
 }
 
 .account { position: relative; }
