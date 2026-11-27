@@ -28,3 +28,9 @@ __pycache__/
 *.p12
 *.jks
 .DS_Store
+# OpenCode 本地工具配置与 skills，不随业务仓库提交
+/opencode.json
+/opencode.jsonc
+/skills-lock.json
+/.agents/
+/.opencode/
