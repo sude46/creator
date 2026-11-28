@@ -191,7 +191,7 @@ processing_task PENDING
 - 私有对象存储
 - 公开 master/media playlist
 - media playlist 中相对 `.ts` 改写为同源 API 分片地址
-- 前端 hls.js；fatal 错误回退 MP4
+- 前端 hls.js；fatal 错误回退源 MP4（需浏览器支持源编码）
 - 历史作品由超级管理员触发 HLS-only 回填
 
 ### 5.5 审核与发布
