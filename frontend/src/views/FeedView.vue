@@ -24,6 +24,7 @@ const loadingMore = ref(false)
 const mode = ref<'latest' | 'recommended' | 'following'>('latest')
 let anchorMode = false
 const sources = ref<Record<string, string>>({})
+const sourceErrors = ref<Record<string, boolean>>({})
 const covers = ref<Record<string, string>>({})
 const loading = ref(true)
 const error = ref('')
@@ -62,8 +63,23 @@ async function loadSource(item: PublicVideo) {
     if (stopped || request?.signal.aborted) return
     fallbackSources.set(item.id, media.url)
     sources.value = { ...sources.value, [item.id]: item.hasHls ? `/api/videos/${item.id}/hls/master.m3u8` : media.url }
-  } catch { /* keep the poster if the source cannot be signed */ }
-  finally { signing.delete(item.id) }
+    if (sourceErrors.value[item.id]) {
+      const next = { ...sourceErrors.value }
+      delete next[item.id]
+      sourceErrors.value = next
+    }
+  } catch {
+    if (!stopped && !request?.signal.aborted) sourceErrors.value = { ...sourceErrors.value, [item.id]: true }
+  } finally { signing.delete(item.id) }
+}
+function retryMedia() {
+  const item = items.value[current.value]
+  if (!item) return
+  const next = { ...sourceErrors.value }
+  delete next[item.id]
+  sourceErrors.value = next
+  notice.value = ''
+  void loadMedia(current.value)
 }
 function destroyHls(id: string) {
   const instance = hlsInstances.get(id)
@@ -291,7 +307,7 @@ async function loadCategories() {
 
 async function loadFeed(nextCategory = category.value, followingMode = false, recommendedMode = false) {
   request?.abort(); moreRequest?.abort(); const controller = new AbortController(); request = controller
-  destroyAllHls(); fallbackSources.clear(); videoSetters.clear(); slideSetters.clear(); videoRefs.value = []; slides.value = []; loading.value = true; error.value = ''; items.value = []; sources.value = {}; covers.value = {}; current.value = 0; playing.value = false; ready.value = false; category.value = nextCategory; following.value = followingMode; recommended.value = recommendedMode
+  destroyAllHls(); fallbackSources.clear(); videoSetters.clear(); slideSetters.clear(); videoRefs.value = []; slides.value = []; loading.value = true; error.value = ''; items.value = []; sources.value = {}; sourceErrors.value = {}; covers.value = {}; current.value = 0; playing.value = false; ready.value = false; category.value = nextCategory; following.value = followingMode; recommended.value = recommendedMode
   feedPage.value = 1; feedTotal.value = 0; hasMore.value = false; anchorMode = false; mode.value = followingMode ? 'following' : recommendedMode ? 'recommended' : 'latest'
   const deepId = !followingMode && !recommendedMode && (typeof route.params.id === 'string' ? route.params.id : (sessionStorage.getItem('frame-feed-anchor') ?? ''))
   try {
@@ -359,11 +375,15 @@ onBeforeUnmount(() => {
         <video v-if="Math.abs(index - current) <= 1 && sources[item.id]" :ref="videoSetter(index, item)" class="feed-video" :src="item.hasHls ? undefined : sources[item.id]" :muted="muted" playsinline webkit-playsinline x5-playsinline x5-video-player-type="h5" x5-video-player-fullscreen="false" preload="auto" loop @click="togglePlayback" @canplay="onCanPlay(index)" @playing="onPlaying(index)" @pause="onPause(index)" @timeupdate="onTimeUpdate($event, index)" />
         <img v-else-if="covers[item.id]" class="feed-poster" :src="covers[item.id]" alt="" role="button" tabindex="0" :aria-label="`播放：${item.title}`" referrerpolicy="no-referrer" @click="onSlideTap(index)" @keydown.enter="onSlideTap(index)" @keydown.space.prevent="onSlideTap(index)" />
         <div class="feed-shade"></div>
-        <div v-if="index === current && !playing && sources[item.id]" class="feed-gate">
-          <button type="button" :aria-label="ready ? '播放视频' : '正在加载视频'" @click="togglePlayback">
+        <div v-if="index === current && !playing && (sources[item.id] || sourceErrors[item.id])" class="feed-gate">
+          <button v-if="sourceErrors[item.id]" type="button" aria-label="重新加载视频" @click="retryMedia">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.34 5.66" /><path d="M20 5v6h-6" /></svg>
+          </button>
+          <button v-else type="button" :aria-label="ready ? '播放视频' : '正在加载视频'" @click="togglePlayback">
             <span v-if="!ready" class="feed-spinner" aria-hidden="true"></span>
             <svg v-else viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M8 5.4v13.2L19 12Z" fill="currentColor" /></svg>
           </button>
+          <p v-if="sourceErrors[item.id]">视频加载失败，点击重试</p>
         </div>
         <aside class="feed-rail">
           <button :disabled="likeBusy || liked === undefined" :aria-pressed="liked" @click="toggleLike">{{ liked ? '♥' : '♡' }}<span>{{ liked ? '已赞' : '点赞' }}</span></button>
@@ -397,6 +417,7 @@ onBeforeUnmount(() => {
 .feed-gate button{pointer-events:auto;display:grid;place-items:center;width:64px;height:64px;padding:0;border-radius:50%;border:1px solid rgba(247,244,236,.5);background:rgba(10,18,15,.55);color:var(--color-surface);cursor:pointer}
 .feed-gate button:hover{background:rgba(10,18,15,.75)}
 .feed-gate button:focus-visible{outline:2px solid #f0a096;outline-offset:3px}
+.feed-gate p{margin:0;padding:4px 10px;border-radius:999px;background:rgba(10,18,15,.55);color:rgba(247,244,236,.85);font-size:12px}
 .feed-spinner{width:24px;height:24px;border:2px solid rgba(247,244,236,.28);border-top-color:var(--color-surface);border-radius:50%;animation:feed-spin .9s linear infinite}
 @keyframes feed-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.feed-spinner{animation-duration:2.4s}}
